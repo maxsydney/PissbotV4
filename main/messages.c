@@ -63,7 +63,7 @@ Message* processPair(char* pair)
     }
     valueBuf[i] = '\0';
 
-	value = atoi(valueBuf);
+	value = atof(valueBuf);
 
     message->key = name;
     message->value = value;
@@ -122,8 +122,18 @@ int freeMessages(Message* head)
 	return 1;
 }
 
+/*
+*   --------------------------------------------------------------------  
+*   decode_data
+*   --------------------------------------------------------------------
+*   Decodes incoming socket messages. Messages can be either of type
+*   INFO or CONN. CONN messages signify a new connection and prompt the
+*   server to begin serving data. INFO messages contain a packet of 
+*   updated controller settings. 
+*/
 Data* decode_data(char* dataPacket)
 {
+    
     uint16_t len = strlen(dataPacket) - 1; 
     Message* head = parseMessage(dataPacket, len);
     if (head == NULL) {

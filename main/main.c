@@ -22,9 +22,11 @@
 void app_main()
 {
     nvs_flash_init();
+    nvs_initialize();
     sensor_init(DS_PIN);
     gpio_init();
     wifi_connect();
+    pwm_init();
     controller_init(CONTROL_LOOP_FREQUENCY);
 
     xTaskCreate(&socket_server_task, "Socket Server", 2048, NULL, 5, NULL);

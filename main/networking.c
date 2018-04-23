@@ -15,6 +15,7 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
+#include "nvs.h"
 #include "networking.h"
 #include "messages.h"
 #include "controller.h"
@@ -22,17 +23,17 @@
 #include "sensors.h"
 #include "gpio.h"
 
-
 #define PORT_NUMBER 8001
 #define BUFLEN 200
 #define SSID "vodafoneB1100A"
 #define PASSWORD "@leadership room 11"
-#define MAX_MESSAGE_LEN 50
+#define MAX_MESSAGE_LEN 100
 #define get_time_ms() (esp_timer_get_time() / 1000000.0)
 
 static void sendData(void* param);
 static void recvData(void* param);
 static bool socket_is_open(int socket);
+static void write_nvs(Data* data);
 
 static char tag[] = "socket server";
 
@@ -56,6 +57,19 @@ void wifi_connect(void)
     esp_wifi_connect();
 }
 
+void nvs_initialize(void)
+{
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(err);
+}
+
 esp_err_t event_handler(void *ctx, system_event_t *event)
 {
     if (event->event_id == SYSTEM_EVENT_STA_GOT_IP) {
@@ -64,9 +78,9 @@ esp_err_t event_handler(void *ctx, system_event_t *event)
     } else if (event->event_id == SYSTEM_EVENT_STA_CONNECTED) {
         // Blink LED 
         flash_pin(LED_PIN, 100);
-        // ESP_LOGI(tag, "Connected to WiFi!\n")
+        ESP_LOGI(tag, "Connected to WiFi!\n");
     } else if (event->event_id == SYSTEM_EVENT_STA_DISCONNECTED) {
-        // ESP_LOGW(tag, "Could not connect!\n")
+        ESP_LOGW(tag, "Could not connect!\n");
     }
     return ESP_OK;
 }
@@ -102,7 +116,7 @@ void socket_server_task(void* params)
 
     while(1) {
         // Listen for a new connection 
-        ESP_LOGD(tag, "Waiting for new client connection");
+        ESP_LOGD(tag, "Waiting for new client connection\n");
         socklen_t clientAddressLength = sizeof(clientAddress);
         int clientSock = accept(sock, (struct sockaddr*) &clientAddress, &clientAddressLength);
         if (clientSock < 0) {
@@ -128,11 +142,30 @@ static void sendData(void* param)
         runtime = get_time_ms();
         setpoint = get_setpoint();
         element_status = get_element_status();
-        sprintf(message, "%.4f,%.4f,%.2f,%d\n",temp, setpoint, runtime, element_status);
+        Data settings = get_controller_settings();
+        sprintf(message, "%.4f,%.4f,%.2f,%d,%f,%f,%f\n",temp, setpoint, runtime, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
         send(socket, message, strlen(message), 0);
     }
     vTaskDelete(NULL);
     return;
+}
+
+static void write_nvs(Data* data)
+{
+    nvs_handle nvs;
+    esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
+    if (err != ESP_OK) {
+        ESP_LOGI(tag, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        ESP_LOGI(tag, "NVS handle opened successfully\n");
+    }
+
+    nvs_set_i32(nvs, "setpoint", (int32_t)(data->setpoint * 1000));
+    nvs_set_i32(nvs, "P_gain", (int32_t)(data->P_gain * 1000));
+    nvs_set_i32(nvs, "I_gain", (int32_t)(data->I_gain * 1000));
+    nvs_set_i32(nvs, "D_gain", (int32_t)(data->D_gain * 1000));
+    ESP_ERROR_CHECK(nvs_commit(nvs));
+    nvs_close(nvs);
 }
 
 static void recvData(void* param)
@@ -142,9 +175,19 @@ static void recvData(void* param)
 
     while(socket_is_open(socket)) {
         if (read(socket, recv_buf, BUFLEN-1)) {
-            Data* data = decode_data(recv_buf);
-            xQueueSend(dataQueue, data, 500);
-            free(data);
+            // Split into header and message
+            char* header = strtok(recv_buf, "&");
+            char* message = strtok(NULL, "&");
+
+            if (strncmp(header, "CONN", 4) == 0) {              // Inital connection from client
+                ESP_LOGI(tag, "Received new connection\n");
+            } else if (strncmp(header, "INFO", 4) == 0) {       // New data packet received
+                ESP_LOGI(tag, "Received INFO message\n");
+                Data* data = decode_data(message);
+                write_nvs(data);
+                xQueueSend(dataQueue, data, 500);
+                free(data);
+            }
         }
     }
     vTaskDelete(NULL);
