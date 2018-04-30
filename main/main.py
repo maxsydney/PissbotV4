@@ -174,7 +174,7 @@ class Window(QtGui.QWidget):
         Check connection with controller server and verify address
         '''
         try:
-            self.sock.connect(("192.168.1.193" , 8001))
+            self.sock.connect(("192.168.1.241" , 8001))
             self.sock.send(bytes("CONN", 'utf-8'))
             QtGui.QMessageBox.information(self, 'test', "Connected!", QtGui.QMessageBox.Ok)
             self.address = addr

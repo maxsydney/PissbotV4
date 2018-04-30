@@ -47,7 +47,7 @@ void wifi_connect(void)
 
     wifi_config_t staConfig = {
         .sta = {
-            .ssid="vodafoneB1100A",
+            .ssid="vodafoneB1100A_2GEXT",
             .password="@leadership room 11",
             .bssid_set=false
         }
@@ -79,6 +79,13 @@ esp_err_t event_handler(void *ctx, system_event_t *event)
         // Blink LED 
         flash_pin(LED_PIN, 100);
         ESP_LOGI(tag, "Connected to WiFi!\n");
+    } else if (event->event_id ==SYSTEM_EVENT_STA_DISCONNECTED) {
+         /* This is a workaround as ESP32 WiFi libs don't currently
+           auto-reassociate. */
+        flash_pin(LED_PIN, 100);
+        ESP_LOGI(tag, "disconnect reason: %d", event->event_info.disconnected.reason);
+        esp_err_t eet = esp_wifi_connect();
+        ESP_LOGI(tag, "reconnected Ok or error: %d, authmode: %d", eet, event->event_info.connected.authmode);
     } else if (event->event_id == SYSTEM_EVENT_STA_DISCONNECTED) {
         ESP_LOGW(tag, "Could not connect!\n");
     }
