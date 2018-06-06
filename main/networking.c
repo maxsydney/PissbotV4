@@ -22,6 +22,7 @@
 #include "main.h"
 #include "sensors.h"
 #include "gpio.h"
+#include "driver/uart.h"
 
 #define PORT_NUMBER 8001
 #define BUFLEN 200
@@ -29,6 +30,11 @@
 #define PASSWORD "@leadership room 11"
 #define MAX_MESSAGE_LEN 100
 #define get_time_ms() (esp_timer_get_time() / 1000000.0)
+#define ECHO_TEST_TXD  (GPIO_NUM_4)
+#define ECHO_TEST_RXD  (GPIO_NUM_5)
+#define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
+#define ECHO_TEST_CTS  (UART_PIN_NO_CHANGE)
+#define BUF_SIZE (1024)
 
 static void sendData(void* param);
 static void recvData(void* param);
@@ -47,7 +53,7 @@ void wifi_connect(void)
 
     wifi_config_t staConfig = {
         .sta = {
-            .ssid="vodafoneB1100A_2GEXT",
+            .ssid="vodafoneB1100A",
             .password="@leadership room 11",
             .bssid_set=false
         }
@@ -68,6 +74,21 @@ void nvs_initialize(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+}
+
+void uart_initialize(void)
+{
+    uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+    };
+    uart_param_config(UART_NUM_1, &uart_config);
+    uart_set_pin(UART_NUM_1, ECHO_TEST_TXD, ECHO_TEST_RXD, ECHO_TEST_RTS, ECHO_TEST_CTS);
+    uart_driver_install(UART_NUM_1, BUF_SIZE * 2, 0, 0, NULL, 0);
+    ESP_LOGI(tag, "UART Initialized");
 }
 
 esp_err_t event_handler(void *ctx, system_event_t *event)
@@ -135,28 +156,6 @@ void socket_server_task(void* params)
     }
 }
 
-static void sendData(void* param)
-{
-    int socket = (int) param;
-    float temp;
-    float setpoint;
-    float runtime;
-    bool element_status;
-    char message[MAX_MESSAGE_LEN];
-
-    while(socket_is_open(socket)) {
-        temp = get_temp();
-        runtime = get_time_ms();
-        setpoint = get_setpoint();
-        element_status = get_element_status();
-        Data settings = get_controller_settings();
-        sprintf(message, "%.4f,%.4f,%.2f,%d,%f,%f,%f\n",temp, setpoint, runtime, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
-        send(socket, message, strlen(message), 0);
-    }
-    vTaskDelete(NULL);
-    return;
-}
-
 static void write_nvs(Data* data)
 {
     nvs_handle nvs;
@@ -201,6 +200,28 @@ static void recvData(void* param)
     return;
 }
 
+static void sendData(void* param)
+{
+    int socket = (int) param;
+    float temp;
+    float setpoint;
+    float runtime;
+    bool element_status;
+    char message[MAX_MESSAGE_LEN];
+
+    while(socket_is_open(socket)) {
+        temp = get_temp();
+        runtime = get_time_ms();
+        setpoint = get_setpoint();
+        element_status = get_element_status();
+        Data settings = get_controller_settings();
+        sprintf(message, "%.4f,%.4f,%.2f,%d,%f,%f,%f\n",temp, setpoint, runtime, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
+        send(socket, message, strlen(message), 0);
+    }
+    vTaskDelete(NULL);
+    return;
+}
+
 static bool socket_is_open(int socket)
 {
     static bool socket_active = false;
@@ -213,4 +234,25 @@ static bool socket_is_open(int socket)
         socket_active = true;
     }
     return socket_active;
+}
+
+void sendDataUART(void* param)
+{
+    float temp;
+    float setpoint;
+    float runtime;
+    bool element_status;
+    char message[MAX_MESSAGE_LEN] = {0};
+    int len;
+
+    while(true) {
+        temp = get_temp();
+        runtime = get_time_ms();
+        setpoint = get_setpoint();
+        element_status = get_element_status();
+        Data settings = get_controller_settings();
+        sprintf(message, "%.4f,%.4f,%.2f,%d,%f,%f,%f\n",temp, setpoint, runtime, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
+        len = uart_write_bytes(UART_NUM_1, (const char *) message, strlen(message));
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+    }
 }
