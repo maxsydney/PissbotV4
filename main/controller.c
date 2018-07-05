@@ -15,7 +15,7 @@ static char tag[] = "Controller";
 static bool element_status;
 static uint8_t ctrl_loop_period_ms;
 
-#define SENSOR_MIN_OUTPUT 1250
+#define SENSOR_MIN_OUTPUT 1350
 #define SENSOR_MAX_OUTPUT 8190
 
 static Data controllerSettings = {

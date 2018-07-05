@@ -17,7 +17,7 @@
 #include "controller.h"
 
 #define DS_PIN                   15
-#define CONTROL_LOOP_FREQUENCY   1 
+#define CONTROL_LOOP_FREQUENCY   2 
 
 void app_main()
 {

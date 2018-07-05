@@ -26,7 +26,7 @@
 
 #define PORT_NUMBER 8001
 #define BUFLEN 200
-#define SSID "vodafoneB1100A"
+#define SSID "vodafoneB1100A_2GEXT"
 #define PASSWORD "@leadership room 11"
 #define MAX_MESSAGE_LEN 100
 #define get_time_ms() (esp_timer_get_time() / 1000000.0)
@@ -53,7 +53,7 @@ void wifi_connect(void)
 
     wifi_config_t staConfig = {
         .sta = {
-            .ssid="vodafoneB1100A",
+            .ssid="vodafoneB1100A_2GEXT",
             .password="@leadership room 11",
             .bssid_set=false
         }

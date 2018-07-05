@@ -2,7 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define PUMP_PIN 21
+#define PUMP_PIN 22
 
 void pwm_init()
 {
