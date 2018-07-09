@@ -97,10 +97,11 @@ esp_err_t controller_init(uint8_t frequency)
 
 void control_loop(void* params)
 {
-    static float output;
-    float temp, error, derivative;
-    float last_error = 0;
-    float integral = 0;
+    static double output;
+    double hotTemp, deltaT, error, derivative;
+    double coldTemp;
+    double last_error = 0;
+    double integral = 0;
     portTickType xLastWakeTime = xTaskGetTickCount();
 
     while(1) {
@@ -109,8 +110,11 @@ void control_loop(void* params)
             flash_pin(LED_PIN, 100);
             ESP_LOGI(tag, "%s\n", "Received data from queue");
         }
-        temp = get_temp();
-        error =  temp - controllerSettings.setpoint;                // Order reversed because higher output reduces temperature
+        coldTemp = get_cold_temp();
+        hotTemp = get_hot_temp();
+        
+        deltaT = hotTemp - coldTemp;
+        error =  deltaT - controllerSettings.setpoint;                // Order reversed because higher output reduces temperature
         derivative = (error - last_error) / 0.2;
         last_error = error;
 
@@ -138,17 +142,27 @@ void control_loop(void* params)
         // ESP_LOGI(tag, "Output =  %.2f + %.2f + %.2f\n", controllerSettings.P_gain * error, controllerSettings.D_gain * derivative, controllerSettings.I_gain * integral);
         set_motor_speed(output);
         vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
+        printf("dT = %.2f\n", deltaT);
     }
 }
 
-float get_temp(void)
+float get_hot_temp(void)
 {
     static float temp;
     float new_temp;
-    if (xQueueReceive(tempQueue, &new_temp, 50 / portTICK_PERIOD_MS)) {
-        if (new_temp < 100) {
-            temp = new_temp;        // Remove
-        }
+    if (xQueueReceive(hotSideTempQueue, &new_temp, 50 / portTICK_PERIOD_MS)) {
+        temp = new_temp; 
+    }
+
+    return temp;
+}
+
+float get_cold_temp(void)
+{
+    static float temp;
+    float new_temp;
+    if (xQueueReceive(coldSideTempQueue, &new_temp, 50 / portTICK_PERIOD_MS)) {
+        temp = new_temp;
     }
 
     return temp;

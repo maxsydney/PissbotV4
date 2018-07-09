@@ -9,7 +9,8 @@ typedef struct {
     float D_gain;
 } Data;
 
-float get_temp(void);
+float get_hot_temp(void);
+float get_cold_temp(void);
 float get_setpoint(void);
 bool get_element_status(void);
 esp_err_t controller_init(uint8_t frequency);

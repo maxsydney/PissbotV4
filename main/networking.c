@@ -210,7 +210,7 @@ static void sendData(void* param)
     char message[MAX_MESSAGE_LEN];
 
     while(socket_is_open(socket)) {
-        temp = get_temp();
+        temp = get_hot_temp();
         runtime = get_time_ms();
         setpoint = get_setpoint();
         element_status = get_element_status();
@@ -238,7 +238,7 @@ static bool socket_is_open(int socket)
 
 void sendDataUART(void* param)
 {
-    float temp;
+    float hotTemp, coldTemp;
     float setpoint;
     float runtime;
     bool element_status;
@@ -246,12 +246,12 @@ void sendDataUART(void* param)
     int len;
 
     while(true) {
-        temp = get_temp();
+        hotTemp = get_hot_temp();
         runtime = get_time_ms();
         setpoint = get_setpoint();
         element_status = get_element_status();
         Data settings = get_controller_settings();
-        sprintf(message, "%.4f,%.4f,%.2f,%d,%f,%f,%f\n",temp, setpoint, runtime, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
+        sprintf(message, "%.4f,%.4f,%.2f,%d,%f,%f,%f\n", hotTemp, setpoint, runtime, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
         len = uart_write_bytes(UART_NUM_1, (const char *) message, strlen(message));
         vTaskDelay(250 / portTICK_PERIOD_MS);
     }
