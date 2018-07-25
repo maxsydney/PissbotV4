@@ -9,3 +9,4 @@ void socket_server_task(void* params);
 void nvs_initialize(void);
 void uart_initialize(void);
 void sendDataUART(void* param);
+void recvDataUART(void* param);

@@ -30,8 +30,8 @@
 #define PASSWORD "@leadership room 11"
 #define MAX_MESSAGE_LEN 100
 #define get_time_ms() (esp_timer_get_time() / 1000000.0)
-#define ECHO_TEST_TXD  (GPIO_NUM_4)
-#define ECHO_TEST_RXD  (GPIO_NUM_5)
+#define ECHO_TEST_TXD  (GPIO_NUM_14)
+#define ECHO_TEST_RXD  (GPIO_NUM_13)
 #define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
 #define ECHO_TEST_CTS  (UART_PIN_NO_CHANGE)
 #define BUF_SIZE (1024)
@@ -238,21 +238,46 @@ static bool socket_is_open(int socket)
 
 void sendDataUART(void* param)
 {
-    float hotTemp, coldTemp;
+    float hotTemp, coldTemp, flowRate;
     float setpoint;
     float runtime;
     bool element_status;
     char message[MAX_MESSAGE_LEN] = {0};
     int len;
 
-    while(true) {
+    while (true) {
         hotTemp = get_hot_temp();
+        coldTemp = get_cold_temp();
         runtime = get_time_ms();
         setpoint = get_setpoint();
+        flowRate = get_flowRate();
         element_status = get_element_status();
         Data settings = get_controller_settings();
-        sprintf(message, "%.4f,%.4f,%.2f,%d,%f,%f,%f\n", hotTemp, setpoint, runtime, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
+        sprintf(message, "%.4f,%4f,%.4f,%2f,%.2f,%d,%f,%f,%f\n", hotTemp, coldTemp, setpoint, runtime, flowRate, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
         len = uart_write_bytes(UART_NUM_1, (const char *) message, strlen(message));
         vTaskDelay(250 / portTICK_PERIOD_MS);
+    }
+}
+
+void recvDataUART(void* param)
+{
+    int length;
+    char data[128];
+
+    while (true) {
+        uart_get_buffered_data_len(UART_NUM_1, (size_t*)&length);
+        if (length > 0) {
+            length = uart_read_bytes(UART_NUM_1, (uint8_t*) data, length, 100 / portTICK_PERIOD_MS);
+            char* header = strtok(data, "&");
+            char* message = strtok(NULL, "&");
+            if (strncmp(header, "INFO", 4) == 0) {       // New data packet received
+                ESP_LOGI(tag, "Received INFO message\n");
+                Data* data = decode_data(message);
+                write_nvs(data);
+                xQueueSend(dataQueue, data, 50);
+                free(data);
+            }
+        }
+        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }

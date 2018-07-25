@@ -114,7 +114,7 @@ void control_loop(void* params)
         hotTemp = get_hot_temp();
         
         deltaT = hotTemp - coldTemp;
-        error =  deltaT - controllerSettings.setpoint;                // Order reversed because higher output reduces temperature
+        error =  deltaT - controllerSettings.setpoint;                    // Order reversed because higher output reduces temperature
         derivative = (error - last_error) / 0.2;
         last_error = error;
 
@@ -124,25 +124,20 @@ void control_loop(void* params)
         } else if ((output < SENSOR_MIN_OUTPUT + 1) && (error < 0)) {
             integral += 0;
         } else {
-            integral += error * 0.2;                                      // Begin with 1hz control loop frequency for simplicity
+            integral += error * 0.2;                                      
         }
                         
         output = controllerSettings.P_gain * error + controllerSettings.D_gain * derivative + controllerSettings.I_gain * integral;
 
-        // ESP_LOGI(tag, "Integral error: %f", integral);
-        // ESP_LOGI(tag, "Integral error: %.2f\n", derivative);
-
+        // Clip output
         if (output < SENSOR_MIN_OUTPUT) {
             output = SENSOR_MIN_OUTPUT;      // Ensures water is always flowing so sensor can get a reading
         } else if (output > SENSOR_MAX_OUTPUT) {
             output = SENSOR_MAX_OUTPUT;
         }
         
-        // ESP_LOGI(tag, "Total output =  %.2f\n", output);
-        // ESP_LOGI(tag, "Output =  %.2f + %.2f + %.2f\n", controllerSettings.P_gain * error, controllerSettings.D_gain * derivative, controllerSettings.I_gain * integral);
         set_motor_speed(output);
         vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
-        printf("dT = %.2f\n", deltaT);
     }
 }
 
@@ -166,6 +161,17 @@ float get_cold_temp(void)
     }
 
     return temp;
+}
+
+float get_flowRate(void)
+{
+    static float flowRate = 0;
+    float new_flowRate;
+    if (xQueueReceive(flowRateQueue, &new_flowRate, 50 / portTICK_PERIOD_MS)) {
+        flowRate = new_flowRate;
+    }
+
+    return flowRate;
 }
 
 float get_setpoint(void)
