@@ -10,6 +10,7 @@ void temp_sensor_task(void *pvParameters);
 esp_err_t sensor_init(uint8_t ds_pin);
 void flowmeter_task(void *pvParameters);
 void IRAM_ATTR flowmeter_ISR(void* arg);
+esp_err_t init_timer(void);
 
 typedef enum {
     coldSideSensor,

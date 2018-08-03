@@ -255,7 +255,7 @@ void sendDataUART(void* param)
         Data settings = get_controller_settings();
         sprintf(message, "%.4f,%4f,%.4f,%2f,%.2f,%d,%f,%f,%f\n", hotTemp, coldTemp, setpoint, runtime, flowRate, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
         len = uart_write_bytes(UART_NUM_1, (const char *) message, strlen(message));
-        vTaskDelay(250 / portTICK_PERIOD_MS);
+        vTaskDelay(200 / portTICK_PERIOD_MS);
     }
 }
 

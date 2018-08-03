@@ -2,6 +2,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
+#define CONTROL_LOOP_RATE 5.0f
+#define CONTROL_LOOP_PERIOD 1.0f / CONTROL_LOOP_RATE
+#define SENSOR_SAMPLE_RATE 5.0f
+#define SENSOR_SAMPLE_PERIOD 1.0f / SENSOR_SAMPLE_RATE
+
 typedef struct { 
     float setpoint;
     float P_gain;

@@ -25,6 +25,7 @@ void app_main()
     nvs_initialize();
     sensor_init(DS_PIN);
     uart_initialize();
+    init_timer();
     gpio_init();
     wifi_connect();
     pwm_init();
@@ -37,3 +38,4 @@ void app_main()
     xTaskCreate(&recvDataUART, "UART receive", 2048, NULL, 6, NULL);
     xTaskCreate(&flowmeter_task, "Flow meter", 2048, NULL, 6, NULL);
 }
+

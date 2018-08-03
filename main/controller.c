@@ -114,7 +114,7 @@ void control_loop(void* params)
         hotTemp = get_hot_temp();
         
         deltaT = hotTemp - coldTemp;
-        error =  deltaT - controllerSettings.setpoint;                    // Order reversed because higher output reduces temperature
+        error =  hotTemp - controllerSettings.setpoint;                    // Order reversed because higher output reduces temperature
         derivative = (error - last_error) / 0.2;
         last_error = error;
 
@@ -135,7 +135,7 @@ void control_loop(void* params)
         } else if (output > SENSOR_MAX_OUTPUT) {
             output = SENSOR_MAX_OUTPUT;
         }
-        
+
         set_motor_speed(output);
         vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
     }

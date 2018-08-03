@@ -6,12 +6,15 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "driver/timer.h"
 #include "ds18b20.h" 
 #include "sensors.h"
 #include "main.h"
 
 const char* tag = "Sensors";
-static volatile int count = 0;
+
+static volatile double timeVal;
+static float filter_singlePoleIIR(float x, float y, float alpha);
 
 esp_err_t sensor_init(uint8_t ds_pin)
 {
@@ -20,6 +23,20 @@ esp_err_t sensor_init(uint8_t ds_pin)
     hotSideTempQueue = xQueueCreate(2, sizeof(float));
     coldSideTempQueue = xQueueCreate(2, sizeof(float));
     flowRateQueue = xQueueCreate(2, sizeof(float));
+    return ESP_OK;
+}
+
+esp_err_t init_timer(void)
+{
+    timer_config_t config;
+    config.divider = 2;
+    config.counter_dir = TIMER_COUNT_UP;
+    config.alarm_en = TIMER_ALARM_DIS;
+    timer_init(TIMER_GROUP_0, TIMER_0, &config);
+
+    timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0x00000000ULL);
+    timer_start(TIMER_GROUP_0, TIMER_0);
+
     return ESP_OK;
 }
 
@@ -35,11 +52,11 @@ void temp_sensor_task(void *pvParameters)
         newColdTemp = ds18b20_get_temp(coldSideSensor);
 
         if (newHotTemp != 0) {
-            hotTemp = newHotTemp;
+            hotTemp = filter_singlePoleIIR(newHotTemp, hotTemp, 0.9);
         }
 
         if (newColdTemp != 0) {
-            coldTemp = newColdTemp;
+            coldTemp = filter_singlePoleIIR(newColdTemp, coldTemp, 0.9);;
         }
 
         ret = xQueueSend(hotSideTempQueue, &hotTemp, 100);
@@ -59,20 +76,33 @@ void flowmeter_task(void *pvParameters)
     float flowRate;
     BaseType_t ret;
     portTickType xLastWakeTime = xTaskGetTickCount();
+    double currTime;
 
     while (true) {
-        flowRate = (float) count / 7.5;
+        timer_get_counter_time_sec(TIMER_GROUP_0, TIMER_0, &currTime);
+        if (currTime > 1) {
+            flowRate = 0;
+        } else {
+            flowRate = (float) 1 / (timeVal * 7.5);
+        }
         ret = xQueueSend(flowRateQueue, &flowRate, 100);
         if (ret == errQUEUE_FULL) {
             ESP_LOGI(tag, "Flow rate queue full");
         }
-        count = 0;
-        vTaskDelayUntil(&xLastWakeTime, 1000 / portTICK_PERIOD_MS);     // Run every second
+        vTaskDelayUntil(&xLastWakeTime, 250 / portTICK_PERIOD_MS);     // Run every second
     }
 
 }
 
+static float filter_singlePoleIIR(float x, float y, float alpha)
+{
+    return alpha * x + (1 - alpha) * y; 
+}
+
 void IRAM_ATTR flowmeter_ISR(void* arg)
 {
-    count++;
+    double timeTemp;
+    timer_get_counter_time_sec(TIMER_GROUP_0, TIMER_0, &timeTemp);
+    timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0x00000000ULL);
+    timeVal = timeTemp;
 }
