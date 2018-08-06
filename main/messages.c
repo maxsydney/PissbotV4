@@ -2,7 +2,9 @@
 #include <string.h>
 #include <esp_log.h>
 #include <esp_err.h>
+#include <string.h>
 #include "messages.h"
+#include "ds18b20.h"
 #include "networking.h"
 #include "controller.h"
 
@@ -148,4 +150,18 @@ Data* decode_data(char* dataPacket)
     data->D_gain = findByKey(head, "D");
     freeMessages(head);
     return data;    
+}
+
+esp_err_t decodeCommand(char* commandPacket)
+{
+    char* command = strtok(commandPacket, ":");
+    char* arg = strtok(NULL, "&");
+
+    if (strncmp(command, "swapTempSensors", 128) == 0) {
+        swapTempSensors();
+    } else if (strncmp(command, "fanState", 128) == 0) {
+        bool state = atof(arg);
+        setFanState(state);
+    }
+    return ESP_OK;
 }

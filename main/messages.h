@@ -13,3 +13,4 @@ void printMessages(Message* head);
 float findByKey(Message* head, char* key);
 int freeMessages(Message* head);
 Data* decode_data(char* dataPacket);
+esp_err_t decodeCommand(char* commandPacket);

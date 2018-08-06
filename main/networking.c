@@ -46,7 +46,7 @@ static char tag[] = "socket server";
 void wifi_connect(void)
 {
     tcpip_adapter_init();
-    esp_event_loop_init(event_handler, NULL);
+    esp_event_loop_init(WiFi_event_handler, NULL);
     wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&config);
     esp_wifi_set_mode(WIFI_MODE_STA);
@@ -63,18 +63,7 @@ void wifi_connect(void)
     esp_wifi_connect();
 }
 
-void nvs_initialize(void)
-{
-    // Initialize NVS
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
-        // NVS partition was truncated and needs to be erased
-        // Retry nvs_flash_init
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
-}
+
 
 void uart_initialize(void)
 {
@@ -91,7 +80,7 @@ void uart_initialize(void)
     ESP_LOGI(tag, "UART Initialized");
 }
 
-esp_err_t event_handler(void *ctx, system_event_t *event)
+esp_err_t WiFi_event_handler(void *ctx, system_event_t *event)
 {
     if (event->event_id == SYSTEM_EVENT_STA_GOT_IP) {
         printf("Our IP address is " IPSTR "\n", IP2STR(&event->event_info.got_ip.ip_info.ip));
@@ -107,9 +96,8 @@ esp_err_t event_handler(void *ctx, system_event_t *event)
         ESP_LOGI(tag, "disconnect reason: %d", event->event_info.disconnected.reason);
         esp_err_t eet = esp_wifi_connect();
         ESP_LOGI(tag, "reconnected Ok or error: %d, authmode: %d", eet, event->event_info.connected.authmode);
-    } else if (event->event_id == SYSTEM_EVENT_STA_DISCONNECTED) {
-        ESP_LOGW(tag, "Could not connect!\n");
     }
+
     return ESP_OK;
 }
 
@@ -276,7 +264,10 @@ void recvDataUART(void* param)
                 write_nvs(data);
                 xQueueSend(dataQueue, data, 50);
                 free(data);
+            } else if (strncmp(header, "CMD", 3) == 0) {
+                decodeCommand(message);
             }
+            memset(data, 0, 128);       // Zero buffer for next command
         }
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
