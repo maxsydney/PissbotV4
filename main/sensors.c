@@ -15,11 +15,15 @@ const char* tag = "Sensors";
 
 static volatile double timeVal;
 static float filter_singlePoleIIR(float x, float y, float alpha);
+static float FIR_filter_lowpass(float x);
+
+const float FIRcoeff[9] = {0.00506988, 0.02935816, 0.11074379, 0.21934068, 0.27097496, 0.21934068, 0.11074379, 0.02935816, 0.00506988};
+static float sensorBuffer[2][9];
 
 esp_err_t sensor_init(uint8_t ds_pin)
 {
     ds18b20_init(ds_pin);
-    set_resolution_10_bit();
+    // set_resolution_10_bit();
     hotSideTempQueue = xQueueCreate(2, sizeof(float));
     coldSideTempQueue = xQueueCreate(2, sizeof(float));
     flowRateQueue = xQueueCreate(2, sizeof(float));
@@ -52,11 +56,12 @@ void temp_sensor_task(void *pvParameters)
         newColdTemp = ds18b20_get_temp(coldSideSensor);
 
         if (newHotTemp != 0) {
-            hotTemp = filter_singlePoleIIR(newHotTemp, hotTemp, 0.9);
+            // hotTemp = filter_singlePoleIIR(newHotTemp, hotTemp, 0.2);
+            hotTemp = FIR_filter_lowpass(newHotTemp);
         }
 
         if (newColdTemp != 0) {
-            coldTemp = filter_singlePoleIIR(newColdTemp, coldTemp, 0.9);;
+            coldTemp = filter_singlePoleIIR(newColdTemp, coldTemp, 1);;
         }
 
         ret = xQueueSend(hotSideTempQueue, &hotTemp, 100);
@@ -105,4 +110,27 @@ void IRAM_ATTR flowmeter_ISR(void* arg)
     timer_get_counter_time_sec(TIMER_GROUP_0, TIMER_0, &timeTemp);
     timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0x00000000ULL);
     timeVal = timeTemp;
+}
+
+static float FIR_filter_lowpass(float x)
+{
+    static float data[9] = {0};
+    static int arrPtr = 0;
+    int j = arrPtr++;
+    float output = 0;
+
+    data[j] = x;
+
+    for (int i = 8; i >= 0; i--) {
+        output += data[j--] * FIRcoeff[i];
+        if (j < 0) {
+            j = 8;
+        }
+    }
+
+    if (arrPtr > 8) {
+        arrPtr = 0;
+    }
+
+    return output;
 }

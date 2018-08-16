@@ -53,7 +53,8 @@ void wifi_connect(void)
 
     wifi_config_t staConfig = {
         .sta = {
-            .ssid="vodafoneB1100A_2GEXT",
+            // .ssid="vodafoneB1100A_2GEXT",
+            .ssid="vodafoneB1100A",
             .password="@leadership room 11",
             .bssid_set=false
         }
