@@ -12,7 +12,7 @@
 #include "gpio.h"
 
 static char tag[] = "Controller";
-static bool element_status;
+static bool element_status, flushSystem;
 static uint8_t ctrl_loop_period_ms;
 
 #define SENSOR_MIN_OUTPUT 1350
@@ -29,6 +29,7 @@ esp_err_t controller_init(uint8_t frequency)
 {
     dataQueue = xQueueCreate(2, sizeof(Data));
     ctrl_loop_period_ms = 1.0 / frequency * 1000;
+    flushSystem = false;
     int32_t setpoint, P_gain, I_gain, D_gain;
 
     nvs_handle nvs;
@@ -126,7 +127,7 @@ void control_loop(void* params)
         coldTemp = get_cold_temp();
         hotTemp = get_hot_temp();
 
-        printf("Hot temp: %.1f - Cold temp: %.1f\n", hotTemp, coldTemp);
+        // printf("Hot temp: %.1f - Cold temp: %.1f\n", hotTemp, coldTemp);
         
         deltaT = hotTemp - coldTemp;
         error =  hotTemp - controllerSettings.setpoint;                    // Order reversed because higher output reduces temperature
@@ -150,9 +151,12 @@ void control_loop(void* params)
         } else if (output > SENSOR_MAX_OUTPUT) {
             output = SENSOR_MAX_OUTPUT;
         }
-        // printf("Control output: %.2f\n", output);
+
+        if (flushSystem) {
+            output = 5000;
+        }
         set_motor_speed(output);
-        vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
+        vTaskDelayUntil(&xLastWakeTime, ctrl_loop_period_ms / portTICK_PERIOD_MS);
     }
 }
 
@@ -212,3 +216,10 @@ void setFanState(int state)
         printf("Switching fan off\n");
     }
 }
+
+void setFlush(bool state)
+{
+    printf("setFlush called with state %d\n", state);
+    flushSystem = state;
+}
+

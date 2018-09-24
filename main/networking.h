@@ -3,6 +3,9 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 
+#define MAX_MESSAGE_LEN 100
+#define get_time_ms() (esp_timer_get_time() / 1000000.0)
+
 /*
 *   --------------------------------------------------------------------  
 *   wifi_connect

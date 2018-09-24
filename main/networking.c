@@ -9,6 +9,7 @@
 #include <esp_timer.h>
 #include <esp_event.h>
 #include <esp_event_loop.h>
+#include <string.h>
 #include <errno.h>
 #include "freertos/queue.h"
 #include "freertos/FreeRTOS.h"
@@ -28,8 +29,6 @@
 #define BUFLEN 200
 #define SSID "vodafoneB1100A_2GEXT"
 #define PASSWORD "@leadership room 11"
-#define MAX_MESSAGE_LEN 100
-#define get_time_ms() (esp_timer_get_time() / 1000000.0)
 #define ECHO_TEST_TXD  (GPIO_NUM_14)
 #define ECHO_TEST_RXD  (GPIO_NUM_13)
 #define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
@@ -244,7 +243,7 @@ void sendDataUART(void* param)
         Data settings = get_controller_settings();
         sprintf(message, "%.4f,%4f,%.4f,%2f,%.2f,%d,%f,%f,%f\n", hotTemp, coldTemp, setpoint, runtime, flowRate, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
         len = uart_write_bytes(UART_NUM_1, (const char *) message, strlen(message));
-        vTaskDelay(200 / portTICK_PERIOD_MS);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 

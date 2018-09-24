@@ -102,3 +102,6 @@ Data get_controller_settings(void);
 */
 void setFanState(int state);
 
+void setFlush(bool state);
+
+

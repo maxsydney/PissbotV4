@@ -4,6 +4,7 @@
 #include <esp_err.h>
 #include <string.h>
 #include "messages.h"
+#include "sensors.h"
 #include "ds18b20.h"
 #include "networking.h"
 #include "controller.h"
@@ -162,6 +163,12 @@ esp_err_t decodeCommand(char* commandPacket)
     } else if (strncmp(command, "fanState", 128) == 0) {
         bool state = atof(arg);
         setFanState(state);
+    } else if (strncmp(command, "flush", 128) == 0) {
+        bool state = atof(arg);
+        setFlush(state);
+    } else if (strncmp(command, "filterT", 128) == 0) {
+        bool state = atof(arg);
+        setTempFilter(state);
     }
     return ESP_OK;
 }

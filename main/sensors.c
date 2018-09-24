@@ -15,14 +15,16 @@ const char* tag = "Sensors";
 
 static volatile double timeVal;
 static float filter_singlePoleIIR(float x, float y, float alpha);
-static float FIR_filter_lowpass(float x);
+static float FIR_filter_lowpass(float x, tempSensor channel);
 
-const float FIRcoeff[9] = {0.00506988, 0.02935816, 0.11074379, 0.21934068, 0.27097496, 0.21934068, 0.11074379, 0.02935816, 0.00506988};
+const float FIRcoeff[5] = {0.02840647, 0.23700821, 0.46917063, 0.23700821, 0.02840647};
 static float sensorBuffer[2][9];
+static bool filterTemp;
 
 esp_err_t sensor_init(uint8_t ds_pin)
 {
     ds18b20_init(ds_pin);
+    filterTemp = false;
     // set_resolution_10_bit();
     hotSideTempQueue = xQueueCreate(2, sizeof(float));
     coldSideTempQueue = xQueueCreate(2, sizeof(float));
@@ -56,12 +58,22 @@ void temp_sensor_task(void *pvParameters)
         newColdTemp = ds18b20_get_temp(coldSideSensor);
 
         if (newHotTemp != 0) {
-            // hotTemp = filter_singlePoleIIR(newHotTemp, hotTemp, 0.2);
-            hotTemp = FIR_filter_lowpass(newHotTemp);
+            
+            if (filterTemp) {
+
+                hotTemp = FIR_filter_lowpass(newHotTemp, hotSideSensor);
+                // hotTemp = filter_singlePoleIIR(newHotTemp, hotTemp, 0.2);
+            } else {
+                hotTemp = newHotTemp;
+            } 
         }
 
         if (newColdTemp != 0) {
-            coldTemp = filter_singlePoleIIR(newColdTemp, coldTemp, 1);;
+            if (filterTemp) {
+                coldTemp = filter_singlePoleIIR(newColdTemp, coldTemp, 0.3);
+            } else {
+                coldTemp = newColdTemp;
+            }
         }
 
         ret = xQueueSend(hotSideTempQueue, &hotTemp, 100);
@@ -112,25 +124,30 @@ void IRAM_ATTR flowmeter_ISR(void* arg)
     timeVal = timeTemp;
 }
 
-static float FIR_filter_lowpass(float x)
+static float FIR_filter_lowpass(float x, tempSensor channel)
 {
-    static float data[9] = {0};
-    static int arrPtr = 0;
-    int j = arrPtr++;
+    static float data[2][5] = {0};
+    static int arrPtr[2] = {0};
+    int j = arrPtr[channel]++;
     float output = 0;
 
-    data[j] = x;
+    data[channel][j] = x;
 
-    for (int i = 8; i >= 0; i--) {
-        output += data[j--] * FIRcoeff[i];
+    for (int i = 4; i >= 0; i--) {
+        output += data[channel][j--] * FIRcoeff[i];
         if (j < 0) {
-            j = 8;
+            j = 4;
         }
     }
 
-    if (arrPtr > 8) {
-        arrPtr = 0;
+    if (arrPtr[channel] > 4) {
+        arrPtr[channel] = 0;
     }
 
     return output;
+}
+
+void setTempFilter(bool status)
+{
+    filterTemp = status;
 }
