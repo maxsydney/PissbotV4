@@ -38,7 +38,6 @@
 static void sendData(void* param);
 static void recvData(void* param);
 static bool socket_is_open(int socket);
-static void write_nvs(Data* data);
 
 static char tag[] = "socket server";
 
@@ -144,7 +143,7 @@ void socket_server_task(void* params)
     }
 }
 
-static void write_nvs(Data* data)
+void write_nvs(Data* data)
 {
     nvs_handle nvs;
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
@@ -153,7 +152,7 @@ static void write_nvs(Data* data)
     } else {
         ESP_LOGI(tag, "NVS handle opened successfully\n");
     }
-
+ 
     nvs_set_i32(nvs, "setpoint", (int32_t)(data->setpoint * 1000));
     nvs_set_i32(nvs, "P_gain", (int32_t)(data->P_gain * 1000));
     nvs_set_i32(nvs, "I_gain", (int32_t)(data->I_gain * 1000));
@@ -243,7 +242,7 @@ void sendDataUART(void* param)
         Data settings = get_controller_settings();
         sprintf(message, "%.4f,%4f,%.4f,%2f,%.2f,%d,%f,%f,%f\n", hotTemp, coldTemp, setpoint, runtime, flowRate, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
         len = uart_write_bytes(UART_NUM_1, (const char *) message, strlen(message));
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(200 / portTICK_PERIOD_MS);
     }
 }
 

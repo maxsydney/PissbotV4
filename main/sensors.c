@@ -24,8 +24,8 @@ static bool filterTemp;
 esp_err_t sensor_init(uint8_t ds_pin)
 {
     ds18b20_init(ds_pin);
-    filterTemp = false;
     // set_resolution_10_bit();
+    filterTemp = false;
     hotSideTempQueue = xQueueCreate(2, sizeof(float));
     coldSideTempQueue = xQueueCreate(2, sizeof(float));
     flowRateQueue = xQueueCreate(2, sizeof(float));
@@ -58,11 +58,8 @@ void temp_sensor_task(void *pvParameters)
         newColdTemp = ds18b20_get_temp(coldSideSensor);
 
         if (newHotTemp != 0) {
-            
             if (filterTemp) {
-
                 hotTemp = FIR_filter_lowpass(newHotTemp, hotSideSensor);
-                // hotTemp = filter_singlePoleIIR(newHotTemp, hotTemp, 0.2);
             } else {
                 hotTemp = newHotTemp;
             } 

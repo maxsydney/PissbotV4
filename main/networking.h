@@ -2,6 +2,7 @@
 #include "esp_event.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "controller.h"
 
 #define MAX_MESSAGE_LEN 100
 #define get_time_ms() (esp_timer_get_time() / 1000000.0)
@@ -60,3 +61,5 @@ void sendDataUART(void* param);
 *   Main task to receive commands from web interface
 */
 void recvDataUART(void* param);
+
+void write_nvs(Data* data);

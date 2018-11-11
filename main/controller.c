@@ -126,11 +126,9 @@ void control_loop(void* params)
         }
         coldTemp = get_cold_temp();
         hotTemp = get_hot_temp();
-
-        // printf("Hot temp: %.1f - Cold temp: %.1f\n", hotTemp, coldTemp);
         
         deltaT = hotTemp - coldTemp;
-        error =  hotTemp - controllerSettings.setpoint;                    // Order reversed because higher output reduces temperature
+        error =  hotTemp - controllerSettings.setpoint;
         derivative = (error - last_error) / 0.2;
         last_error = error;
 
@@ -140,7 +138,7 @@ void control_loop(void* params)
         } else if ((output < SENSOR_MIN_OUTPUT + 1) && (error < 0)) {
             integral += 0;
         } else {
-            integral += error * 0.2;                                      
+            integral += error * 0.1;                                      
         }
                         
         output = controllerSettings.P_gain * error + controllerSettings.D_gain * derivative + controllerSettings.I_gain * integral;
@@ -155,6 +153,7 @@ void control_loop(void* params)
         if (flushSystem) {
             output = 5000;
         }
+
         set_motor_speed(output);
         vTaskDelayUntil(&xLastWakeTime, ctrl_loop_period_ms / portTICK_PERIOD_MS);
     }

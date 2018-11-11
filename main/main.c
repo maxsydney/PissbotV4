@@ -13,9 +13,7 @@
 #include "sensors.h"
 #include "messages.h"
 #include "sdkconfig.h"
-#include "lcd.h"
 #include "controller.h"
-// #include "webserver.h"
 
 #define DS_PIN                   15
 #define CONTROL_LOOP_FREQUENCY   10 
@@ -30,7 +28,6 @@ void app_main()
     gpio_init();
     wifi_connect();
     pwm_init();
-    // initServer();
     controller_init(CONTROL_LOOP_FREQUENCY);
 
     xTaskCreate(&socket_server_task, "Socket Server", 2048, NULL, 5, NULL);
