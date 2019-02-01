@@ -3,3 +3,4 @@
 
 void gpio_init(void);
 void flash_pin(gpio_num_t pin, uint16_t delay);
+void setPin(gpio_num_t pin, bool state);

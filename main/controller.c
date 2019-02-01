@@ -211,8 +211,10 @@ void setFanState(int state)
 {
     if (state) {
         printf("Switching fan on\n");
+        setPin(FAN_CTRL_PIN, state);
     } else {
         printf("Switching fan off\n");
+        setPin(FAN_CTRL_PIN, state);
     }
 }
 
@@ -221,4 +223,5 @@ void setFlush(bool state)
     printf("setFlush called with state %d\n", state);
     flushSystem = state;
 }
+
 
