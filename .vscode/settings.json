@@ -20,7 +20,8 @@
         "*.tcc": "c",
         "__locale": "c",
         "ios": "c",
-        "regex": "c"
+        "regex": "c",
+        "locale": "c"
     },
     "python.linting.pylintEnabled": false
 }
