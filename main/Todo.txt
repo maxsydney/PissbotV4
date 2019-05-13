@@ -1,0 +1,8 @@
+- Fix screen refresh functionality on for served webpage (Raspberry pi issue)   - Completed
+- Fix ongoing controller performance issues                                     - Controller tuned
+- Migrate to fully ESP32 based webserver                                        
+- D-term filtering                                                              - Unsure if beneficial
+- Acceleration limits on pump                       
+- I-term engage only once still it up to temperature                            
+- Set fan to function automatically                                             - Completed
+- Remove support for Python client                          

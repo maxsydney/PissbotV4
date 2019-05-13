@@ -34,21 +34,16 @@
 #define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
 #define ECHO_TEST_CTS  (UART_PIN_NO_CHANGE)
 #define BUF_SIZE (1024)
-
-static void sendData(void* param);
-static void recvData(void* param);
-static bool socket_is_open(int socket);
+#define STATIC_IP		"192.168.1.201"
+#define SUBNET_MASK		"255.255.255.0"
+#define GATE_WAY		"192.168.1.1"
+#define DNS_SERVER		"8.8.8.8"
 
 static char tag[] = "socket server";
 
 void wifi_connect(void)
 {
-    tcpip_adapter_init();
-    esp_event_loop_init(WiFi_event_handler, NULL);
-    wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
-    esp_wifi_init(&config);
-    esp_wifi_set_mode(WIFI_MODE_STA);
-
+    tcpip_adapter_ip_info_t ipInfo;
     wifi_config_t staConfig = {
         .sta = {
             // .ssid="vodafoneB1100A_2GEXT",
@@ -57,6 +52,28 @@ void wifi_connect(void)
             .bssid_set=false
         }
     };
+    tcpip_adapter_init();
+
+    //For using of static IP
+	tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // Don't run a DHCP client
+
+	//Set static IP
+	
+	inet_pton(AF_INET, STATIC_IP, &ipInfo.ip);
+	inet_pton(AF_INET, GATE_WAY, &ipInfo.gw);
+	inet_pton(AF_INET, SUBNET_MASK, &ipInfo.netmask);
+	tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
+
+	//Set Main DNS server
+	tcpip_adapter_dns_info_t dnsInfo;
+	inet_pton(AF_INET, DNS_SERVER, &dnsInfo.ip);
+	tcpip_adapter_set_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN,
+			&dnsInfo);
+    esp_event_loop_init(WiFi_event_handler, NULL);
+
+    wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
+    esp_wifi_init(&config);
+    esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_set_config(WIFI_IF_STA, &staConfig);
     esp_wifi_start();
     esp_wifi_connect();
@@ -98,49 +115,6 @@ esp_err_t WiFi_event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-void socket_server_task(void* params)
-{
-    struct sockaddr_in clientAddress;
-    struct sockaddr_in serverAddress;
-
-    // Create socket to listen on 
-    int sock = socket(AF_INET,SOCK_STREAM, IPPROTO_TCP);
-    if (sock < 0) {
-        printf("Socket: %d %s", sock, strerror(errno));
-        vTaskDelete(NULL);
-    }
-
-    // Bind server socket to a port 
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    serverAddress.sin_port = htons(PORT_NUMBER);
-    int rc = bind(sock, (struct sockaddr*) &serverAddress, sizeof(serverAddress));
-    if (rc < 0) {
-        printf("Bind: %d %s", rc, strerror(errno));
-        vTaskDelete(NULL);
-    }
-
-    // Flag socket as listening for new connections
-    rc = listen(sock, 5);
-    if (rc < 0) {
-        printf("Listen: %d %s", rc, strerror(errno));
-        vTaskDelete(NULL);
-    }
-
-    while(1) {
-        // Listen for a new connection 
-        ESP_LOGD(tag, "Waiting for new client connection\n");
-        socklen_t clientAddressLength = sizeof(clientAddress);
-        int clientSock = accept(sock, (struct sockaddr*) &clientAddress, &clientAddressLength);
-        if (clientSock < 0) {
-            printf("Accept: %d %s", clientSock, strerror(errno));
-                vTaskDelete(NULL);
-        }
-        xTaskCreate(&sendData, "Data transmission", 2048, (void*) clientSock, 1, NULL);
-        xTaskCreate(&recvData, "Receive data", 2048, (void*) clientSock, 2, NULL);
-    }
-}
-
 void write_nvs(Data* data)
 {
     nvs_handle nvs;
@@ -157,68 +131,6 @@ void write_nvs(Data* data)
     nvs_set_i32(nvs, "D_gain", (int32_t)(data->D_gain * 1000));
     ESP_ERROR_CHECK(nvs_commit(nvs));
     nvs_close(nvs);
-}
-
-static void recvData(void* param)
-{
-    int socket = (int) param;
-    char recv_buf[BUFLEN] = {0};
-
-    while(socket_is_open(socket)) {
-        if (read(socket, recv_buf, BUFLEN-1)) {
-            // Split into header and message
-            char* header = strtok(recv_buf, "&");
-            char* message = strtok(NULL, "&");
-
-            if (strncmp(header, "CONN", 4) == 0) {              // Inital connection from client
-                ESP_LOGI(tag, "Received new connection\n");
-            } else if (strncmp(header, "INFO", 4) == 0) {       // New data packet received
-                ESP_LOGI(tag, "Received INFO message\n");
-                Data* data = decode_data(message);
-                write_nvs(data);
-                xQueueSend(dataQueue, data, 500);
-                free(data);
-            }
-        }
-    }
-    vTaskDelete(NULL);
-    return;
-}
-
-static void sendData(void* param)
-{
-    int socket = (int) param;
-    float temp;
-    float setpoint;
-    float runtime;
-    bool element_status;
-    char message[MAX_MESSAGE_LEN];
-
-    while(socket_is_open(socket)) {
-        temp = get_hot_temp();
-        runtime = get_time_ms();
-        setpoint = get_setpoint();
-        element_status = get_element_status();
-        Data settings = get_controller_settings();
-        sprintf(message, "%.4f,%.4f,%.2f,%d,%f,%f,%f\n",temp, setpoint, runtime, element_status, settings.P_gain, settings.I_gain, settings.D_gain);
-        send(socket, message, strlen(message), 0);
-    }
-    vTaskDelete(NULL);
-    return;
-}
-
-static bool socket_is_open(int socket)
-{
-    static bool socket_active = false;
-    if (send(socket, "BEAT\n", 5, 0) == -1) {       // Send heartbeat
-        if (socket_active) {
-            ESP_LOGI(tag, "%s\n", "Socket connection lost");
-        }
-        socket_active = false;
-    } else {
-        socket_active = true;
-    }
-    return socket_active;
 }
 
 void sendDataUART(void* param)
