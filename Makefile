@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := app-template
-
+PROJECT_NAME := distillerFirmware
+# PROJECT_VER = "1.2"
 include $(IDF_PATH)/make/project.mk
 

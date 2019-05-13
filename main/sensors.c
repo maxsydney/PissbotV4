@@ -9,9 +9,11 @@
 #include "driver/timer.h"
 #include "ds18b20.h" 
 #include "sensors.h"
+#include "controller.h"
 #include "main.h"
+#include "pinDefs.h"
 
-const char* tag = "Sensors";
+static const char* tag = "Sensors";
 
 static volatile double timeVal;
 static float filter_singlePoleIIR(float x, float y, float alpha);
@@ -24,11 +26,11 @@ static bool filterTemp;
 esp_err_t sensor_init(uint8_t ds_pin)
 {
     ds18b20_init(ds_pin);
-    // set_resolution_10_bit();
     filterTemp = false;
-    hotSideTempQueue = xQueueCreate(2, sizeof(float));
-    coldSideTempQueue = xQueueCreate(2, sizeof(float));
-    flowRateQueue = xQueueCreate(2, sizeof(float));
+    hotSideTempQueue = xQueueCreate(10, sizeof(float));
+    coldSideTempQueue = xQueueCreate(10, sizeof(float));
+    flowRateQueue = xQueueCreate(10, sizeof(float));
+    checkPowerSupply();
     return ESP_OK;
 }
 
@@ -48,40 +50,53 @@ esp_err_t init_timer(void)
 
 void temp_sensor_task(void *pvParameters) 
 {
-    float hotTemp = ds18b20_get_temp(hotSideSensor);
-    float coldTemp = ds18b20_get_temp(coldSideSensor);
+    float hotTemp = 5;
+    float coldTemp = 5;
     float newHotTemp, newColdTemp;
+    float sensorTemps[5] = {0};
+    // static int init = 1;
+    // if (init) {
+    //     sensor_init(ONEWIRE_BUS);
+    //     init = 0;
+    // }
+    portTickType xLastWakeTime = xTaskGetTickCount();
     BaseType_t ret;
     while (1) 
     {
-        newHotTemp = ds18b20_get_temp(hotSideSensor);
-        newColdTemp = ds18b20_get_temp(coldSideSensor);
+        // newHotTemp = ds18b20_get_temp(T_refluxHot);
+        // newColdTemp = ds18b20_get_temp(T_refluxCold);
 
-        if (newHotTemp != 0) {
-            if (filterTemp) {
-                hotTemp = FIR_filter_lowpass(newHotTemp, hotSideSensor);
-            } else {
-                hotTemp = newHotTemp;
-            } 
-        }
+        readTemps(sensorTemps);
 
-        if (newColdTemp != 0) {
-            if (filterTemp) {
-                coldTemp = filter_singlePoleIIR(newColdTemp, coldTemp, 0.3);
-            } else {
-                coldTemp = newColdTemp;
-            }
-        }
+        // if (newHotTemp != 0) {
+        //     if (filterTemp) {
+        //         hotTemp = FIR_filter_lowpass(newHotTemp, T_refluxHot);
+        //     } else {
+        //         hotTemp = newHotTemp;
+        //     } 
+        // }
 
-        ret = xQueueSend(hotSideTempQueue, &hotTemp, 100);
+        // if (newColdTemp != 0) {
+        //     if (filterTemp) {
+        //         coldTemp = filter_singlePoleIIR(newColdTemp, coldTemp, 0.3);
+        //     } else {
+        //         coldTemp = newColdTemp;
+        //     }
+        // }
+
+        ESP_LOGI(tag, "T1: %.2f - T2: %.2f - T3: %.2f - T4: %.2f", sensorTemps[0], sensorTemps[1], sensorTemps[2], sensorTemps[3]);
+
+        ret = xQueueSend(hotSideTempQueue, &sensorTemps[T_refluxHot], 100 / portTICK_PERIOD_MS);
         if (ret == errQUEUE_FULL) {
             ESP_LOGI(tag, "Hot side temp queue full");
         }
 
-        ret = xQueueSend(coldSideTempQueue, &coldTemp, 100);
+        ret = xQueueSend(coldSideTempQueue, &sensorTemps[T_refluxCold], 100 / portTICK_PERIOD_MS);
         if (ret == errQUEUE_FULL) {
             ESP_LOGI(tag, "Cold side temp queue full");
         }
+
+        vTaskDelayUntil(&xLastWakeTime, ctrl_loop_period_ms / portTICK_PERIOD_MS);
     }
 }
 
@@ -99,13 +114,12 @@ void flowmeter_task(void *pvParameters)
         } else {
             flowRate = (float) 1 / (timeVal * 7.5);
         }
-        ret = xQueueSend(flowRateQueue, &flowRate, 100);
+        ret = xQueueSend(flowRateQueue, &flowRate, 100 / portTICK_PERIOD_MS);
         if (ret == errQUEUE_FULL) {
             ESP_LOGI(tag, "Flow rate queue full");
         }
-        vTaskDelayUntil(&xLastWakeTime, 250 / portTICK_PERIOD_MS);     // Run every second
+        vTaskDelayUntil(&xLastWakeTime, ctrl_loop_period_ms / portTICK_PERIOD_MS);     // Run every second
     }
-
 }
 
 static float filter_singlePoleIIR(float x, float y, float alpha)
@@ -147,4 +161,40 @@ static float FIR_filter_lowpass(float x, tempSensor channel)
 void setTempFilter(bool status)
 {
     filterTemp = status;
+}
+
+void readTemps(float sensorTemps[])
+{
+    // for (int i = 0; i < 4; i++) {
+    //     initiateConversion(i);
+    //     vTaskDelay(50 / portTICK_RATE_MS);
+    // }
+
+    // ds18b20_RST_PULSE();
+    if (ds18b20_RST_PULSE()) {
+        ds18b20_send_byte(0xCC);
+        ds18b20_send_byte(0x44);
+        // ret = 1;
+    }
+
+    vTaskDelay(200 / portTICK_RATE_MS);
+
+    for (int i = 0; i < sensorCount; i++) {
+        float T = ds18b20_get_temp(i);
+        if (T != 0) {
+            sensorTemps[i] = T;
+        }
+    }
+}
+
+void checkPowerSupply(void)
+{
+    for (int i = 0; i < 4; i++) {
+        int supply = readPowerSupply(i);
+        if (supply) {
+            ESP_LOGI(tag, "Sensor on channel %d using external power", i);
+        } else {
+            ESP_LOGI(tag, "Sensor on channel %d using parasite power", i);
+        }
+    }
 }

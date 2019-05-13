@@ -1,8 +1,7 @@
 #include <driver/ledc.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
-#define PUMP_PIN 22
+#include "pinDefs.h"
 
 void pwm_init()
 {
@@ -17,7 +16,7 @@ void pwm_init()
     ledc_channel_config_t ledc_channel = {
         .channel    = LEDC_CHANNEL_0,
         .duty       = 0,
-        .gpio_num   = PUMP_PIN,
+        .gpio_num   = REFLUX_PUMP,
         .speed_mode = LEDC_HIGH_SPEED_MODE,
         .timer_sel  = LEDC_TIMER_0
     };

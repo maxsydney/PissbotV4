@@ -7,11 +7,6 @@ xQueueHandle hotSideTempQueue;
 xQueueHandle coldSideTempQueue;
 xQueueHandle flowRateQueue;
 
-typedef enum {
-    coldSideSensor,
-    hotSideSensor
-} tempSensor;
-
 /*
 *   --------------------------------------------------------------------  
 *   temp_sensor_task
@@ -55,5 +50,9 @@ void IRAM_ATTR flowmeter_ISR(void* arg);
 esp_err_t init_timer(void);
 
 void setTempFilter(bool status);
+
+void readTemps(float sensorTemps[]);
+
+void checkPowerSupply(void);
 
 

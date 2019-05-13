@@ -10,13 +10,16 @@
 #include "networking.h"
 #include "main.h"
 #include "gpio.h"
+#include "pinDefs.h"
 
 static char tag[] = "Controller";
 static bool element_status, flushSystem;
-static uint8_t ctrl_loop_period_ms;
+uint16_t ctrl_loop_period_ms;
+static int fanState = 0;
 
-#define SENSOR_MIN_OUTPUT 1350
+#define SENSOR_MIN_OUTPUT 1600
 #define SENSOR_MAX_OUTPUT 8190
+#define FAN_THRESH 30
 
 static Data controllerSettings = {
     .setpoint = 50,
@@ -116,9 +119,13 @@ void control_loop(void* params)
     double coldTemp;
     double last_error = 0;
     double integral = 0;
+    double lastDerivative = 0;
+    float loopPeriodSeconds;
     portTickType xLastWakeTime = xTaskGetTickCount();
+    int speed = 0;
 
     while(1) {
+        loopPeriodSeconds = ctrl_loop_period_ms / 1000;
         if (uxQueueMessagesWaiting(dataQueue)) {
             xQueueReceive(dataQueue, &controllerSettings, 50 / portTICK_PERIOD_MS);
             flash_pin(LED_PIN, 100);
@@ -126,10 +133,15 @@ void control_loop(void* params)
         }
         coldTemp = get_cold_temp();
         hotTemp = get_hot_temp();
+
+        // ESP_LOGI(tag, "T1: %.2f - T2: %.2f", hotTemp, coldTemp);
         
+        checkFan(hotTemp);
         deltaT = hotTemp - coldTemp;
         error =  hotTemp - controllerSettings.setpoint;
         derivative = (error - last_error) / 0.2;
+        derivative = 0.75 * derivative + 0.25 * lastDerivative;
+        lastDerivative = derivative;
         last_error = error;
 
         // Basic strategy to avoid integral windup. Only integrate when output is not saturated
@@ -138,7 +150,7 @@ void control_loop(void* params)
         } else if ((output < SENSOR_MIN_OUTPUT + 1) && (error < 0)) {
             integral += 0;
         } else {
-            integral += error * 0.1;                                      
+            integral += error * ctrl_loop_period_ms / 1000;                                      
         }
                         
         output = controllerSettings.P_gain * error + controllerSettings.D_gain * derivative + controllerSettings.I_gain * integral;
@@ -150,12 +162,14 @@ void control_loop(void* params)
             output = SENSOR_MAX_OUTPUT;
         }
 
+        // ESP_LOGI(tag, "P: %.2f - I: %.2f - D: %.2f", controllerSettings.P_gain * error, controllerSettings.I_gain * integral, controllerSettings.D_gain * derivative);        
+
         if (flushSystem) {
             output = 5000;
         }
 
         set_motor_speed(output);
-        vTaskDelayUntil(&xLastWakeTime, ctrl_loop_period_ms / portTICK_PERIOD_MS);
+        vTaskDelayUntil(&xLastWakeTime, 50 / portTICK_PERIOD_MS);
     }
 }
 
@@ -211,17 +225,29 @@ void setFanState(int state)
 {
     if (state) {
         printf("Switching fan on\n");
-        setPin(FAN_CTRL_PIN, state);
+        setPin(FAN_SWITCH, state);
     } else {
         printf("Switching fan off\n");
-        setPin(FAN_CTRL_PIN, state);
+        setPin(FAN_SWITCH, state);
     }
+    fanState = state;
 }
 
 void setFlush(bool state)
 {
     printf("setFlush called with state %d\n", state);
     flushSystem = state;
+}
+
+void checkFan(double T1)
+{
+    if (T1 > FAN_THRESH && !fanState) {
+        setPin(FAN_SWITCH, 1);
+        fanState = 1;
+    } else if (T1 <= fanState) {
+        setPin(FAN_SWITCH, 0);
+        fanState = 0;
+    }
 }
 
 

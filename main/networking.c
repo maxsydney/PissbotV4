@@ -62,8 +62,6 @@ void wifi_connect(void)
     esp_wifi_connect();
 }
 
-
-
 void uart_initialize(void)
 {
     uart_config_t uart_config = {

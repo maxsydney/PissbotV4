@@ -8,10 +8,13 @@
 #include "ds18b20.h"
 #include "networking.h"
 #include "controller.h"
+#include "ota.h"
 
 #define MAX_LINE_LEN 40
 #define MAX_KEY_LEN 10
 #define MAX_VALUE_LEN 5
+
+static char tag[] = "Messages";
 
 Message* parseMessage(char* dataPacket, uint32_t len)
 {
@@ -137,6 +140,11 @@ esp_err_t decodeCommand(char* commandPacket)
     } else if (strncmp(command, "filterT", 128) == 0) {
         bool state = atof(arg);
         setTempFilter(state);
+    } else if (strncmp(command, "OTA", 16) == 0) {
+        printf("Received OTA message");
+        xTaskCreate(&ota_update_task, "ota_update_task", 8192, NULL, 5, NULL);
+    } else {
+        ESP_LOGE(tag, "Unrecognised command");
     }
     return ESP_OK;
 }

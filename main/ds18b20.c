@@ -18,12 +18,18 @@
 #include "driver/gpio.h"
 #include "rom/ets_sys.h"
 #include "ds18b20.h"
+#include <esp_err.h>
+#include <esp_log.h>
 #include "string.h"
+#include "main.h"
+
+static const char* tag = "ds18b20";
 
 int DS_GPIO;
 int init = 0;
+int sensorCount;
 
-char Ds18B20_Addresses[2][8];
+char Ds18B20_Addresses[5][8];
 
 static unsigned char dscrc_table[] = {
         0, 94,188,226, 97, 63,221,131,194,156,126, 32,163,253, 31, 65,
@@ -59,8 +65,10 @@ void ds18b20_init(int GPIO)
   init=1;
   printf("Beginning search routine\n");
   doSearch();
-  ds18b20_set_resolution(Ds18B20_Addresses[0], 9);
-  ds18b20_set_resolution(Ds18B20_Addresses[1], 9);
+  ds18b20_set_resolution(Ds18B20_Addresses[0], 10);
+  ds18b20_set_resolution(Ds18B20_Addresses[1], 10);
+  ds18b20_set_resolution(Ds18B20_Addresses[2], 10);
+  ds18b20_set_resolution(Ds18B20_Addresses[3], 10);
 }
 
 /// Sends one bit to bus
@@ -82,12 +90,12 @@ unsigned char ds18b20_read(void)
     unsigned char bit = 0;
     gpio_set_direction(DS_GPIO, GPIO_MODE_OUTPUT);
     gpio_set_level(DS_GPIO,0);
-    ets_delay_us(6);
-    gpio_set_level(DS_GPIO,1);
-    ets_delay_us(15);
+    ets_delay_us(1);
+    // gpio_set_level(DS_GPIO,1);
     gpio_set_direction(DS_GPIO, GPIO_MODE_INPUT);
+    ets_delay_us(15);
     bit = gpio_get_level(DS_GPIO);
-    ets_delay_us(55);
+    ets_delay_us(15);
     return(bit);
 }
 
@@ -126,9 +134,9 @@ unsigned char ds18b20_RST_PULSE(void)
     gpio_set_direction(DS_GPIO, GPIO_MODE_INPUT);
     ets_delay_us(70);
     if(gpio_get_level(DS_GPIO) == 0) {
-        PRESENCE=1;
+        PRESENCE = 1;
     } else {
-        PRESENCE=0;
+        PRESENCE = 0;
     }
     ets_delay_us(405);
     return PRESENCE;
@@ -150,11 +158,23 @@ esp_err_t ds18b20_set_resolution(char* addr, int res)
     }
 
     if (ds18b20_get_resolution(addr) == res) {
+        ESP_LOGI(tag, "Resolution sucessfully set to %d bits", res);
         return ESP_OK;
     } else {
+        ESP_LOGE(tag, "Resolution failed to set to %d bits", res);
         return ESP_FAIL;
     }
-    
+}
+
+int readPowerSupply(tempSensor sens)
+{
+    char ret = 0;
+    char* addr = Ds18B20_Addresses[sens];
+    if (selectSensor(addr)) {
+        ds18b20_send_byte(0xB4);
+        ret = ds18b20_read_byte();
+    } 
+    return ret;
 }
 
 int ds18b20_get_resolution(char* addr)
@@ -191,38 +211,56 @@ static bool selectSensor(char* addr)
     return false;
 }
 
+int initiateConversion(tempSensor sens)
+{
+    char* addr = Ds18B20_Addresses[sens];
+    int ret = 0;
+    ds18b20_RST_PULSE();
+    if (selectSensor(addr)) {
+        ds18b20_send_byte(0x44);
+        ret = 1;
+    }
+    return ret;
+}
+
 // Returns temperature from sensor
-float ds18b20_get_temp(int index) {
-    char* addr = Ds18B20_Addresses[index];
+float ds18b20_get_temp(tempSensor sens) 
+{
+    char* addr = Ds18B20_Addresses[sens];
+    char dataBuffer[8];
     char crc = 0x00;
     unsigned char check;
     char temp1, temp2;
     float temp = 0;
-    check = selectSensor(addr);
+    check = ds18b20_RST_PULSE();
 
-    if(check == 1) {
-        ds18b20_send_byte(0x44);
-        vTaskDelay(200 / portTICK_RATE_MS);
+    if (check == 1) {
 
         selectSensor(addr);
         ds18b20_send_byte(0xBE);
-        temp1 = ds18b20_read_byte();
-        temp2 = ds18b20_read_byte();
-        crc = _crc_ibutton_update(crc, temp1);
-        crc = _crc_ibutton_update(crc, temp2);
-        for (int i = 0; i < 6; i++) {
+
+        for (int i = 0; i < 8; i++) {
             uint8_t newByte = (uint8_t) ds18b20_read_byte();
             crc = _crc_ibutton_update(crc, newByte);
+            dataBuffer[i] = newByte;
         }
-        char sensor_crc = ds18b20_read_byte();
 
+        char sensor_crc = ds18b20_read_byte();
+        
         if (crc == sensor_crc) {
-            temp = (float) (temp1 | temp2 << 8) * 0.0625;
+            temp = (float) (dataBuffer[0] | dataBuffer[1] << 8) * 0.0625;
             return temp;
         } else {
+            ESP_LOGE(tag, "CRC failed on channel %d", sens);
+            ESP_LOGE(tag, "Failed data read from sensor: (%02X - %02X)", crc, sensor_crc);
+            for (int i = 0; i < 8; i++) {
+                printf("0x%02X ", dataBuffer[i]);
+            }
+            printf("\n");
             return 0;
         }
     } else {
+        ESP_LOGE(tag, "Sensor failed to respond on channel %d", sens);
         return 0;
     }
 }
@@ -415,6 +453,9 @@ void doSearch(void)
         rslt = OWNext();
         addrIndex++;
     }
+
+    printf("Found %d devices on OneWire bus\n", addrIndex);
+    sensorCount = addrIndex;
 }
 
 void swapTempSensors(void)
