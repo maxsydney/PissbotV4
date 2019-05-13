@@ -13,7 +13,7 @@
 #include "pinDefs.h"
 
 static char tag[] = "Controller";
-static bool element_status, flushSystem;
+static bool element_status = 0, flushSystem = 0;
 uint16_t ctrl_loop_period_ms;
 static int fanState = 0;
 
@@ -21,12 +21,7 @@ static int fanState = 0;
 #define SENSOR_MAX_OUTPUT 8190
 #define FAN_THRESH 30
 
-static Data controllerSettings = {
-    .setpoint = 50,
-    .P_gain = 45,
-    .I_gain = 10,
-    .D_gain = 300 
-};
+static Data controllerSettings;
 
 esp_err_t controller_init(uint8_t frequency)
 {
@@ -186,7 +181,7 @@ float get_hot_temp(void)
 
 float get_cold_temp(void)
 {
-    static float temp;
+    static float temp = 0;
     float new_temp;
     if (xQueueReceive(coldSideTempQueue, &new_temp, 50 / portTICK_PERIOD_MS)) {
         temp = new_temp;
@@ -244,7 +239,7 @@ void checkFan(double T1)
     if (T1 > FAN_THRESH && !fanState) {
         setPin(FAN_SWITCH, 1);
         fanState = 1;
-    } else if (T1 <= fanState) {
+    } else if (T1 <= FAN_THRESH) {
         setPin(FAN_SWITCH, 0);
         fanState = 0;
     }

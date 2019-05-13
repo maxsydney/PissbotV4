@@ -27,6 +27,9 @@
 #include <math.h>
 #include "esp_spiffs.h"
 #include "controller.h"
+#include "messages.h"
+#include "networking.h"
+
 
 #define LED_PIN 2
 #define GPIO_HIGH   1
@@ -50,13 +53,16 @@ xTaskHandle socketSendHandle;
 void websocket_task(void *pvParameters) 
 {
     Websock *ws = (Websock*) pvParameters;
-    char buff[40];
+    char buff[128];
     int count = 0;
-    float hotTemp = 0, coldTemp = 0;
+    float hotTemp, coldTemp;
+    Data ctrlSet;
+
     while (true) {
         hotTemp = get_hot_temp();
         coldTemp = get_cold_temp();
-        sprintf(buff, "[%f, %f, %d, %d]", hotTemp, coldTemp, 20, count);
+        ctrlSet = get_controller_settings();
+        sprintf(buff, "[%f, %f, %f, %d, 0, 0, %f, %f, %f]", hotTemp, coldTemp, ctrlSet.setpoint, count, ctrlSet.P_gain, ctrlSet.I_gain, ctrlSet.D_gain);
         count++;
 
         if ((!checkWebsocketActive(ws))) {
@@ -80,17 +86,19 @@ static bool checkWebsocketActive(Websock* ws)
 }
 
 static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
-	int i;
-	char buff[128];
-	sprintf(buff, "You sent: ");
-	for (i=0; i<len; i++) buff[i+10]=data[i];
-	buff[i+10]=0;
-    if (!checkWebsocketActive(ws)) {
-        ESP_LOGE(tag, "Trying to respond to dead handle");
-        return;
+    char *msg = strtok(data, "\n");
+    ESP_LOGI(tag, "Received msg: %s", msg);
+	char* header = strtok(msg, "&");
+    char* message = strtok(NULL, "&");
+    if (strncmp(header, "INFO", 4) == 0) {       // New data packet received
+        ESP_LOGI(tag, "Received INFO message\n");
+        Data* data = decode_data(message);
+        write_nvs(data);
+        xQueueSend(dataQueue, data, 50);
+        free(data);
+    } else if (strncmp(header, "CMD", 3) == 0) {
+        decodeCommand(message);
     }
-	cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
-	                 ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
 }
 
 static void myWebsocketConnect(Websock *ws) {
