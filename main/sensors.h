@@ -3,6 +3,7 @@
 #include "freertos/queue.h"
 
 // Expose queue handles for passing data between tasks
+xQueueHandle tempQueue;
 xQueueHandle hotSideTempQueue;
 xQueueHandle coldSideTempQueue;
 xQueueHandle flowRateQueue;

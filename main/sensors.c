@@ -16,8 +16,6 @@
 static const char* tag = "Sensors";
 
 static volatile double timeVal;
-static float filter_singlePoleIIR(float x, float y, float alpha);
-static float FIR_filter_lowpass(float x, tempSensor channel);
 
 const float FIRcoeff[5] = {0.02840647, 0.23700821, 0.46917063, 0.23700821, 0.02840647};
 static float sensorBuffer[2][9];
@@ -27,9 +25,11 @@ esp_err_t sensor_init(uint8_t ds_pin)
 {
     ds18b20_init(ds_pin);
     filterTemp = false;
+    tempQueue = xQueueCreate(10, sizeof(float[5]));
     hotSideTempQueue = xQueueCreate(10, sizeof(float));
     coldSideTempQueue = xQueueCreate(10, sizeof(float));
     flowRateQueue = xQueueCreate(10, sizeof(float));
+
     checkPowerSupply();
     return ESP_OK;
 }
@@ -50,52 +50,17 @@ esp_err_t init_timer(void)
 
 void temp_sensor_task(void *pvParameters) 
 {
-    float hotTemp = 5;
-    float coldTemp = 5;
-    float newHotTemp, newColdTemp;
     float sensorTemps[5] = {0};
-    // static int init = 1;
-    // if (init) {
-    //     sensor_init(ONEWIRE_BUS);
-    //     init = 0;
-    // }
     portTickType xLastWakeTime = xTaskGetTickCount();
     BaseType_t ret;
+
     while (1) 
     {
-        // newHotTemp = ds18b20_get_temp(T_refluxHot);
-        // newColdTemp = ds18b20_get_temp(T_refluxCold);
-
         readTemps(sensorTemps);
-
-        // if (newHotTemp != 0) {
-        //     if (filterTemp) {
-        //         hotTemp = FIR_filter_lowpass(newHotTemp, T_refluxHot);
-        //     } else {
-        //         hotTemp = newHotTemp;
-        //     } 
-        // }
-
-        // if (newColdTemp != 0) {
-        //     if (filterTemp) {
-        //         coldTemp = filter_singlePoleIIR(newColdTemp, coldTemp, 0.3);
-        //     } else {
-        //         coldTemp = newColdTemp;
-        //     }
-        // }
-
-        ESP_LOGI(tag, "T1: %.2f - T2: %.2f - T3: %.2f - T4: %.2f", sensorTemps[0], sensorTemps[1], sensorTemps[2], sensorTemps[3]);
-
-        ret = xQueueSend(hotSideTempQueue, &sensorTemps[T_refluxHot], 100 / portTICK_PERIOD_MS);
+        ret = xQueueSend(tempQueue, sensorTemps, 100 / portTICK_PERIOD_MS); 
         if (ret == errQUEUE_FULL) {
-            ESP_LOGI(tag, "Hot side temp queue full");
+            ESP_LOGI(tag, "Flow rate queue full");
         }
-
-        ret = xQueueSend(coldSideTempQueue, &sensorTemps[T_refluxCold], 100 / portTICK_PERIOD_MS);
-        if (ret == errQUEUE_FULL) {
-            ESP_LOGI(tag, "Cold side temp queue full");
-        }
-
         vTaskDelayUntil(&xLastWakeTime, ctrl_loop_period_ms / portTICK_PERIOD_MS);
     }
 }
@@ -122,40 +87,12 @@ void flowmeter_task(void *pvParameters)
     }
 }
 
-static float filter_singlePoleIIR(float x, float y, float alpha)
-{
-    return alpha * x + (1 - alpha) * y; 
-}
-
 void IRAM_ATTR flowmeter_ISR(void* arg)
 {
     double timeTemp;
     timer_get_counter_time_sec(TIMER_GROUP_0, TIMER_0, &timeTemp);
     timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0x00000000ULL);
     timeVal = timeTemp;
-}
-
-static float FIR_filter_lowpass(float x, tempSensor channel)
-{
-    static float data[2][5] = {0};
-    static int arrPtr[2] = {0};
-    int j = arrPtr[channel]++;
-    float output = 0;
-
-    data[channel][j] = x;
-
-    for (int i = 4; i >= 0; i--) {
-        output += data[channel][j--] * FIRcoeff[i];
-        if (j < 0) {
-            j = 4;
-        }
-    }
-
-    if (arrPtr[channel] > 4) {
-        arrPtr[channel] = 0;
-    }
-
-    return output;
 }
 
 void setTempFilter(bool status)
@@ -165,18 +102,7 @@ void setTempFilter(bool status)
 
 void readTemps(float sensorTemps[])
 {
-    // for (int i = 0; i < 4; i++) {
-    //     initiateConversion(i);
-    //     vTaskDelay(50 / portTICK_RATE_MS);
-    // }
-
-    // ds18b20_RST_PULSE();
-    if (ds18b20_RST_PULSE()) {
-        ds18b20_send_byte(0xCC);
-        ds18b20_send_byte(0x44);
-        // ret = 1;
-    }
-
+    initiateConversion();
     vTaskDelay(200 / portTICK_RATE_MS);
 
     for (int i = 0; i < sensorCount; i++) {

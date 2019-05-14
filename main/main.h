@@ -15,7 +15,8 @@ typedef enum {
     T_refluxCold,
     T_productHot,
     T_productCold,
-    T_boiler
+    T_boiler,
+    n_tempSensors
 } tempSensor;
 
 xQueueHandle queue;

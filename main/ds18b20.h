@@ -35,6 +35,6 @@ unsigned char docrc8(unsigned char value);
 void doSearch(void);
 void swapTempSensors(void);
 int readPowerSupply(tempSensor sens);
-int initiateConversion(tempSensor sens);
+int initiateConversion(void);
 
 #endif

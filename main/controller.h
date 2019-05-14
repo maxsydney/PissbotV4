@@ -19,21 +19,12 @@ typedef struct {
 
 /*
 *   --------------------------------------------------------------------  
-*   get_hot_temp
+*   getTemperatures
 *   --------------------------------------------------------------------
-*   Returns the most recent temperature reasing from the distiller
-*   outflow temperature probe 
+*   Retrieves the most recently read temperatures and writes them into
+*   tempArray
 */
-float get_hot_temp(void);
-
-/*
-*   --------------------------------------------------------------------  
-*   get_cold_temp
-*   --------------------------------------------------------------------
-*   Returns the most recent temperature reasing from the radiator
-*   outflow temperature probe 
-*/
-float get_cold_temp(void);
+esp_err_t getTemperatures(float tempArray[]);
 
 /*
 *   --------------------------------------------------------------------  

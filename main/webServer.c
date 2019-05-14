@@ -54,21 +54,22 @@ void websocket_task(void *pvParameters)
 {
     Websock *ws = (Websock*) pvParameters;
     char buff[128];
-    int count = 0;
     float hotTemp, coldTemp;
     Data ctrlSet;
+    int64_t uptime_uS;
 
     while (true) {
         hotTemp = get_hot_temp();
         coldTemp = get_cold_temp();
         ctrlSet = get_controller_settings();
-        sprintf(buff, "[%f, %f, %f, %d, 0, 0, %f, %f, %f]", hotTemp, coldTemp, ctrlSet.setpoint, count, ctrlSet.P_gain, ctrlSet.I_gain, ctrlSet.D_gain);
-        count++;
+        uptime_uS = esp_timer_get_time() / 1000000;
+        sprintf(buff, "[%f, %f, %f, %lld, 0, 0, %f, %f, %f]", hotTemp, coldTemp, ctrlSet.setpoint, uptime_uS, ctrlSet.P_gain, ctrlSet.I_gain, ctrlSet.D_gain);
 
         if ((!checkWebsocketActive(ws))) {
             ESP_LOGE(tag, "Deleting send task");
             vTaskDelete(socketSendHandle);
         }
+
         cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
 	                 ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
         vTaskDelay(250 / portTICK_PERIOD_MS);

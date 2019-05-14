@@ -110,14 +110,12 @@ void nvs_initialize(void)
 void control_loop(void* params)
 {
     static double output;
-    double hotTemp, deltaT, error, derivative;
-    double coldTemp;
+    double error, derivative;
     double last_error = 0;
     double integral = 0;
-    double lastDerivative = 0;
+    float temperatures[n_tempSensors] = {0};
     float loopPeriodSeconds;
     portTickType xLastWakeTime = xTaskGetTickCount();
-    int speed = 0;
 
     while(1) {
         loopPeriodSeconds = ctrl_loop_period_ms / 1000;
@@ -126,17 +124,12 @@ void control_loop(void* params)
             flash_pin(LED_PIN, 100);
             ESP_LOGI(tag, "%s\n", "Received data from queue");
         }
-        coldTemp = get_cold_temp();
-        hotTemp = get_hot_temp();
-
-        // ESP_LOGI(tag, "T1: %.2f - T2: %.2f", hotTemp, coldTemp);
         
-        checkFan(hotTemp);
-        deltaT = hotTemp - coldTemp;
-        error =  hotTemp - controllerSettings.setpoint;
+        getTemperatures(temperatures);
+        
+        checkFan(temperatures[T_refluxHot]);
+        error =  temperatures[T_refluxHot] - controllerSettings.setpoint;
         derivative = (error - last_error) / 0.2;
-        derivative = 0.75 * derivative + 0.25 * lastDerivative;
-        lastDerivative = derivative;
         last_error = error;
 
         // Basic strategy to avoid integral windup. Only integrate when output is not saturated
@@ -156,38 +149,24 @@ void control_loop(void* params)
         } else if (output > SENSOR_MAX_OUTPUT) {
             output = SENSOR_MAX_OUTPUT;
         }
-
-        // ESP_LOGI(tag, "P: %.2f - I: %.2f - D: %.2f", controllerSettings.P_gain * error, controllerSettings.I_gain * integral, controllerSettings.D_gain * derivative);        
+       
 
         if (flushSystem) {
             output = 5000;
         }
 
         set_motor_speed(output);
-        vTaskDelayUntil(&xLastWakeTime, 50 / portTICK_PERIOD_MS);
+        vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
     }
 }
 
-float get_hot_temp(void)
+esp_err_t getTemperatures(float tempArray[])
 {
-    static float temp;
-    float new_temp;
-    if (xQueueReceive(hotSideTempQueue, &new_temp, 50 / portTICK_PERIOD_MS)) {
-        temp = new_temp; 
+    if (xQueueReceive(tempQueue, tempArray, 50 / portTICK_PERIOD_MS)) {
+        return ESP_OK;
     }
 
-    return temp;
-}
-
-float get_cold_temp(void)
-{
-    static float temp = 0;
-    float new_temp;
-    if (xQueueReceive(coldSideTempQueue, &new_temp, 50 / portTICK_PERIOD_MS)) {
-        temp = new_temp;
-    }
-
-    return temp;
+    return ESP_ERR_NOT_FOUND;
 }
 
 float get_flowRate(void)

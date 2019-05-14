@@ -211,12 +211,11 @@ static bool selectSensor(char* addr)
     return false;
 }
 
-int initiateConversion(tempSensor sens)
+int initiateConversion(void)
 {
-    char* addr = Ds18B20_Addresses[sens];
     int ret = 0;
-    ds18b20_RST_PULSE();
-    if (selectSensor(addr)) {
+    if (ds18b20_RST_PULSE()) {
+        ds18b20_send_byte(0xCC);
         ds18b20_send_byte(0x44);
         ret = 1;
     }
@@ -230,7 +229,6 @@ float ds18b20_get_temp(tempSensor sens)
     char dataBuffer[8];
     char crc = 0x00;
     unsigned char check;
-    char temp1, temp2;
     float temp = 0;
     check = ds18b20_RST_PULSE();
 
