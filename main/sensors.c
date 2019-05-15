@@ -26,8 +26,6 @@ esp_err_t sensor_init(uint8_t ds_pin)
     ds18b20_init(ds_pin);
     filterTemp = false;
     tempQueue = xQueueCreate(10, sizeof(float[5]));
-    hotSideTempQueue = xQueueCreate(10, sizeof(float));
-    coldSideTempQueue = xQueueCreate(10, sizeof(float));
     flowRateQueue = xQueueCreate(10, sizeof(float));
 
     checkPowerSupply();
@@ -57,11 +55,13 @@ void temp_sensor_task(void *pvParameters)
     while (1) 
     {
         readTemps(sensorTemps);
-        ret = xQueueSend(tempQueue, sensorTemps, 100 / portTICK_PERIOD_MS); 
+        ret = xQueueSend(tempQueue, sensorTemps, 100 / portTICK_PERIOD_MS);
         if (ret == errQUEUE_FULL) {
             ESP_LOGI(tag, "Flow rate queue full");
+        } else {
+            ESP_LOGI(tag, "Sent message: %d in queue", uxQueueMessagesWaiting(tempQueue));
         }
-        vTaskDelayUntil(&xLastWakeTime, ctrl_loop_period_ms / portTICK_PERIOD_MS);
+        vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
     }
 }
 

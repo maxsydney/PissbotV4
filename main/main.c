@@ -38,7 +38,7 @@ void app_main()
 
 
     // xTaskCreatePinnedToCore(&websocket_task, "webServer", 2048, NULL, 3, NULL, 0);
-    xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 2048, NULL, 7, NULL, 1);
+    xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 4096, NULL, 7, NULL, 1);
     xTaskCreatePinnedToCore(&control_loop, "Controller", 2048, NULL, 6, NULL, 0);
     // xTaskCreate(&sendDataUART, "UART send", 2048, NULL, 6, NULL);
     // xTaskCreate(&recvDataUART, "UART receive", 2048, NULL, 6, NULL);

@@ -11,6 +11,8 @@
 #include "main.h"
 #include "gpio.h"
 #include "pinDefs.h"
+#include <stdlib.h>
+#include <string.h>
 
 static char tag[] = "Controller";
 static bool element_status = 0, flushSystem = 0;
@@ -162,10 +164,15 @@ void control_loop(void* params)
 
 esp_err_t getTemperatures(float tempArray[])
 {
-    if (xQueueReceive(tempQueue, tempArray, 50 / portTICK_PERIOD_MS)) {
+    static float temperatures[n_tempSensors] = {0};
+    if (xQueueReceive(tempQueue, temperatures, 100 / portTICK_PERIOD_MS)) {
+        memcpy(tempArray, temperatures, n_tempSensors * sizeof(float));
         return ESP_OK;
+    } else {
+        ESP_LOGE(tag, "Unable to read temperatures from queue (%d) in queue", uxQueueMessagesWaiting(tempQueue));
     }
 
+    memcpy(tempArray, temperatures, n_tempSensors * sizeof(float));     // If no new temps in queue, copy most recent reading
     return ESP_ERR_NOT_FOUND;
 }
 

@@ -19,22 +19,139 @@ int sensorCount;
 
 #include "main.h"
 
+/*
+*   --------------------------------------------------------------------  
+*   ds18b20_send
+*   --------------------------------------------------------------------
+*   Sends one bit to the oneWire bus
+*/
 void ds18b20_send(char bit);
+
+/*
+*   --------------------------------------------------------------------  
+*   ds18b20_read
+*   --------------------------------------------------------------------
+*   Reads one bit from the oneWire bus
+*/
 unsigned char ds18b20_read(void);
+
+/*
+*   --------------------------------------------------------------------  
+*   ds18b20_send_byte
+*   --------------------------------------------------------------------
+*   Sends one byte to the oneWire bus
+*/
 void ds18b20_send_byte(char data);
+
+/*
+*   --------------------------------------------------------------------  
+*   ds18b20_read_byte
+*   --------------------------------------------------------------------
+*   Reads one byte from the oneWire bus
+*
+*   RETURNS:
+*       Byte read from bus
+*/
 unsigned char ds18b20_read_byte(void);
+
+/*
+*   --------------------------------------------------------------------  
+*   ds18b20_RST_PULSE
+*   --------------------------------------------------------------------
+*   Sends a reset pulse signal to the oneWire bus
+*
+*   RETURNS:
+*       Success/failure
+*/
 unsigned char ds18b20_RST_PULSE(void);
+
+/*
+*   --------------------------------------------------------------------  
+*   ds18b20_get_temp
+*   --------------------------------------------------------------------
+*   Retrieves the temperature from a single sensor on the oneWire bus
+*   
+*   INPUTS:
+*       sens - index of the sensor to request temperature from
+*
+*   RETURNS:
+*       Temperature in degrees celsius
+*/
 float ds18b20_get_temp(tempSensor sens);
+
+/*
+*   --------------------------------------------------------------------  
+*   ds18b20_init
+*   --------------------------------------------------------------------
+*   Initialises the oneWire bus. Searches the bus for all avalilable
+*   sensors and stores addresses (up to 5 sensors). Sets the 
+*   resolution for all discovered sensors to 10 bit
+*   
+*   INPUTS:
+*       GPIO - pin to intialise oneWire bus on
+*/
 void ds18b20_init(int GPIO);
+
+/*
+*   --------------------------------------------------------------------  
+*   ds18b20_set_resolution
+*   --------------------------------------------------------------------
+*   Sets the resolution for a sensor
+*   
+*   INPUTS:
+*       addr - Address of sensor to set resolution
+*       res  - Resolution (9, 10, 11, 12 bits)
+*
+*   RETURNS:
+*       Sucess/failure
+*/
 esp_err_t ds18b20_set_resolution(char* addr, int res);
+
+/*
+*   --------------------------------------------------------------------  
+*   ds18b20_get_resolution
+*   --------------------------------------------------------------------
+*   Retrieves the resolution for a sensor
+*   
+*   INPUTS:
+*       addr - Sensor address
+*
+*   RETURNS:
+*       Sensor resolution in bits
+*/
 int ds18b20_get_resolution(char* addr);
-int OWFirst();
-int OWNext();
-int OWSearch();
-unsigned char docrc8(unsigned char value);
-void doSearch(void);
+
+/*
+*   --------------------------------------------------------------------  
+*   swapTempSensors
+*   --------------------------------------------------------------------
+*   Swaps the refluxHot/refluxCold sensors
+*/
 void swapTempSensors(void);
+
+/*
+*   --------------------------------------------------------------------  
+*   readPowerSupply
+*   --------------------------------------------------------------------
+*   Reads the power supply mode of a sensor (parasitic, external)
+*   
+*   INPUTS:
+*       sens - Sensor ID
+*
+*   RETURNS:
+*       Sensor power mode
+*/
 int readPowerSupply(tempSensor sens);
+
+/*
+*   --------------------------------------------------------------------  
+*   initiateConversion
+*   --------------------------------------------------------------------
+*   Initiates temperature conversion for all sensors on bus
+*   
+*   RETURNS:
+*       Sucess/failure
+*/
 int initiateConversion(void);
 
 #endif

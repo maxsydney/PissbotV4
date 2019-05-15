@@ -29,6 +29,7 @@
 #include "controller.h"
 #include "messages.h"
 #include "networking.h"
+#include "main.h"
 
 
 #define LED_PIN 2
@@ -53,17 +54,17 @@ xTaskHandle socketSendHandle;
 void websocket_task(void *pvParameters) 
 {
     Websock *ws = (Websock*) pvParameters;
+    float temps[n_tempSensors] = {0};
     char buff[128];
-    float hotTemp, coldTemp;
     Data ctrlSet;
     int64_t uptime_uS;
 
     while (true) {
-        hotTemp = get_hot_temp();
-        coldTemp = get_cold_temp();
+        getTemperatures(temps);
+        ESP_LOGI(tag, "Stack available: %d", uxTaskGetStackHighWaterMark(NULL));
         ctrlSet = get_controller_settings();
         uptime_uS = esp_timer_get_time() / 1000000;
-        sprintf(buff, "[%f, %f, %f, %lld, 0, 0, %f, %f, %f]", hotTemp, coldTemp, ctrlSet.setpoint, uptime_uS, ctrlSet.P_gain, ctrlSet.I_gain, ctrlSet.D_gain);
+        sprintf(buff, "[%f, %f, %f, %lld, 0, 0, %f, %f, %f]", temps[T_refluxHot], temps[T_refluxCold], ctrlSet.setpoint, uptime_uS, ctrlSet.P_gain, ctrlSet.I_gain, ctrlSet.D_gain);
 
         if ((!checkWebsocketActive(ws))) {
             ESP_LOGE(tag, "Deleting send task");
@@ -105,7 +106,7 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
 static void myWebsocketConnect(Websock *ws) {
 	ws->recvCb=myWebsocketRecv;
     ESP_LOGI(tag, "Socket connected!!\n");
-    xTaskCreatePinnedToCore(&websocket_task, "webServer", 2048, ws, 3, &socketSendHandle, 0);
+    xTaskCreatePinnedToCore(&websocket_task, "webServer", 4096, ws, 3, &socketSendHandle, 0);
 }
 
 HttpdBuiltInUrl builtInUrls[]={

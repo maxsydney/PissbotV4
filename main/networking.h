@@ -46,20 +46,6 @@ void socket_server_task(void* params);
 */
 void uart_initialize(void);
 
-/*
-*   --------------------------------------------------------------------  
-*   sendDataUART
-*   --------------------------------------------------------------------
-*   Main task to handle sending data to webserver
-*/
-void sendDataUART(void* param);
-
-/*
-*   --------------------------------------------------------------------  
-*   recvDataUART
-*   --------------------------------------------------------------------
-*   Main task to receive commands from web interface
-*/
-void recvDataUART(void* param);
-
 void write_nvs(Data* data);
+
+void start_mdns_service(void);

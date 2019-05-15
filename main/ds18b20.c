@@ -25,6 +25,14 @@
 
 static const char* tag = "ds18b20";
 
+static int OWFirst();
+static int OWNext();
+static int OWSearch();
+static unsigned char docrc8(unsigned char value);
+static void doSearch(void);
+static uint8_t _crc_ibutton_update(uint8_t crc, uint8_t data);
+static bool selectSensor(char* addr);
+
 int DS_GPIO;
 int init = 0;
 int sensorCount;
@@ -54,9 +62,6 @@ int LastDiscrepancy;
 int LastFamilyDiscrepancy;
 int LastDeviceFlag;
 unsigned char crc8;
-
-static uint8_t _crc_ibutton_update(uint8_t crc, uint8_t data);
-static bool selectSensor(char* addr);
 
 void ds18b20_init(int GPIO)
 {
@@ -284,7 +289,7 @@ static uint8_t _crc_ibutton_update(uint8_t crc, uint8_t data)
 // Return TRUE  : device found, ROM number in ROM_NO buffer
 //        FALSE : no device present
 //
-int OWFirst()
+static int OWFirst()
 {
    // reset the search state
    LastDiscrepancy = 0;
@@ -299,7 +304,7 @@ int OWFirst()
 // Return TRUE  : device found, ROM number in ROM_NO buffer
 //        FALSE : device not found, end of search
 //
-int OWNext()
+static int OWNext()
 {
    // leave the search state alone
    return OWSearch();
@@ -311,7 +316,7 @@ int OWNext()
 // Return TRUE  : device found, ROM number in ROM_NO buffer
 //        FALSE : device not found, end of search
 //
-int OWSearch()
+static int OWSearch()
 {
     int id_bit_number;
     int last_zero, rom_byte_number, search_result;
@@ -427,14 +432,14 @@ int OWSearch()
    return search_result;
 }
 
-unsigned char docrc8(unsigned char value)
+static unsigned char docrc8(unsigned char value)
 {
    // See Application Note 27
    crc8 = dscrc_table[crc8 ^ value];
    return crc8;
 }
 
-void doSearch(void)
+static void doSearch(void)
 {
     int addrIndex = 0;
     bool rslt = OWFirst();
