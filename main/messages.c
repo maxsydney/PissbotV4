@@ -70,8 +70,6 @@ Message* processPair(char* pair)
     return message;
 }
 
-
-
 void printMessages(Message* head)
 {
 	while (head) {
@@ -129,9 +127,7 @@ esp_err_t decodeCommand(char* commandPacket)
     char* arg = strtok(NULL, "&\n");
     printf("Command: %s\nArg: %s\n", command, arg);
 
-    if (strncmp(command, "swapTempSensors", 128) == 0) {
-        swapTempSensors();
-    } else if (strncmp(command, "fanState", 128) == 0) {
+    if (strncmp(command, "fanState", 128) == 0) {
         bool state = atof(arg);
         setFanState(state);
     } else if (strncmp(command, "flush", 128) == 0) {

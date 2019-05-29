@@ -64,15 +64,26 @@ void websocket_task(void *pvParameters)
         ESP_LOGI(tag, "Stack available: %d", uxTaskGetStackHighWaterMark(NULL));
         ctrlSet = get_controller_settings();
         uptime_uS = esp_timer_get_time() / 1000000;
-        sprintf(buff, "[%f, %f, %f, %lld, 0, 0, %f, %f, %f]", temps[T_refluxHot], temps[T_refluxCold], ctrlSet.setpoint, uptime_uS, ctrlSet.P_gain, ctrlSet.I_gain, ctrlSet.D_gain);
+        sprintf(buff, "[%f, %f, %f, %f, %f, %f, %lld, 0, 0, %f, %f, %f]", temps[T_refluxHot], 
+                                                                          temps[T_refluxCold],
+                                                                          temps[T_productHot],
+                                                                          temps[T_productCold],
+                                                                          temps[T_boiler],
+                                                                          ctrlSet.setpoint, 
+                                                                          uptime_uS, 
+                                                                          ctrlSet.P_gain, 
+                                                                          ctrlSet.I_gain, 
+                                                                          ctrlSet.D_gain);
 
         if ((!checkWebsocketActive(ws))) {
             ESP_LOGE(tag, "Deleting send task");
-            vTaskDelete(socketSendHandle);
+            vTaskDelete(NULL);
+        } else {
+            ESP_LOGI(tag, "Sending on socket: %p", ws);
+            cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
+                        ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
         }
 
-        cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
-	                 ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
         vTaskDelay(250 / portTICK_PERIOD_MS);
     }
 }
@@ -81,7 +92,14 @@ static bool checkWebsocketActive(Websock* ws)
 {
     bool active = true;
     
-    if (ws->conn->isConnectionClosed) {
+    printf("WS: %p\n", ws);
+    printf("Conn: %p\n", ws->conn);
+    if (ws->conn == 0x0) {
+        ESP_LOGE(tag, "Closing connection");
+        active = false;
+    } else if (ws->conn->isConnectionClosed) {
+        // This check is not redundant, if conn = 0x00 then this check causes panic handler to be invoked
+        ESP_LOGE(tag, "Closing connection");
         active = false;
     }
     return active;

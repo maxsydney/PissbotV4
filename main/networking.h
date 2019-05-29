@@ -30,15 +30,6 @@ esp_err_t WiFi_event_handler(void *ctx, system_event_t *event);
 
 /*
 *   --------------------------------------------------------------------  
-*   socket_server_task
-*   --------------------------------------------------------------------
-*   Main task for running the (now deprecated) socket server. Handles
-*   bi-directional socket communications between ESP32 and Python client
-*/
-void socket_server_task(void* params);
-
-/*
-*   --------------------------------------------------------------------  
 *   uart_initialize
 *   --------------------------------------------------------------------
 *   Initializes the UART for bi-directional communications with raspberry

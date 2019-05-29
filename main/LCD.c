@@ -11,7 +11,7 @@
 
 static char tag[] = "LCD test";
 
-void LCD_DemoTask(void* param)
+void LCD_task(void* param)
 {
     char txtBuf[8];
     float temps[n_tempSensors];

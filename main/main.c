@@ -24,7 +24,7 @@
 void app_main()
 {
     nvs_flash_init();
-    sensor_init(ONEWIRE_BUS);
+    sensor_init(ONEWIRE_BUS, DS18B20_RESOLUTION_10_BIT);
     nvs_initialize();
     uart_initialize();
     init_timer();
@@ -35,14 +35,8 @@ void app_main()
     LCD_init(LCD_ADDR, LCD_SDA, LCD_SCL, LCD_COLS, LCD_ROWS);
     webServer_init();
     
-
-
-    // xTaskCreatePinnedToCore(&websocket_task, "webServer", 2048, NULL, 3, NULL, 0);
     xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 4096, NULL, 7, NULL, 1);
     xTaskCreatePinnedToCore(&control_loop, "Controller", 2048, NULL, 6, NULL, 0);
-    // xTaskCreate(&sendDataUART, "UART send", 2048, NULL, 6, NULL);
-    // xTaskCreate(&recvDataUART, "UART receive", 2048, NULL, 6, NULL);
-    // xTaskCreate(&flowmeter_task, "Flow meter", 2048, NULL, 3, NULL);
-    xTaskCreatePinnedToCore(&LCD_DemoTask, "LCD task", 2048, NULL, 3, NULL, 0);
+    xTaskCreatePinnedToCore(&LCD_task, "LCD task", 2048, NULL, 3, NULL, 0);
 }
 

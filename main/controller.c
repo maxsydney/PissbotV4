@@ -168,8 +168,6 @@ esp_err_t getTemperatures(float tempArray[])
     if (xQueueReceive(tempQueue, temperatures, 100 / portTICK_PERIOD_MS)) {
         memcpy(tempArray, temperatures, n_tempSensors * sizeof(float));
         return ESP_OK;
-    } else {
-        ESP_LOGE(tag, "Unable to read temperatures from queue (%d) in queue", uxQueueMessagesWaiting(tempQueue));
     }
 
     memcpy(tempArray, temperatures, n_tempSensors * sizeof(float));     // If no new temps in queue, copy most recent reading

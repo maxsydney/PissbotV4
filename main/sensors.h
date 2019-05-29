@@ -1,6 +1,7 @@
 #pragma once
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "ds18b20.h"
 
 // Expose queue handles for passing data between tasks
 xQueueHandle tempQueue;
@@ -24,7 +25,7 @@ void temp_sensor_task(void *pvParameters);
 *   Initializes sensors on the one wire bus and the queues to pass data
 *   between tasks
 */
-esp_err_t sensor_init(uint8_t ds_pin);
+esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res);
 
 /*
 *   --------------------------------------------------------------------  

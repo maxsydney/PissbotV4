@@ -21,7 +21,8 @@
         "__locale": "c",
         "ios": "c",
         "regex": "c",
-        "locale": "c"
+        "locale": "c",
+        "httpd-platform.h": "c"
     },
     "python.linting.pylintEnabled": false
 }
