@@ -1,0 +1,13 @@
+- Fix ongoing controller performance issues                                     - Controller tuned
+- Migrate to fully ESP32 based webserver
+    - Fix crashing issue on browser reload/exit  
+    - Implement handling of multiple connections                                      
+- D-term filtering                                                              - Unsure if beneficial
+- Acceleration limits on pump                                                   - Unsure if beneficial
+- I-term engage only once still is up to temperature                            
+- Set fan to function automatically                                             - Completed
+- Remove support for Python client                                              - Completed
+- Modify drivers to work with new PCB
+- Fix compiler warnings                                                         - Completed
+- Record current process data in RAM                
+- Change messaging protocol to JSON
