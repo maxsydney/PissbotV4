@@ -61,7 +61,6 @@ void websocket_task(void *pvParameters)
 
     while (true) {
         getTemperatures(temps);
-        ESP_LOGI(tag, "Stack available: %d", uxTaskGetStackHighWaterMark(NULL));
         ctrlSet = get_controller_settings();
         uptime_uS = esp_timer_get_time() / 1000000;
         sprintf(buff, "[%f, %f, %f, %f, %f, %f, %lld, 0, 0, %f, %f, %f]", temps[T_refluxHot], 
@@ -79,7 +78,6 @@ void websocket_task(void *pvParameters)
             ESP_LOGE(tag, "Deleting send task");
             vTaskDelete(NULL);
         } else {
-            ESP_LOGI(tag, "Sending on socket: %p", ws);
             cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
                         ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
         }
@@ -91,9 +89,7 @@ void websocket_task(void *pvParameters)
 static bool checkWebsocketActive(Websock* ws)
 {
     bool active = true;
-    
-    printf("WS: %p\n", ws);
-    printf("Conn: %p\n", ws->conn);
+
     if (ws->conn == 0x0) {
         ESP_LOGE(tag, "Closing connection");
         active = false;

@@ -101,7 +101,6 @@ int freeMessages(Message* head)
 	return 1;
 }
 
-
 Data* decode_data(char* dataPacket)
 {
     
@@ -133,11 +132,10 @@ esp_err_t decodeCommand(char* commandPacket)
     } else if (strncmp(command, "flush", 128) == 0) {
         bool state = atof(arg);
         setFlush(state);
-    } else if (strncmp(command, "filterT", 128) == 0) {
-        bool state = atof(arg);
-        setTempFilter(state);
     } else if (strncmp(command, "OTA", 16) == 0) {
         printf("Received OTA message");
+        memcpy(&OTA_IP, arg, strlen(arg));
+        printf("OTA IP set to %s\n", OTA_IP);
         xTaskCreate(&ota_update_task, "ota_update_task", 8192, NULL, 5, NULL);
     } else {
         ESP_LOGE(tag, "Unrecognised command");

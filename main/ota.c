@@ -17,11 +17,13 @@
 #include "driver/gpio.h"
 #include "ota.h"
 
-#define EXAMPLE_SERVER_URL "http://192.168.1.80:8070/distillerFirmware.bin"
+#define OTA_SERVER_PREFIX "http://"
+#define OTA_SERVER_SUFFIX ":8070/distillerFirmware.bin"
 #define BUFFSIZE 1024
 #define HASH_LEN 32 /* SHA-256 digest length */
 
 static char TAG[] = "native_ota_example";
+char OTA_IP[128];
 /*an ota data write buffer ready to write to the flash*/
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 
@@ -57,6 +59,10 @@ void ota_update_task(void *pvParameter)
     /* update handle : set by esp_ota_begin(), must be freed via esp_ota_end() */
     esp_ota_handle_t update_handle = 0 ;
     const esp_partition_t *update_partition = NULL;
+    char url_buffer[64];
+    snprintf(url_buffer, 64, "%s%s%s", OTA_SERVER_PREFIX, OTA_IP, OTA_SERVER_SUFFIX);
+
+    ESP_LOGI(TAG, "Attemping to connect to: %s", url_buffer);
 
     ESP_LOGI(TAG, "Starting OTA task...");
 
@@ -70,7 +76,7 @@ void ota_update_task(void *pvParameter)
     ESP_LOGI(TAG, "Running partition type %d subtype %d (offset 0x%08x)", running->type, running->subtype, running->address);
 
     esp_http_client_config_t config = {
-        .url = EXAMPLE_SERVER_URL,
+        .url = url_buffer,
         .transport_type = HTTP_TRANSPORT_OVER_TCP
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -125,14 +131,16 @@ void ota_update_task(void *pvParameter)
                             ESP_LOGW(TAG, "Previously, there was an attempt to launch the firmware with %s version, but it failed.", invalid_app_info.version);
                             ESP_LOGW(TAG, "The firmware has been rolled back to the previous version.");
                             http_cleanup(client);
-                            infinite_loop();
+                            ESP_LOGI(TAG, "Quitting OTA");
+                            vTaskDelete(NULL);
                         }
                     }
 
                     if (memcmp(new_app_info.version, running_app_info.version, sizeof(new_app_info.version)) == 0) {
                         ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
                         http_cleanup(client);
-                        infinite_loop();
+                        ESP_LOGI(TAG, "Quitting OTA");
+                        vTaskDelete(NULL);
                     }
 
                     image_header_was_checked = true;

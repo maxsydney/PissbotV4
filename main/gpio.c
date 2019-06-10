@@ -23,7 +23,6 @@ void gpio_init(void)
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     gpio_config(&io_conf);
 
-
     // Set up fan control pin for
     gpio_pad_select_gpio(FAN_SWITCH);
     gpio_set_direction(FAN_SWITCH, GPIO_MODE_OUTPUT);

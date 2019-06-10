@@ -21,9 +21,6 @@
 
 static const char* tag = "Sensors";
 static volatile double timeVal;
-const float FIRcoeff[5] = {0.02840647, 0.23700821, 0.46917063, 0.23700821, 0.02840647};
-static float sensorBuffer[2][9];
-static bool filterTemp;
 
 static OneWireBus_ROMCode device_rom_codes[MAX_DEVICES] = {0};
 static DS18B20_Info * devices[MAX_DEVICES] = {0};
@@ -65,7 +62,6 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
         ds18b20_set_resolution(ds18b20_info, res);
     }
 
-    filterTemp = false;
     tempQueue = xQueueCreate(10, sizeof(float[5]));
     flowRateQueue = xQueueCreate(10, sizeof(float));
 
@@ -134,11 +130,6 @@ void IRAM_ATTR flowmeter_ISR(void* arg)
     timeVal = timeTemp;
 }
 
-void setTempFilter(bool status)
-{
-    filterTemp = status;
-}
-
 void readTemps(float sensorTemps[])
 {
     // Read temperatures more efficiently by starting conversions on all devices at the same time
@@ -151,12 +142,9 @@ void readTemps(float sensorTemps[])
         // so use the first device to determine the delay
         ds18b20_wait_for_conversion(devices[0]);
 
-        // Read the results immediately after conversion otherwise it may fail
-        // (using printf before reading may take too long)
         DS18B20_ERROR errors[MAX_DEVICES] = { 0 };
 
-        for (int i = 0; i < num_devices; ++i)
-        {
+        for (int i = 0; i < num_devices; ++i) {
             errors[i] = ds18b20_read_temp(devices[i], &sensorTemps[i]);
         }
     }

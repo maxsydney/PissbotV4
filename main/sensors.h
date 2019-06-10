@@ -51,8 +51,6 @@ void IRAM_ATTR flowmeter_ISR(void* arg);
 */
 esp_err_t init_timer(void);
 
-void setTempFilter(bool status);
-
 void readTemps(float sensorTemps[]);
 
 void checkPowerSupply(void);
