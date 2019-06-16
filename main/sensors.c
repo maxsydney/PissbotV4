@@ -106,6 +106,7 @@ void flowmeter_task(void *pvParameters)
     BaseType_t ret;
     portTickType xLastWakeTime = xTaskGetTickCount();
     double currTime;
+    ESP_LOGI(tag, "Running flowmeter task");
 
     while (true) {
         timer_get_counter_time_sec(TIMER_GROUP_0, TIMER_0, &currTime);
@@ -113,12 +114,13 @@ void flowmeter_task(void *pvParameters)
             flowRate = 0;
         } else {
             flowRate = (float) 1 / (timeVal * 7.5);
+            printf("Flowrate: %.2f\n", flowRate);
         }
         ret = xQueueSend(flowRateQueue, &flowRate, 100 / portTICK_PERIOD_MS);
         if (ret == errQUEUE_FULL) {
             ESP_LOGI(tag, "Flow rate queue full");
         }
-        vTaskDelayUntil(&xLastWakeTime, ctrl_loop_period_ms / portTICK_PERIOD_MS);     // Run every second
+        vTaskDelayUntil(&xLastWakeTime, 500 / portTICK_PERIOD_MS);     // Run every second
     }
 }
 

@@ -44,7 +44,7 @@
 
 static char connectionMemory[sizeof(RtosConnType) * MAX_CONNECTIONS];
 
-static const char *tag = "Spiffs test";
+static const char *tag = "Webserver";
 static HttpdFreertosInstance httpdFreertosInstance;
 
 static bool checkWebsocketActive(Websock* ws);
