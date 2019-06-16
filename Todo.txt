@@ -11,3 +11,9 @@
 - Fix compiler warnings                                                         - Completed
 - Record current process data in RAM                
 - Change messaging protocol to JSON
+- Create small factory app to OTA full app
+- Write drivers for flowrate sensors
+- Write drivers for input 
+- Write drivers for SSR 
+- Init screen
+- Fix crash when LCD is not plugged in

@@ -140,7 +140,7 @@ void control_loop(void* params)
         } else if ((output < SENSOR_MIN_OUTPUT + 1) && (error < 0)) {
             integral += 0;
         } else {
-            integral += error * ctrl_loop_period_ms / 1000;                                      
+            integral += error * ctrl_loop_period_ms / 1000;                                       
         }
                         
         output = controllerSettings.P_gain * error + controllerSettings.D_gain * derivative + controllerSettings.I_gain * integral;

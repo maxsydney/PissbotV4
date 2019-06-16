@@ -18,6 +18,7 @@
 #include "HD44780.h"
 #include "LCD.h"
 #include "webServer.h"
+#include "input.h"
 
 #define CONTROL_LOOP_FREQUENCY   5
 
@@ -34,9 +35,12 @@ void app_main()
     controller_init(CONTROL_LOOP_FREQUENCY);
     LCD_init(LCD_ADDR, LCD_SDA, LCD_SCL, LCD_COLS, LCD_ROWS);
     webServer_init();
+    init_input();
     
     xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 4096, NULL, 7, NULL, 1);
+    // xTaskCreatePinnedToCore(&flowmeter_task, "Flowrate", 2048, NULL, 7, NULL, 1);
     xTaskCreatePinnedToCore(&control_loop, "Controller", 2048, NULL, 6, NULL, 0);
     xTaskCreatePinnedToCore(&LCD_task, "LCD task", 2048, NULL, 3, NULL, 0);
+    xTaskCreatePinnedToCore(&input_task, "Input task", 2048, NULL, 3, NULL, 0);
 }
 
