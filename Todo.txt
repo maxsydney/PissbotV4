@@ -1,6 +1,6 @@
 - Fix ongoing controller performance issues                                     - Controller tuned
 - Migrate to fully ESP32 based webserver
-    - Fix crashing issue on browser reload/exit  
+    - Fix crashing issue on browser reload/exit                                 - Mostly fixed. Still crashes on odd occaison
     - Implement handling of multiple connections                                      
 - D-term filtering                                                              - Unsure if beneficial
 - Acceleration limits on pump                                                   - Unsure if beneficial
@@ -17,3 +17,4 @@
 - Write drivers for SSR 
 - Init screen
 - Fix crash when LCD is not plugged in
+- Write menu and screen functionality

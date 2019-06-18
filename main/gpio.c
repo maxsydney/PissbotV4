@@ -23,8 +23,8 @@ void gpio_init(void)
     io_conf.intr_type = GPIO_PIN_INTR_POSEDGE;
     io_conf.pin_bit_mask = GPIO_PIN_BITMASK(REFLUX_FLOW);
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
-    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 
     // Set input up button pin

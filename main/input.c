@@ -25,17 +25,27 @@ void IRAM_ATTR input_ISR_handler(void* arg)
     xQueueSendFromISR(inputQueue, &btnEvent, pdFALSE);
 }
 
+bool debounceInput(buttonPress btnEvent)
+{
+    static int64_t currTime = 0;
+    bool validPress = false;
+
+    if (btnEvent.time - currTime > 100000) {
+        currTime = btnEvent.time;
+        validPress = true;
+    }
+
+    return validPress;
+}
+
 void input_task(void *pvParameters) 
 {
     buttonPress btnEvent;
-    static int64_t currTime = 0;
+    
     while (true) {
         if (uxQueueMessagesWaiting(inputQueue)) {
             xQueueReceive(inputQueue, &btnEvent, 50 / portTICK_PERIOD_MS);
-            if (btnEvent.time - currTime > 100000) {
-                ESP_LOGI(tag, "Received input on pin: %d", btnEvent.button);
-                currTime = btnEvent.time;
-            }
+            
         }
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
