@@ -35,6 +35,7 @@ void gpio_init(void)
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     gpio_config(&io_conf);  
 
+<<<<<<< HEAD
     // Set input down button pin
     io_conf.intr_type = GPIO_PIN_INTR_POSEDGE;
     io_conf.pin_bit_mask = GPIO_PIN_BITMASK(INPUT_DOWN);
@@ -43,6 +44,24 @@ void gpio_init(void)
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     gpio_config(&io_conf); 
 
+=======
+    // Set input up button pin
+    io_conf.intr_type = GPIO_PIN_INTR_POSEDGE;
+    io_conf.pin_bit_mask = GPIO_PIN_BITMASK(INPUT_UP);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    gpio_config(&io_conf);  
+
+    // Set input down button pin
+    io_conf.intr_type = GPIO_PIN_INTR_POSEDGE;
+    io_conf.pin_bit_mask = GPIO_PIN_BITMASK(INPUT_DOWN);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    gpio_config(&io_conf); 
+
+>>>>>>> 42f4ce2a03db0fc47d41de576334adf443e59735
     // Set input left button pin
     io_conf.intr_type = GPIO_PIN_INTR_POSEDGE;
     io_conf.pin_bit_mask = GPIO_PIN_BITMASK(INPUT_LEFT);
