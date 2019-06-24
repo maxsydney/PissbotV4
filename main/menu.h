@@ -1,9 +1,14 @@
 #pragma once
 
+#include "menu.h"
+
 #define MENU_STATIC 0
 #define MAX_MENU_ITEMS 6
+#define MAX_MENU_DEPTH 5
 
 void menu_task(void* param);
+
+typedef struct menu menu_t;
 
 typedef enum {
     menuItem_none,
@@ -17,25 +22,27 @@ typedef enum {
     menu_exit
 } menuReturn_t;
 
-typedef enum {
-    btnEvent_none,
-    btnEvent_valid,
-    signal_init
-} signal_t;
-
-typedef struct {
+typedef struct menuItem {
     char* fieldName;
     menuItemTyepe_t type;
-    int intVal;
-    float floatVal;
+    int* intVal;
+    float* floatVal;
     char* stringVal;
-    void (*fn)(void);
+    menu_t* subMenu;
+    void (*fn) (int);
 } menuItem_t;
 
-typedef struct {
+typedef struct menu {
     char* title;
     int n_items;
+    bool init;
     int currIndex;
+    bool runFunction;
     menuItem_t optionTable[MAX_MENU_ITEMS];
 } menu_t;
+
+typedef struct {
+    int n_items;
+    menu_t *menus[MAX_MENU_DEPTH];
+} menuStack_t;
 

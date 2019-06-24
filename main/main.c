@@ -19,10 +19,7 @@
 #include "LCD.h"
 #include "webServer.h"
 #include "input.h"
-<<<<<<< HEAD
 #include "menu.h"
-=======
->>>>>>> 42f4ce2a03db0fc47d41de576334adf443e59735
 
 #define CONTROL_LOOP_FREQUENCY   5
 
@@ -44,11 +41,7 @@ void app_main()
     xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 4096, NULL, 7, NULL, 1);
     // xTaskCreatePinnedToCore(&flowmeter_task, "Flowrate", 2048, NULL, 7, NULL, 1);
     xTaskCreatePinnedToCore(&control_loop, "Controller", 2048, NULL, 6, NULL, 0);
-<<<<<<< HEAD
     xTaskCreatePinnedToCore(&menu_task, "LCD task", 2048, NULL, 3, NULL, 0);
-=======
-    xTaskCreatePinnedToCore(&LCD_task, "LCD task", 2048, NULL, 3, NULL, 0);
->>>>>>> 42f4ce2a03db0fc47d41de576334adf443e59735
-    xTaskCreatePinnedToCore(&input_task, "Input task", 2048, NULL, 3, NULL, 0);
+    xTaskCreatePinnedToCore(&input_task, "Input task", 2048, NULL, 3, NULL, 1);
 }
 

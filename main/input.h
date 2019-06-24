@@ -6,7 +6,8 @@ typedef enum {
     input_up,
     input_down,
     input_left,
-    input_mid
+    input_mid,
+    input_none
 } inputType;
 
 typedef struct {
