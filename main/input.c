@@ -30,23 +30,10 @@ bool debounceInput(buttonPress btnEvent)
     static int64_t currTime = 0;
     bool validPress = false;
 
-    if (btnEvent.time - currTime > 100000) {
+    if (btnEvent.time - currTime > 500000) {
         currTime = btnEvent.time;
         validPress = true;
     }
 
     return validPress;
-}
-
-void input_task(void *pvParameters) 
-{
-    buttonPress btnEvent;
-    
-    while (true) {
-        if (uxQueueMessagesWaiting(inputQueue)) {
-            xQueueReceive(inputQueue, &btnEvent, 50 / portTICK_PERIOD_MS);
-            
-        }
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-    }
 }

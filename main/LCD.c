@@ -11,6 +11,7 @@
 #include "main.h"
 #include "menu.h"
 #include "input.h"
+#include "networking.h"
 
 static char tag[] = "LCD test";
 static menuStack_t menuStack;
@@ -21,18 +22,23 @@ static int32_t setpoint, P_gain, I_gain, D_gain;
 
 // Screens
 void mainScreen(int btn);
-void function1(int btn);
+void tunePGain(int btn);
 
 // Menu handling functions
 static void runMenu(menu_t *menu, inputType btn);
 static void drawMenuItem(menu_t *menu, int index);
+static void drawMenuItems(menu_t* menu);
+
+// Get data for menu items
+static void loadControllerSettings(void);
 
 // Define menus 
 static menu_t tuneControllerMenu = {
     .title = "Tune Controller",
     .n_items = 3,
+    .init = true,
     .optionTable = {
-        {.fieldName = "P Gain", .type = menuItem_int, .intVal = &P_gain, .fn = function1},
+        {.fieldName = "P Gain", .type = menuItem_int, .intVal = &P_gain, .fn = tunePGain},
         {.fieldName = "I Gain", .type = menuItem_int, .intVal = &I_gain, .fn = NULL},
         {.fieldName = "D Gain", .type = menuItem_int, .intVal = &D_gain, .fn = NULL},
         {.fieldName = "Setpoint", .type = menuItem_int, .intVal = &P_gain, .fn = NULL}
@@ -42,6 +48,7 @@ static menu_t tuneControllerMenu = {
 static menu_t mainMenu = {
     .title = "Pissbot V3.0",
     .n_items = 3,
+    .init = true,
     .optionTable = {
         {.fieldName = "Main Screen", .type = menuItem_none, .fn = mainScreen},
         {.fieldName = "Tune PID", .type = menuItem_none, .subMenu = &tuneControllerMenu},
@@ -88,23 +95,28 @@ void menu_task(void* param)
     while (true) {
         btnEvent.button = input_none;
 
+        loadControllerSettings();
+
         if (uxQueueMessagesWaiting(inputQueue)) {
             xQueueReceive(inputQueue, &btnEvent, 50 / portTICK_PERIOD_MS);
+            xQueueReset(inputQueue);
             if (debounceInput(btnEvent)) {
                 ESP_LOGI(tag, "Button pressed: %d", btnEvent.button);
             }
         }
 
         runMenu(menuStack_peek(), btnEvent.button);
-        vTaskDelay(10 / portTICK_RATE_MS);
+        vTaskDelay(50 / portTICK_RATE_MS);
     }
 }
 
 static void runMenu(menu_t *menu, inputType btn)
 {
-    if (menu->init ) {
+    if (menu->init && !menu->runFunction) {
         LCD_clearScreen();
         menu->init = false;
+        drawMenuItems(menu);
+        return;
     }
 
     // Handle keypress logic
@@ -121,12 +133,14 @@ static void runMenu(menu_t *menu, inputType btn)
                 menu->init = true;
             } else {
                 // Enter submenu
-                menuStack_push(menu->optionTable[menu->currIndex].subMenu);
                 menu->init = true;      // Reset old menu so when we return we re-init
+                menuStack_push(menu->optionTable[menu->currIndex].subMenu);
                 return;
             }
         } else if (btn == input_left) {
-            menuStack_pop();
+            if (menuStack_pop() == ESP_OK) {
+                menu->init = true;
+            }
             return;
         } else if (btn == input_none) {
             return;
@@ -140,6 +154,11 @@ static void runMenu(menu_t *menu, inputType btn)
         return;
     }
 
+    drawMenuItems(menu);
+}
+
+static void drawMenuItems(menu_t* menu)
+{
     // Draw the menu
     LCD_home();
     LCD_writeStr(menu->title);
@@ -150,14 +169,20 @@ static void runMenu(menu_t *menu, inputType btn)
 
 static void drawMenuItem(menu_t *menu, int index)
 {
+    char dataBuffer[8];
     if (menu->currIndex == index) {
         LCD_setCursor(0, index + 1);
         LCD_writeStr("> ");
-        LCD_writeStr(menu->optionTable[index].fieldName);
+        
     } else {
         LCD_setCursor(0, index + 1);
         LCD_writeStr("  ");
-        LCD_writeStr(menu->optionTable[index].fieldName);
+    }
+    LCD_writeStr(menu->optionTable[index].fieldName);
+    LCD_setCursor(14, index+1);
+    if(menu->optionTable[index].type == menuItem_int) {
+        snprintf(dataBuffer, 8, "%5d", *(menu->optionTable[index].intVal));
+        LCD_writeStr(dataBuffer);
     }
 }
 
@@ -184,6 +209,10 @@ void mainScreen(int btn)
         LCD_setCursor(0, 3);
         LCD_writeStr("Boiler: ");
         initScreen = false;
+    }
+
+    if (btn == input_left) {
+        initScreen = true;
     }
 
     getTemperatures(temps);
@@ -253,17 +282,44 @@ void LCD_task(void* param)
     }
 }
 
-void function1(int unused)
+static void loadControllerSettings(void)
 {
-    printf("Accessed menu item 1");
+    Data settings = get_controller_settings();
+    setpoint = settings.setpoint;
+    P_gain = settings.P_gain;
+    I_gain = settings.I_gain;
+    D_gain = settings.D_gain;
 }
 
-void function2(void)
+void tunePGain(int btn)
 {
-    printf("Accessed menu item 2");
-}
+    static bool initScreen = true;
+    static int32_t P_gain_local;
+    char dataBuffer[5];
 
-void function3(void)
-{
-    printf("Accessed menu item 3");
+    if (initScreen) {
+        LCD_clearScreen();
+        LCD_setCursor(0, 0);
+        LCD_writeStr("P Gain - ");
+        P_gain_local = P_gain;
+        initScreen = false;
+    }
+
+    if (btn == input_up) {
+        printf("Incrementing P gain\n");
+        P_gain_local++;
+    } else if (btn == input_down) {
+        printf("Decrementing P gain\n");
+        P_gain_local--;
+    } else if (btn == input_left) {
+        Data updateData = get_controller_settings();
+        updateData.P_gain = P_gain_local;
+        write_nvs(&updateData);
+        xQueueSend(dataQueue, &updateData, 50);
+        initScreen = true;
+    }
+
+    snprintf(dataBuffer, 5, "%4d", P_gain_local);
+    LCD_setCursor(10, 0);
+    LCD_writeStr(dataBuffer);
 }
