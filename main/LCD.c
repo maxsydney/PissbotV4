@@ -23,10 +23,13 @@ static int32_t setpoint, P_gain, I_gain, D_gain;
 // Screens
 void mainScreen(int btn);
 void tunePGain(int btn);
+void tuneIGain(int btn);
+void tuneDGain(int btn);
+void tuneSetpoint(int btn);
 
 // Menu handling functions
 static void runMenu(menu_t *menu, inputType btn);
-static void drawMenuItem(menu_t *menu, int index);
+static void drawMenuItem(menu_t *menu, int index, int offset);
 static void drawMenuItems(menu_t* menu);
 
 // Get data for menu items
@@ -35,13 +38,13 @@ static void loadControllerSettings(void);
 // Define menus 
 static menu_t tuneControllerMenu = {
     .title = "Tune Controller",
-    .n_items = 3,
+    .n_items = 4,
     .init = true,
     .optionTable = {
-        {.fieldName = "P Gain", .type = menuItem_int, .intVal = &P_gain, .fn = tunePGain},
-        {.fieldName = "I Gain", .type = menuItem_int, .intVal = &I_gain, .fn = NULL},
-        {.fieldName = "D Gain", .type = menuItem_int, .intVal = &D_gain, .fn = NULL},
-        {.fieldName = "Setpoint", .type = menuItem_int, .intVal = &P_gain, .fn = NULL}
+        {.fieldName = "P Gain   ", .type = menuItem_int, .intVal = &P_gain, .fn = tunePGain},
+        {.fieldName = "I Gain   ", .type = menuItem_int, .intVal = &I_gain, .fn = tuneIGain},
+        {.fieldName = "D Gain   ", .type = menuItem_int, .intVal = &D_gain, .fn = tuneDGain},
+        {.fieldName = "Setpoint ", .type = menuItem_int, .intVal = &setpoint, .fn = tuneSetpoint}
     }
 };
 
@@ -50,9 +53,9 @@ static menu_t mainMenu = {
     .n_items = 3,
     .init = true,
     .optionTable = {
-        {.fieldName = "Main Screen", .type = menuItem_none, .fn = mainScreen},
-        {.fieldName = "Tune PID", .type = menuItem_none, .subMenu = &tuneControllerMenu},
-        {.fieldName = "Settings", .type = menuItem_string, .stringVal = "Gaan", .fn = NULL}
+        {.fieldName = "Main Screen ", .type = menuItem_none, .fn = mainScreen},
+        {.fieldName = "Tune PID    ", .type = menuItem_none, .subMenu = &tuneControllerMenu},
+        {.fieldName = "Settings    ", .type = menuItem_string, .stringVal = "Gaan", .fn = NULL}
     }
 };
 
@@ -122,7 +125,7 @@ static void runMenu(menu_t *menu, inputType btn)
     // Handle keypress logic
     if (!menu->runFunction) {
         // Handle keypresses to navigate menus
-        if ((btn == input_down) && (menu->currIndex < menu->n_items - 1)) {
+        if ((btn == input_down) && (menu->currIndex < (menu->n_items - 1))) {
             menu->currIndex++;
         } else if ((btn == input_up) && (menu->currIndex > 0)) {
             menu->currIndex--;
@@ -159,29 +162,32 @@ static void runMenu(menu_t *menu, inputType btn)
 
 static void drawMenuItems(menu_t* menu)
 {
+    int offset = 0;
+    if (menu->currIndex >= 3) {
+        offset = menu->currIndex - 2;
+    }
     // Draw the menu
     LCD_home();
     LCD_writeStr(menu->title);
-    for (int i = 0; i < menu->n_items; i++) {
-        drawMenuItem(menu, i);
+    for (int i = offset; i < offset + 3; i++) {
+        drawMenuItem(menu, i, offset);
     }
 }
 
-static void drawMenuItem(menu_t *menu, int index)
+static void drawMenuItem(menu_t *menu, int index, int offset)
 {
-    char dataBuffer[8];
+    char dataBuffer[16];
     if (menu->currIndex == index) {
-        LCD_setCursor(0, index + 1);
+        LCD_setCursor(0, index - offset + 1);
         LCD_writeStr("> ");
-        
     } else {
-        LCD_setCursor(0, index + 1);
+        LCD_setCursor(0, index - offset + 1);
         LCD_writeStr("  ");
     }
     LCD_writeStr(menu->optionTable[index].fieldName);
-    LCD_setCursor(14, index+1);
+    LCD_setCursor(14, index - offset + 1);
     if(menu->optionTable[index].type == menuItem_int) {
-        snprintf(dataBuffer, 8, "%5d", *(menu->optionTable[index].intVal));
+        snprintf(dataBuffer, sizeof(dataBuffer), "%5d", *(menu->optionTable[index].intVal));
         LCD_writeStr(dataBuffer);
     }
 }
@@ -238,50 +244,6 @@ void mainScreen(int btn)
     LCD_writeStr(txtBuf);
 }
 
-void LCD_task(void* param)
-{
-    char txtBuf[8];
-    float temps[n_tempSensors];
-    LCD_home();
-    LCD_clearScreen();
-    LCD_writeStr("Pissbot V3.0");
-    LCD_setCursor(0, 1);
-    LCD_writeStr("T1: ");
-    LCD_setCursor(10, 1);
-    LCD_writeStr("T2: ");
-    LCD_setCursor(0, 2);
-    LCD_writeStr("T3: ");
-    LCD_setCursor(10, 2);
-    LCD_writeStr("T4: ");
-    LCD_setCursor(0, 3);
-    LCD_writeStr("Boiler: ");
-    while (true) {
-        getTemperatures(temps);
-        
-        LCD_setCursor(4, 1);
-        snprintf(txtBuf, 6, "%.2f", temps[T_refluxHot]);
-        LCD_writeStr(txtBuf);
-
-        LCD_setCursor(14, 1);
-        snprintf(txtBuf, 6, "%.2f", temps[T_refluxCold]);
-        LCD_writeStr(txtBuf);
-
-        LCD_setCursor(4, 2);
-        snprintf(txtBuf, 6, "%.2f", temps[T_productHot]);
-        LCD_writeStr(txtBuf);
-
-        LCD_setCursor(14, 2);
-        snprintf(txtBuf, 6, "%.2f", temps[T_productCold]);
-        LCD_writeStr(txtBuf);
-
-        LCD_setCursor(8, 3);
-        snprintf(txtBuf, 4, "%.2f", temps[T_boiler]);
-        LCD_writeStr(txtBuf);
-
-        vTaskDelay(200 / portTICK_RATE_MS);
-    }
-}
-
 static void loadControllerSettings(void)
 {
     Data settings = get_controller_settings();
@@ -306,20 +268,115 @@ void tunePGain(int btn)
     }
 
     if (btn == input_up) {
-        printf("Incrementing P gain\n");
         P_gain_local++;
     } else if (btn == input_down) {
-        printf("Decrementing P gain\n");
         P_gain_local--;
     } else if (btn == input_left) {
         Data updateData = get_controller_settings();
         updateData.P_gain = P_gain_local;
+        P_gain = P_gain_local;
         write_nvs(&updateData);
         xQueueSend(dataQueue, &updateData, 50);
         initScreen = true;
     }
 
     snprintf(dataBuffer, 5, "%4d", P_gain_local);
+    LCD_setCursor(10, 0);
+    LCD_writeStr(dataBuffer);
+}
+
+void tuneIGain(int btn)
+{
+    static bool initScreen = true;
+    static int32_t I_gain_local;
+    char dataBuffer[5];
+
+    if (initScreen) {
+        LCD_clearScreen();
+        LCD_setCursor(0, 0);
+        LCD_writeStr("I Gain - ");
+        I_gain_local = I_gain;
+        initScreen = false;
+    }
+
+    if (btn == input_up) {
+        I_gain_local++;
+    } else if (btn == input_down) {
+        I_gain_local--;
+    } else if (btn == input_left) {
+        Data updateData = get_controller_settings();
+        updateData.I_gain = I_gain_local;
+        I_gain = I_gain_local;
+        write_nvs(&updateData);
+        xQueueSend(dataQueue, &updateData, 50);
+        initScreen = true;
+    }
+
+    snprintf(dataBuffer, 5, "%4d", I_gain_local);
+    LCD_setCursor(10, 0);
+    LCD_writeStr(dataBuffer);
+}
+
+void tuneDGain(int btn)
+{
+    static bool initScreen = true;
+    static int32_t D_gain_local;
+    char dataBuffer[5];
+
+    if (initScreen) {
+        LCD_clearScreen();
+        LCD_setCursor(0, 0);
+        LCD_writeStr("P Gain - ");
+        D_gain_local = D_gain;
+        initScreen = false;
+    }
+
+    if (btn == input_up) {
+        D_gain_local++;
+    } else if (btn == input_down) {
+        D_gain_local--;
+    } else if (btn == input_left) {
+        Data updateData = get_controller_settings();
+        updateData.D_gain = D_gain_local;
+        D_gain = D_gain_local;
+        write_nvs(&updateData);
+        xQueueSend(dataQueue, &updateData, 50);
+        initScreen = true;
+    }
+
+    snprintf(dataBuffer, 5, "%4d", D_gain_local);
+    LCD_setCursor(10, 0);
+    LCD_writeStr(dataBuffer);
+}
+
+void tuneSetpoint(int btn)
+{
+    static bool initScreen = true;
+    static int32_t setpoint_local;
+    char dataBuffer[5];
+
+    if (initScreen) {
+        LCD_clearScreen();
+        LCD_setCursor(0, 0);
+        LCD_writeStr("P Gain - ");
+        setpoint_local = setpoint;
+        initScreen = false;
+    }
+
+    if (btn == input_up) {
+        setpoint_local++;
+    } else if (btn == input_down) {
+        setpoint_local--;
+    } else if (btn == input_left) {
+        Data updateData = get_controller_settings();
+        updateData.setpoint = setpoint_local;
+        setpoint = setpoint_local;
+        write_nvs(&updateData);
+        xQueueSend(dataQueue, &updateData, 50);
+        initScreen = true;
+    }
+
+    snprintf(dataBuffer, 5, "%4d", setpoint_local);
     LCD_setCursor(10, 0);
     LCD_writeStr(dataBuffer);
 }
