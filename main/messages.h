@@ -38,6 +38,14 @@ void printMessages(Message* head);
 *   function to return error code.
 */
 float findByKey(Message* head, char* key);
+
+/*
+*   --------------------------------------------------------------------  
+*   freeMessages
+*   --------------------------------------------------------------------
+*   Frees memory allocated for handling of incoming messages. Must be 
+*   called on all message data structures to avoid memory leaks
+*/
 int freeMessages(Message* head);
 
 /*

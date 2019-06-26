@@ -51,8 +51,22 @@ void IRAM_ATTR flowmeter_ISR(void* arg);
 */
 esp_err_t init_timer(void);
 
+/*
+*   --------------------------------------------------------------------  
+*   readTemps
+*   --------------------------------------------------------------------
+*   Reads the temperatures from all connected sensors and loads them
+*   into sensorTemps array
+*/
 void readTemps(float sensorTemps[]);
 
+/*
+*   --------------------------------------------------------------------  
+*   checkPowerSupply
+*   --------------------------------------------------------------------
+*   Checks if DS18B20 sensors are connected in powered or parasitic
+*   power mode
+*/
 void checkPowerSupply(void);
 
 

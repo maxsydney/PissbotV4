@@ -3,7 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
-#define SW_VERSION 1.0
+#define SW_VERSION 1.0      // Deprecated
 
 #define LED_PIN 2
 #define LCD_ADDR 0x27

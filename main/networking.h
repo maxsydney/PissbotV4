@@ -33,10 +33,16 @@ esp_err_t WiFi_event_handler(void *ctx, system_event_t *event);
 *   uart_initialize
 *   --------------------------------------------------------------------
 *   Initializes the UART for bi-directional communications with raspberry
-*   pi webserver
+*   pi webserver. Deprecated in current version, might be re-used in the 
+*   future for serial communications
 */
 void uart_initialize(void);
 
+/*
+*   --------------------------------------------------------------------  
+*   uart_initialize
+*   --------------------------------------------------------------------
+*   Initializes the UART for bi-directional communications with raspberry
+*   pi webserver
+*/
 void write_nvs(Data* data);
-
-void start_mdns_service(void);

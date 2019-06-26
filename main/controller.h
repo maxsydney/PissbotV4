@@ -94,6 +94,12 @@ Data get_controller_settings(void);
 */
 void setFanState(int state);
 
+/*
+*   --------------------------------------------------------------------  
+*   setFlush
+*   --------------------------------------------------------------------
+*   Sets the pump to a fixed speed to flush all air out of the system
+*/
 void setFlush(bool state);
 
 /*

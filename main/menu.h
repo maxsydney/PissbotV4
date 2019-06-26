@@ -6,6 +6,12 @@
 #define MAX_MENU_ITEMS 6
 #define MAX_MENU_DEPTH 5
 
+/*
+*   --------------------------------------------------------------------  
+*   menu_task
+*   --------------------------------------------------------------------
+*   Starts up the task responsible for handling menu screens
+*/
 void menu_task(void* param);
 
 typedef struct menu menu_t;
