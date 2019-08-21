@@ -14,7 +14,7 @@
 - Create small factory app to OTA full app
 - Write drivers for flowrate sensors
 - Write drivers for input 
-- Write drivers for SSR 
+- Write drivers for SSR                                                         - 2.4kW element implemented
 - Init screen
 - Fix crash when LCD is not plugged in
 - Write menu and screen functionality

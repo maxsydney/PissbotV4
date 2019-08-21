@@ -112,4 +112,6 @@ void setFlush(bool state);
 */
 void checkFan(double T1);
 
+void setElementState(int state);
+
 

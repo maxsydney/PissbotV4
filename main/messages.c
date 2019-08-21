@@ -137,6 +137,9 @@ esp_err_t decodeCommand(char* commandPacket)
         memcpy(&OTA_IP, arg, strlen(arg));
         printf("OTA IP set to %s\n", OTA_IP);
         xTaskCreate(&ota_update_task, "ota_update_task", 8192, NULL, 5, NULL);
+    } else if (strncmp(command, "element1", 128) == 0)  {
+        bool state = atof(arg);
+        setElementState(state);
     } else {
         ESP_LOGE(tag, "Unrecognised command");
     }

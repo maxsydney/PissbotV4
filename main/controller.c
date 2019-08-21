@@ -229,4 +229,15 @@ void checkFan(double T1)
     }
 }
 
+void setElementState(int state)
+{
+    if (state) {
+        printf("Switching element on\n");
+        setPin(ELEMENT_1, state);
+    } else {
+        printf("Switching element off\n");
+        setPin(ELEMENT_1, state);
+    }
+}
+
 
