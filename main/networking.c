@@ -58,7 +58,6 @@ void wifi_connect(void)
 	tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // Don't run a DHCP client
 
 	//Set static IP
-	
 	inet_pton(AF_INET, STATIC_IP, &ipInfo.ip);
 	inet_pton(AF_INET, GATE_WAY, &ipInfo.gw);
 	inet_pton(AF_INET, SUBNET_MASK, &ipInfo.netmask);
@@ -104,8 +103,7 @@ esp_err_t WiFi_event_handler(void *ctx, system_event_t *event)
         flash_pin(LED_PIN, 100);
         ESP_LOGI(tag, "Connected to WiFi!\n");
     } else if (event->event_id ==SYSTEM_EVENT_STA_DISCONNECTED) {
-         /* This is a workaround as ESP32 WiFi libs don't currently
-           auto-reassociate. */
+        // This is a workaround as ESP32 WiFi libs don't currently auto-reassociate.
         flash_pin(LED_PIN, 100);
         ESP_LOGI(tag, "disconnect reason: %d", event->event_info.disconnected.reason);
         esp_err_t eet = esp_wifi_connect();

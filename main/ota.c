@@ -22,7 +22,7 @@
 #define BUFFSIZE 1024
 #define HASH_LEN 32 /* SHA-256 digest length */
 
-static char TAG[] = "native_ota_example";
+static char TAG[] = "OTA handler";
 char OTA_IP[128];
 /*an ota data write buffer ready to write to the flash*/
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
@@ -40,16 +40,6 @@ static void __attribute__((noreturn)) task_fatal_error()
 
     while (1) {
         ;
-    }
-}
-
-static void infinite_loop(void)
-{
-    int i = 0;
-    ESP_LOGI(TAG, "When a new firmware is available on the server, press the reset button to download it");
-    while(1) {
-        ESP_LOGI(TAG, "Waiting for a new firmware ... %d", ++i);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }
 

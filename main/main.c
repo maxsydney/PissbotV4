@@ -25,6 +25,7 @@
 
 void app_main()
 {
+    // Initialise peripherals and drivers
     nvs_flash_init();
     sensor_init(ONEWIRE_BUS, DS18B20_RESOLUTION_10_BIT);
     nvs_initialize();
@@ -38,6 +39,7 @@ void app_main()
     webServer_init();
     init_input();
     
+    // Schedule tasks
     xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 4096, NULL, 7, NULL, 1);
     // xTaskCreatePinnedToCore(&flowmeter_task, "Flowrate", 2048, NULL, 7, NULL, 1);
     xTaskCreatePinnedToCore(&control_loop, "Controller", 2048, NULL, 6, NULL, 0);

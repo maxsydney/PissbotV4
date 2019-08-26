@@ -112,6 +112,12 @@ void setFlush(bool state);
 */
 void checkFan(double T1);
 
+/*
+*   --------------------------------------------------------------------  
+*   setElementState
+*   --------------------------------------------------------------------
+*   Switches power to 2.4kW heating element
+*/
 void setElementState(int state);
 
 
