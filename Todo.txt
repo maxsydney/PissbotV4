@@ -16,5 +16,7 @@
 - Write drivers for input 
 - Write drivers for SSR                                                         - 2.4kW element implemented
 - Init screen
-- Fix crash when LCD is not plugged in
+- Fix crash when LCD is not plugged in                                          - Done
 - Write menu and screen functionality
+- Write alcohol concentration estimator for vapour and liquid phases              
+- Increase stability of pushbutton input

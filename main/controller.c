@@ -13,15 +13,27 @@
 #include "pinDefs.h"
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+
+// Controller constants
+#define SENSOR_MIN_OUTPUT 1600
+#define SENSOR_MAX_OUTPUT 8190
+#define FAN_THRESH 30
+#define P_atm 101.325
+
+// Antoine equation constants
+#define H20_A 10.196213
+#define H20_B 1730.63
+#define H20_C 233.426
+
+#define ETH_A 9.806073      // Parameters valid for T in (77, 243) degrees celsius
+#define ETH_B 1332.04
+#define ETH_C 199.200
 
 static char tag[] = "Controller";
 static bool element_status = 0, flushSystem = 0;
 uint16_t ctrl_loop_period_ms;
 static int fanState = 0;
-
-#define SENSOR_MIN_OUTPUT 1600
-#define SENSOR_MAX_OUTPUT 8190
-#define FAN_THRESH 30
 
 static Data controllerSettings;
 
@@ -128,8 +140,8 @@ void control_loop(void* params)
         }
         
         getTemperatures(temperatures);
-        
         checkFan(temperatures[T_refluxHot]);
+
         error =  temperatures[T_refluxHot] - controllerSettings.setpoint;
         derivative = (error - last_error) / 0.2;
         last_error = error;
@@ -238,6 +250,56 @@ void setElementState(int state)
         printf("Switching element off\n");
         setPin(ELEMENT_1, state);
     }
+}
+
+// Compute the partial vapour pressure in kPa based on the
+// Antoine equation https://en.wikipedia.org/wiki/Antoine_equation
+float computeVapourPressure(float A, float B, float C, float T)
+{
+    float exp = A - B / (C + T);
+    return pow(10, exp) / 1000;
+}
+
+// Compute bubble line based on The Compleat Distiller
+// Ch8 - Equilibrium curves
+float computeLiquidEthConcentration(float temp)
+{
+    float P_eth = computeVapourPressure(ETH_A, ETH_B, ETH_C, temp);
+    float P_H20 = computeVapourPressure(H20_A, H20_B, H20_C, temp);
+    return (P_atm - P_H20) / (P_eth - P_H20);
+}
+
+// Compute dew line based on The Compleat Distiller
+// Ch8 - Equilibrium curves
+float computeVapourEthConcentration(float temp)
+{
+    float molFractionEth = computeLiquidEthConcentration(temp);
+    float P_eth = computeVapourPressure(ETH_A, ETH_B, ETH_C, temp);
+    return molFractionEth * P_eth / P_atm;
+}
+
+float getBoilerConcentration(float boilerTemp)
+{
+    float conc = -1;
+
+    // Simple criteria for detecting if liquid is boiling or not. Valid for mashes up to ~15% (Confirm with experimental data)
+    if (boilerTemp >= 90) {
+        conc = computeLiquidEthConcentration(boilerTemp) * 100;
+    }
+
+    return conc;
+}
+
+float getVapourConcentration(float vapourTemp)
+{
+    float conc = -1;
+
+    // Valid range for estimator model
+    if (vapourTemp >= 77) {
+        conc = computeVapourEthConcentration(vapourTemp) * 100;
+    }
+
+    return conc;
 }
 
 

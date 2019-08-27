@@ -120,4 +120,32 @@ void checkFan(double T1);
 */
 void setElementState(int state);
 
+/*
+*   --------------------------------------------------------------------  
+*   computeVapourPressure
+*   --------------------------------------------------------------------
+*   Computes the partial vapour pressure of a gas in kPa based on Antoine 
+*   equation constants.
+*/
+float computeVapourPressure(float A, float B, float C, float T);
+
+/*
+*   --------------------------------------------------------------------  
+*   computeLiquidEthConcentration
+*   --------------------------------------------------------------------
+*   Computes the mol fraction of ethanol in a boiling mash
+*/
+float computeLiquidEthConcentration(float temp);
+
+/*
+*   --------------------------------------------------------------------  
+*   computeVapourEthConcentration
+*   --------------------------------------------------------------------
+*   Computes the mol fraction of ethanol in ethanol vapour
+*/
+float computeVapourEthConcentration(float temp);
+
+float getBoilerConcentration(float boilerTemp);
+
+float getVapourConcentration(float vapourTemp);
 

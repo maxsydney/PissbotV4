@@ -65,17 +65,19 @@ void websocket_task(void *pvParameters)
         ctrlSet = get_controller_settings();
         uptime_uS = esp_timer_get_time() / 1000000;
         flowRate = get_flowRate();
-        sprintf(buff, "[%f, %f, %f, %f, %f, %f, %lld, %f, 0, %f, %f, %f]", temps[T_refluxHot], 
-                                                                          temps[T_refluxCold],
-                                                                          temps[T_productHot],
-                                                                          temps[T_productCold],
-                                                                          temps[T_boiler],
-                                                                          ctrlSet.setpoint, 
-                                                                          uptime_uS, 
-                                                                          flowRate,
-                                                                          ctrlSet.P_gain, 
-                                                                          ctrlSet.I_gain, 
-                                                                          ctrlSet.D_gain);
+        sprintf(buff, "[%f, %f, %f, %f, %f, %f, %lld, %f, 0, %f, %f, %f, %f, %f]", temps[T_refluxHot], 
+                                                                                   temps[T_refluxCold],
+                                                                                   temps[T_productHot],
+                                                                                   temps[T_productCold],
+                                                                                   temps[T_boiler],
+                                                                                   ctrlSet.setpoint, 
+                                                                                   uptime_uS, 
+                                                                                   flowRate,
+                                                                                   ctrlSet.P_gain, 
+                                                                                   ctrlSet.I_gain, 
+                                                                                   ctrlSet.D_gain,
+                                                                                   getBoilerConcentration(96),
+                                                                                   getVapourConcentration(temps[T_refluxHot]+50));
 
         if ((!checkWebsocketActive(ws))) {
             ESP_LOGE(tag, "Deleting send task");
