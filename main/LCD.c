@@ -137,7 +137,7 @@ static void runMenu(menu_t *menu, inputType btn)
             } else {
                 // Enter submenu
                 menu->init = true;      // Reset old menu so when we return we re-init
-                menuStack_push(menu->optionTable[menu->currIndex].subMenu);
+                // menuStack_push(menu->optionTable[menu->currIndex].subMenu);
                 return;
             }
         } else if (btn == input_left) {
