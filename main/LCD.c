@@ -50,12 +50,12 @@ static menu_t tuneControllerMenu = {
 
 static menu_t mainMenu = {
     .title = "Pissbot V3.0",
-    .n_items = 3,
+    .n_items = 2,
     .init = true,
     .optionTable = {
         {.fieldName = "Main Screen ", .type = menuItem_none, .fn = mainScreen},
         {.fieldName = "Tune PID    ", .type = menuItem_none, .subMenu = &tuneControllerMenu},
-        {.fieldName = "Settings    ", .type = menuItem_string, .stringVal = "Gaan", .fn = NULL}
+        // {.fieldName = "Settings    ", .type = menuItem_string, .stringVal = "Gaan", .fn = NULL}
     }
 };
 
@@ -187,12 +187,16 @@ static void drawMenuItem(menu_t *menu, int index, int offset)
         LCD_setCursor(0, index - offset + 1);
         LCD_writeStr("  ");
     }
-    LCD_writeStr(menu->optionTable[index].fieldName);
-    LCD_setCursor(14, index - offset + 1);
-    if(menu->optionTable[index].type == menuItem_int) {
-        snprintf(dataBuffer, sizeof(dataBuffer), "%5d", *(menu->optionTable[index].intVal));
-        LCD_writeStr(dataBuffer);
-    }
+
+    // Restrict access to valid menu items in array
+    if (index < menu->n_items) {
+        LCD_writeStr(menu->optionTable[index].fieldName);
+        LCD_setCursor(14, index - offset + 1);
+        if(menu->optionTable[index].type == menuItem_int) {
+            snprintf(dataBuffer, sizeof(dataBuffer), "%5d", *(menu->optionTable[index].intVal));
+            LCD_writeStr(dataBuffer);
+        }
+    }   
 }
 
 // Menu item functions
