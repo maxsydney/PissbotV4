@@ -109,7 +109,7 @@ void menu_task(void* param)
         }
 
         runMenu(menuStack_peek(), btnEvent.button);
-        vTaskDelay(50 / portTICK_RATE_MS);
+        vTaskDelay(150 / portTICK_RATE_MS);
     }
 }
 
@@ -134,10 +134,13 @@ static void runMenu(menu_t *menu, inputType btn)
                 // Case where menu item is a screen/function
                 menu->runFunction = true;
                 menu->init = true;
-            } else {
+            } else if (menu->optionTable[menu->currIndex].subMenu != NULL && menu->optionTable[menu->currIndex].fn == NULL)  {
                 // Enter submenu
                 menu->init = true;      // Reset old menu so when we return we re-init
-                // menuStack_push(menu->optionTable[menu->currIndex].subMenu);
+                menuStack_push(menu->optionTable[menu->currIndex].subMenu);
+                return;
+            } else {
+                // Middle button should do nothing
                 return;
             }
         } else if (btn == input_left) {
