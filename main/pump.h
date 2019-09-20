@@ -1,13 +1,23 @@
 #pragma once
 
+typedef enum {
+    pumpCtrl_active,
+    pumpCtrl_fixed
+} pumpMode_t;
+
+typdef struct {
+    uint32_t pumpSpeed;
+    pumpMode_t mode;
+} pumpCtrl_t;
+
 /*
 *   --------------------------------------------------------------------  
-*   pwm_init
+*   initPumps
 *   --------------------------------------------------------------------
-*   Initializes the PWM pin used to send the controller output signal to 
-*   the pump control circuit.
+*   Initializes the PWM pins used to send the controller output signal to 
+*   the pump control circuits.
 */
-void pwm_init();
+void initPumps();
 
 /*
 *   --------------------------------------------------------------------  
