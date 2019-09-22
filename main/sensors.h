@@ -1,13 +1,18 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "ds18b20.h"
 
 // Expose queue handles for passing data between tasks
-xQueueHandle tempQueue;
-xQueueHandle hotSideTempQueue;
-xQueueHandle coldSideTempQueue;
-xQueueHandle flowRateQueue;
+extern xQueueHandle tempQueue;
+extern xQueueHandle hotSideTempQueue;
+extern xQueueHandle coldSideTempQueue;
+extern xQueueHandle flowRateQueue;
 
 /*
 *   --------------------------------------------------------------------  
@@ -69,4 +74,6 @@ void readTemps(float sensorTemps[]);
 */
 void checkPowerSupply(void);
 
-
+#ifdef __cplusplus
+}
+#endif

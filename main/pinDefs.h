@@ -1,16 +1,16 @@
 #pragma once
 
-#define PROD_PUMP 23
-#define REFLUX_PUMP 22
-#define PROD_FLOW 34
-#define REFLUX_FLOW 35
-#define ONEWIRE_BUS 15
-#define LCD_SCL 18
-#define LCD_SDA 19
-#define FAN_SWITCH 21
-#define INPUT_UP 25
-#define INPUT_DOWN 26
-#define INPUT_LEFT 27
-#define INPUT_MID 14
-#define ELEMENT_1 13
-#define ELEMENT_2 10
+#define PROD_PUMP GPIO_NUM_23
+#define REFLUX_PUMP GPIO_NUM_22
+#define PROD_FLOW GPIO_NUM_34
+#define REFLUX_FLOW GPIO_NUM_35
+#define ONEWIRE_BUS GPIO_NUM_15
+#define LCD_SCL GPIO_NUM_18
+#define LCD_SDA GPIO_NUM_19
+#define FAN_SWITCH GPIO_NUM_21
+#define INPUT_UP GPIO_NUM_25
+#define INPUT_DOWN GPIO_NUM_26
+#define INPUT_LEFT GPIO_NUM_27
+#define INPUT_MID GPIO_NUM_14
+#define ELEMENT_1 GPIO_NUM_13
+#define ELEMENT_2 GPIO_NUM_10

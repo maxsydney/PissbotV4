@@ -5,7 +5,7 @@
 
 #define SW_VERSION 1.0      // Deprecated
 
-#define LED_PIN 2
+#define LED_PIN GPIO_NUM_2
 #define LCD_ADDR 0x27
 #define LCD_COLS 20
 #define LCD_ROWS 4
@@ -19,4 +19,4 @@ typedef enum {
     n_tempSensors
 } tempSensor;
 
-xQueueHandle queue;
+extern xQueueHandle queue;

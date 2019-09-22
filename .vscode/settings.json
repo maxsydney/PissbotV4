@@ -22,7 +22,8 @@
         "ios": "c",
         "regex": "c",
         "locale": "c",
-        "httpd-platform.h": "c"
+        "httpd-platform.h": "c",
+        "*.ipp": "cpp"
     },
     "python.linting.pylintEnabled": false
 }

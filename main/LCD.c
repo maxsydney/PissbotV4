@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <driver/i2c.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
@@ -7,7 +11,7 @@
 #include "sdkconfig.h"
 #include "HD44780.h"
 #include "LCD.h"
-#include "controller.h"
+#include "controlLoop.h"
 #include "main.h"
 #include "menu.h"
 #include "input.h"
@@ -387,3 +391,7 @@ void tuneSetpoint(int btn)
     LCD_setCursor(10, 0);
     LCD_writeStr(dataBuffer);
 }
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <esp_log.h>
@@ -9,7 +13,7 @@
 #include "driver/timer.h"
 #include "ds18b20.h" 
 #include "sensors.h"
-#include "controller.h"
+#include "controlLoop.h"
 #include "main.h"
 #include "pinDefs.h"
 #include "owb.h"
@@ -27,6 +31,9 @@ static DS18B20_Info * devices[MAX_DEVICES] = {0};
 static OneWireBus * owb;
 static owb_rmt_driver_info rmt_driver_info;
 int num_devices = 0;
+
+xQueueHandle tempQueue;
+xQueueHandle flowRateQueue;
 
 esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
 {
@@ -135,8 +142,8 @@ void IRAM_ATTR flowmeter_ISR(void* arg)
 void readTemps(float sensorTemps[])
 {
     // Read temperatures more efficiently by starting conversions on all devices at the same time
-    int errors_count[MAX_DEVICES] = {0};
-    int sample_count = 0;
+    // int errors_count[MAX_DEVICES] = {0};
+    // int sample_count = 0;
     if (num_devices > 0) {
         ds18b20_convert_all(owb);
 
@@ -151,3 +158,7 @@ void readTemps(float sensorTemps[])
         }
     }
 }
+
+#ifdef __cplusplus
+}
+#endif

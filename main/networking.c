@@ -18,7 +18,7 @@
 #include "nvs.h"
 #include "networking.h"
 #include "messages.h"
-#include "controller.h"
+#include "controlLoop.h"
 #include "main.h"
 #include "sensors.h"
 #include "gpio.h"

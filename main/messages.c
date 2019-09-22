@@ -7,7 +7,7 @@
 #include "sensors.h"
 #include "ds18b20.h"
 #include "networking.h"
-#include "controller.h"
+#include "controlLoop.h"
 #include "ota.h"
 
 #define MAX_LINE_LEN 40

@@ -26,13 +26,13 @@
 #include <string.h>
 #include <math.h>
 #include "esp_spiffs.h"
-#include "controller.h"
+#include "controlLoop.h"
 #include "messages.h"
 #include "networking.h"
 #include "main.h"
 
 
-#define LED_PIN 2
+#define LED_PIN GPIO_NUM_2
 #define GPIO_HIGH   1
 #define GPIO_LOW    0
 #define LISTEN_PORT     80u

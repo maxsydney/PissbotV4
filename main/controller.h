@@ -1,151 +1,63 @@
 #pragma once
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
 
-#define CONTROL_LOOP_RATE 5.0f
-#define CONTROL_LOOP_PERIOD 1.0f / CONTROL_LOOP_RATE
-#define SENSOR_SAMPLE_RATE 5.0f
-#define SENSOR_SAMPLE_PERIOD 1.0f / SENSOR_SAMPLE_RATE
+#include "controlLoop.h"
+#include "pump.h"
 
-xQueueHandle dataQueue;
-uint16_t ctrl_loop_period_ms;;
+constexpr uint16_t PUMP_MIN_OUTPUT = 1600;
+constexpr uint16_t PUMP_MAX_OUTPUT = 8190;
 
-typedef struct { 
-    float setpoint;
-    float P_gain;
-    float I_gain;
-    float D_gain;
-} Data;
+class Controller
+{
+    public:
+        Controller(uint8_t freq, Data settings, int P1_pin, ledc_channel_t P1_timer, 
+                   int P2_pin, ledc_channel_t P2_channel, gpio_num_t fanPin,
+                   gpio_num_t elem24Pin, gpio_num_t elem3Pin);
+        Controller();
 
-/*
-*   --------------------------------------------------------------------  
-*   getTemperatures
-*   --------------------------------------------------------------------
-*   Retrieves the most recently read temperatures and writes them into
-*   tempArray
-*/
-esp_err_t getTemperatures(float tempArray[]);
+        void updatePumpSpeed(double temp);
+        void updateComponents();
 
-/*
-*   --------------------------------------------------------------------  
-*   get_setpoint
-*   --------------------------------------------------------------------
-*   Returns the current controller setpoint
-*/
-float get_setpoint(void);
+        // Setters
+        void setFanState(bool state) {_fanState = state;};
+        void setRefluxSpeed(uint16_t speed) {_refluxPump.setSpeed(speed);};
+        void setProductSpeed(uint16_t speed) {_prodPump.setSpeed(speed);};
+        void setElem24State(bool state) {_elementState_24 = state;};
+        void setElem3State(bool state) {_elementState_3 = state;};
+        void setSetPoint(double sp) {_settings.setpoint = sp;};
+        void setPGain(float P) {_settings.P_gain = P;};
+        void setIGain(float I) {_settings.I_gain = I;};
+        void setDGain(float D) {_settings.D_gain = D;};
+        void setRefluxPumpMode(pumpMode_t mode) {_refluxPump.setMode(mode);};
+        void setProductPumpMode(pumpMode_t mode) {_prodPump.setMode(mode);};
 
-/*
-*   --------------------------------------------------------------------  
-*   get_flowRate
-*   --------------------------------------------------------------------
-*   Returns the most recent flowrate measurement in L/min. Does not work
-*   accurately at very low flow rates
-*/
-float get_flowRate(void);
+        // Getters
+        bool getFanState() const {return _fanState;};
+        uint16_t getRefluxSpeed() const {return _refluxPump.getSpeed();}
+        uint16_t getProductSpeed() const {return _prodPump.getSpeed();}
+        bool getElem24State() const {return _elementState_24;};
+        bool getElem3State() const {return _elementState_3;};
+        double getSetpoint() const {return _settings.setpoint;};
+        double getPGain() const {return _settings.P_gain;};
+        double getIGain() const {return _settings.I_gain;};
+        double getDGain() const {return _settings.D_gain;};
+        pumpMode_t getRefluxPumpMode() const {return _refluxPump.getMode();};
+        pumpMode_t getProductPumpMode() const {return _prodPump.getMode();};
 
-/*
-*   --------------------------------------------------------------------  
-*   get_element_status
-*   --------------------------------------------------------------------
-*   Not used on current PCB revision
-*/
-bool get_element_status(void);
-
-/*
-*   --------------------------------------------------------------------  
-*   controller_init
-*   --------------------------------------------------------------------
-*   Initializes the controller with parameters from NVS
-*/
-esp_err_t controller_init(uint8_t frequency);
-
-/*
-*   --------------------------------------------------------------------  
-*   nvs_initialize
-*   --------------------------------------------------------------------
-*   Initializes the NVS memory driver to access stored controller settings
-*/
-void nvs_initialize(void);
-
-/*
-*   --------------------------------------------------------------------  
-*   control_loop
-*   --------------------------------------------------------------------
-*   Main temperature control task. Implements a simple PID controller 
-*   with an anti integral windup strategy. Controller parameters are
-*   configurable from the python GUI or the web interface
-*/
-void control_loop(void* params);
-
-/*
-*   --------------------------------------------------------------------  
-*   get_controller_settings
-*   --------------------------------------------------------------------
-*   Returns a struct containing all controller parameters
-*/
-Data get_controller_settings(void);
-
-/*
-*   --------------------------------------------------------------------  
-*   setFanState
-*   --------------------------------------------------------------------
-*   Switches the radiator fan on and off. Not currently implemented but
-*   will be available in coming PCB revisions
-*/
-void setFanState(int state);
-
-/*
-*   --------------------------------------------------------------------  
-*   setFlush
-*   --------------------------------------------------------------------
-*   Sets the pump to a fixed speed to flush all air out of the system
-*/
-void setFlush(bool state);
-
-/*
-*   --------------------------------------------------------------------  
-*   checkFan
-*   --------------------------------------------------------------------
-*   Enables automatic handling of radiator fan. Fan will automatically switch
-*   on when the hot side temperature is above a threshold, and switched off
-*   when the system has cooled below the threshold 
-*/
-void checkFan(double T1);
-
-/*
-*   --------------------------------------------------------------------  
-*   setElementState
-*   --------------------------------------------------------------------
-*   Switches power to 2.4kW heating element
-*/
-void setElementState(int state);
-
-/*
-*   --------------------------------------------------------------------  
-*   computeVapourPressure
-*   --------------------------------------------------------------------
-*   Computes the partial vapour pressure of a gas in kPa based on Antoine 
-*   equation constants.
-*/
-float computeVapourPressure(float A, float B, float C, float T);
-
-/*
-*   --------------------------------------------------------------------  
-*   computeLiquidEthConcentration
-*   --------------------------------------------------------------------
-*   Computes the mol fraction of ethanol in a boiling mash
-*/
-float computeLiquidEthConcentration(float temp);
-
-/*
-*   --------------------------------------------------------------------  
-*   computeVapourEthConcentration
-*   --------------------------------------------------------------------
-*   Computes the mol fraction of ethanol in ethanol vapour
-*/
-float computeVapourEthConcentration(float temp);
-
-float getBoilerConcentration(float boilerTemp);
-
-float getVapourConcentration(float vapourTemp);
-
+    private:
+        void _initComponents() const;
+        void _initPumps() const;
+    
+        uint8_t _updateFreq;
+        float _updatePeriod;
+        Data _settings;
+        Pump _refluxPump;
+        Pump _prodPump;
+        bool _fanState;
+        gpio_num_t _fanPin;
+        bool _elementState_24;
+        gpio_num_t _elem24Pin;
+        bool _elementState_3;
+        gpio_num_t _elem3Pin;
+        double _prevError;
+        double _integral;
+};
