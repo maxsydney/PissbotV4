@@ -56,7 +56,7 @@ void websocket_task(void *pvParameters)
     Websock *ws = (Websock*) pvParameters;
     float temps[n_tempSensors] = {0};
     float flowRate;
-    char buff[128];
+    char buff[3848];
     Data ctrlSet;
     int64_t uptime_uS;
 
@@ -65,7 +65,7 @@ void websocket_task(void *pvParameters)
         ctrlSet = get_controller_settings();
         uptime_uS = esp_timer_get_time() / 1000000;
         flowRate = get_flowRate();
-        sprintf(buff, "[%f, %f, %f, %f, %f, %f, %lld, %f, 0, %f, %f, %f, %f, %f]", temps[T_refluxHot], 
+        snprintf(buff, 3848, "[%f, %f, %f, %f, %f, %f, %lld, %f, 0, %f, %f, %f, %f, %f]", temps[T_refluxHot], 
                                                                                    temps[T_refluxCold],
                                                                                    temps[T_productHot],
                                                                                    temps[T_productCold],

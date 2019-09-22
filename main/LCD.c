@@ -247,7 +247,7 @@ void mainScreen(int btn)
     LCD_writeStr(txtBuf);
 
     LCD_setCursor(8, 3);
-    snprintf(txtBuf, 4, "%.2f", temps[T_boiler]);
+    snprintf(txtBuf, 6, "%.2f", temps[T_boiler]);
     LCD_writeStr(txtBuf);
 }
 

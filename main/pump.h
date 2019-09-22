@@ -5,7 +5,7 @@ typedef enum {
     pumpCtrl_fixed
 } pumpMode_t;
 
-typdef struct {
+typedef struct {
     uint32_t pumpSpeed;
     pumpMode_t mode;
 } pumpCtrl_t;

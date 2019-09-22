@@ -8,7 +8,6 @@
 #include <esp_err.h>
 #include <esp_timer.h>
 #include <esp_event.h>
-#include <esp_event_loop.h>
 #include <string.h>
 #include <errno.h>
 #include "freertos/queue.h"

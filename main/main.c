@@ -33,7 +33,7 @@ void app_main()
     init_timer();
     gpio_init();
     wifi_connect();
-    pwm_init();
+    initPumps();
     controller_init(CONTROL_LOOP_FREQUENCY);
     LCD_init(LCD_ADDR, LCD_SDA, LCD_SCL, LCD_COLS, LCD_ROWS);
     webServer_init();

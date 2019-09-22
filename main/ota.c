@@ -5,7 +5,7 @@
 
 #include "esp_system.h"
 #include "esp_wifi.h"
-#include "esp_event_loop.h"
+#include "esp_event.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
@@ -49,8 +49,8 @@ void ota_update_task(void *pvParameter)
     /* update handle : set by esp_ota_begin(), must be freed via esp_ota_end() */
     esp_ota_handle_t update_handle = 0 ;
     const esp_partition_t *update_partition = NULL;
-    char url_buffer[64];
-    snprintf(url_buffer, 64, "%s%s%s", OTA_SERVER_PREFIX, OTA_IP, OTA_SERVER_SUFFIX);
+    char url_buffer[162];
+    snprintf(url_buffer, 162, "%s%s%s", OTA_SERVER_PREFIX, OTA_IP, OTA_SERVER_SUFFIX);
 
     ESP_LOGI(TAG, "Attemping to connect to: %s", url_buffer);
 

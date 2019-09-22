@@ -1,6 +1,8 @@
 #define GPIO_HIGH   1
 #define GPIO_LOW    0
 
+#include "driver/gpio.h"
+
 /*
 *   --------------------------------------------------------------------  
 *   gpio_init
