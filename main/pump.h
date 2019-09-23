@@ -14,10 +14,10 @@ typedef enum {
 class Pump
 {
     public:
-        Pump(int pin, ledc_channel_t PWMChannel);
-        Pump();
+        Pump(gpio_num_t pin, ledc_channel_t PWMChannel, ledc_timer_t timerChannel);
+        Pump() {};
 
-        void commandPump() const;
+        void commandPump();
 
         void setSpeed(uint16_t speed) {_pumpSpeed = speed;};
         void setMode(pumpMode_t mode) {_mode = mode;};
@@ -32,25 +32,8 @@ class Pump
         pumpMode_t _mode;
         ledc_channel_t _PWMChannel;
         int _pin;
-
+        ledc_timer_t _timerChannel;
 };
-
-/*
-*   --------------------------------------------------------------------  
-*   initPumps
-*   --------------------------------------------------------------------
-*   Initializes the PWM pins used to send the controller output signal to 
-*   the pump control circuits.
-*/
-void initPumps();
-
-/*
-*   --------------------------------------------------------------------  
-*   set_motor_speed
-*   --------------------------------------------------------------------
-*   Updates the contol signal sent to the pump
-*/
-void set_motor_speed(int speed);
 
 #ifdef __cplusplus
 }

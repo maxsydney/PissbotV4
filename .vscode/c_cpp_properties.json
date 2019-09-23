@@ -3,22 +3,44 @@
         {
             "name": "Mac",
             "includePath": [
-                "/Users/newuser/Library/Arduino15/packages/esp8266/hardware/esp8266/2.3.0/cores/esp8266"
+                "/Users/newuser/esp/Distiller_Wrover",
+                "/Users/newuser/esp/esp-idf/components/driver/include",
+                "/Users/newuser/esp/esp-idf/components/freertos/include",
+                "/Users/newuser/esp/esp-idf/components/esp_event/include",
+                "/Users/newuser/esp/esp-idf/components/nvs_flash/include",
+                "/Users/newuser/esp/esp-idf/components/esp_common/include",
+                "/Users/newuser/esp/esp-idf/components/soc/esp32/include",
+                "/Users/newuser/esp/Distiller_Wrover/components/esp32-ds18b20/include",
+                "/Users/newuser/esp/Distiller_Wrover/components/esp32-owb/include",
+                "/Users/newuser/esp/esp-idf/components/esp_ringbuf/include",
+                "/Users/newuser/esp/esp-idf/components/soc/include",
+                "/Users/newuser/esp/esp-idf/components/xtensa/include",
+                "/Users/newuser/esp/esp-idf/components/esp32/include",
+                "/Users/newuser/esp/esp-idf/components/spi_flash/include",
+                "/Users/newuser/esp/esp-idf/components/esp_rom/include",
+                "/Users/newuser/esp/esp-idf/components/newlib/include",
+                "/Users/newuser/esp/esp-idf/components/spi_flash/sim/stubs/log/include",
+                "/Users/newuser/esp/esp-idf/examples/get-started/blink/build/bootloader/config",
+                "/Users/newuser/esp/esp-idf/components/nvs_flash/test_nvs_host",
+                "/Users/newuser/esp/esp-idf/components/spiffs/test_spiffs_host/sdkconfig",
+                "/Users/newuser/esp/esp-idf/components/spi_flash/sim/sdkconfig",
+                "/Users/newuser/esp/esp-idf/components/fatfs/test_fatfs_host/sdkconfig",
+                "/Users/newuser/esp/esp-idf/examples/get-started/hello_world/build/config",
+                "/Users/newuser/esp/esp-idf/components/spi_flash/sim/stubs/sdkconfig",
+                "/Users/newuser/esp/esp-idf/components/wear_levelling/test_wl_host/sdkconfig",
+                "/Users/newuser/esp/esp-idf/examples/get-started/blink/build/config",
+                "${workspaceFolder}/build/include",
+                "/Users/newuser/esp/esp-idf/components/xtensa/esp32/include",
+                "/Users/newuser/esp/esp-idf/components/xtensa/esp32/include",
+                "/Users/newuser/esp/esp-idf/components/heap/include",
+                "/Users/newuser/esp/esp-idf/components/esp_wifi/include",
+                "/Users/newuser/esp/esp-idf/components/tcpip_adapter/include",
+                "/Users/newuser/esp/Distiller_Wrover/components/HD44780/include"
             ],
             "browse": {
-                "limitSymbolsToIncludedHeaders": false,
-                "path": [
-                    "/Users/newuser/Library/Arduino15/packages/esp8266/hardware/esp8266/2.3.0/cores/esp8266"
-                ]
-            },
-            "intelliSenseMode": "clang-x64",
-            "macFrameworkPath": [
-                "/System/Library/Frameworks",
-                "/Library/Frameworks"
-            ],
-            "compilerPath": "/usr/bin/clang",
-            "cStandard": "c11",
-            "cppStandard": "c++17"
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            }
         }
     ],
     "version": 4

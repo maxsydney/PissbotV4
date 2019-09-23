@@ -125,7 +125,7 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
 static void myWebsocketConnect(Websock *ws) {
 	ws->recvCb=myWebsocketRecv;
     ESP_LOGI(tag, "Socket connected!!\n");
-    xTaskCreatePinnedToCore(&websocket_task, "webServer", 4096, ws, 3, &socketSendHandle, 0);
+    xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 0);
 }
 
 HttpdBuiltInUrl builtInUrls[]={

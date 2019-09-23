@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "controlLoop.h"
 #include "pump.h"
 
@@ -9,9 +13,10 @@ constexpr uint16_t PUMP_MAX_OUTPUT = 8190;
 class Controller
 {
     public:
-        Controller(uint8_t freq, Data settings, int P1_pin, ledc_channel_t P1_timer, 
-                   int P2_pin, ledc_channel_t P2_channel, gpio_num_t fanPin,
-                   gpio_num_t elem24Pin, gpio_num_t elem3Pin);
+        Controller(uint8_t freq, Data settings, gpio_num_t P1_pin, ledc_channel_t P1_channel, 
+                   ledc_timer_t timerChannel1, gpio_num_t P2_pin, ledc_channel_t P2_channel, 
+                   ledc_timer_t timerChannel2, gpio_num_t fanPin, gpio_num_t elem24Pin, 
+                   gpio_num_t elem3Pin);
         Controller();
 
         void updatePumpSpeed(double temp);
@@ -63,3 +68,7 @@ class Controller
         double _prevError;
         double _integral;
 };
+
+#ifdef __cplusplus
+}
+#endif

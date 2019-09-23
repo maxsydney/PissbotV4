@@ -4,6 +4,7 @@
 #include "freertos/queue.h"
 
 #define SW_VERSION 1.0      // Deprecated
+#define CONTROL_LOOP_FREQUENCY 5
 
 #define LED_PIN GPIO_NUM_2
 #define LCD_ADDR 0x27

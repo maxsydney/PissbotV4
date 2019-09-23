@@ -20,3 +20,4 @@
 - Write menu and screen functionality                                           - Done
 - Write alcohol concentration estimator for vapour and liquid phases            - Done
 - Increase stability of pushbutton input                                        - Done
+- Fix OTA crashing on reboot bug
