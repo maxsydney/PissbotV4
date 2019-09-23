@@ -27,6 +27,7 @@ class Controller
         void setPGain(float P) {_settings.P_gain = P;};
         void setIGain(float I) {_settings.I_gain = I;};
         void setDGain(float D) {_settings.D_gain = D;};
+        void setControllerSettings(Data settings) {_settings = settings;};
         void setRefluxPumpMode(pumpMode_t mode) {_refluxPump.setMode(mode);};
         void setProductPumpMode(pumpMode_t mode) {_prodPump.setMode(mode);};
 
@@ -40,6 +41,7 @@ class Controller
         double getPGain() const {return _settings.P_gain;};
         double getIGain() const {return _settings.I_gain;};
         double getDGain() const {return _settings.D_gain;};
+        Data getControllerSettings() const {return _settings;};
         pumpMode_t getRefluxPumpMode() const {return _refluxPump.getMode();};
         pumpMode_t getProductPumpMode() const {return _prodPump.getMode();};
 
