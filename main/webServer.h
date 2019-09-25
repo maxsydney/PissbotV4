@@ -1,5 +1,14 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {
+    char ip[16];
+    uint8_t len;
+} ota_t;
+
 /*
 *   --------------------------------------------------------------------  
 *   websocket_task
@@ -16,3 +25,7 @@ void websocket_task(void *pvParameters);
 *   Spins up an http server to serve static browser client files
 */
 void webServer_init(void);
+
+#ifdef __cplusplus
+}
+#endif

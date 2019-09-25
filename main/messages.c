@@ -120,28 +120,14 @@ Data* decode_data(char* dataPacket)
     return data;    
 }
 
-esp_err_t decodeCommand(char* commandPacket)
+Cmd_t decodeCommand(char* commandPacket)
 {
     char* command = strtok(commandPacket, ":");
     char* arg = strtok(NULL, "&\n");
+    Cmd_t cmd;
+    strncpy(cmd.cmd, command, CMD_LEN);
+    strncpy(cmd.arg, arg, ARG_LEN);
     printf("Command: %s\nArg: %s\n", command, arg);
 
-    if (strncmp(command, "fanState", 128) == 0) {
-        bool state = atof(arg);
-        setFanState(state);
-    } else if (strncmp(command, "flush", 128) == 0) {
-        bool state = atof(arg);
-        setFlush(state);
-    } else if (strncmp(command, "OTA", 16) == 0) {
-        printf("Received OTA message");
-        memcpy(&OTA_IP, arg, strlen(arg));
-        printf("OTA IP set to %s\n", OTA_IP);
-        xTaskCreate(&ota_update_task, "ota_update_task", 8192, NULL, 5, NULL);
-    } else if (strncmp(command, "element1", 128) == 0)  {
-        bool state = atof(arg);
-        setElementState(state);
-    } else {
-        ESP_LOGE(tag, "Unrecognised command");
-    }
-    return ESP_OK;
+    return cmd;
 }

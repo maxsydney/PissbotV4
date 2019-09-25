@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "freertos/FreeRTOS.h"
 #include "esp_wifi.h"
 #include "esp_system.h"
@@ -30,6 +34,8 @@
 #include "messages.h"
 #include "networking.h"
 #include "main.h"
+#include "ota.h"
+#include "webServer.h"
 
 
 #define LED_PIN GPIO_NUM_2
@@ -111,14 +117,30 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
     ESP_LOGI(tag, "Received msg: %s", msg);
 	char* header = strtok(msg, "&");
     char* message = strtok(NULL, "&");
-    if (strncmp(header, "INFO", 4) == 0) {       // New data packet received
+
+    if (strncmp(header, "INFO", 4) == 0) { 
+        // Hand new data packet to controller      
         ESP_LOGI(tag, "Received INFO message\n");
         Data* data = decode_data(message);
         write_nvs(data);
         xQueueSend(dataQueue, data, 50);
         free(data);
     } else if (strncmp(header, "CMD", 3) == 0) {
-        decodeCommand(message);
+        // Received new command
+        ESP_LOGI(tag, "Received CMD message\n");
+        Cmd_t cmd = decodeCommand(message);
+        if (strncmp(cmd.cmd, "OTA", 16) == 0) {
+            // We have received new OTA request. Run OTA
+            printf("Received OTA message");
+            ota_t ota;
+            ota.len = strlen(cmd.arg);
+            memcpy(ota.ip, cmd.arg, ota.len);
+            printf("OTA IP set to %s\n", OTA_IP);
+            xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
+        } else {
+            // Command is for controller
+            xQueueSend(cmdQueue, &cmd, 50);
+        }
     }
 }
 
@@ -148,3 +170,6 @@ void webServer_init(void)
 	httpdFreertosStart(&httpdFreertosInstance);
 }
 
+#ifdef __cplusplus
+}
+#endif

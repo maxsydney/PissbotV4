@@ -1,11 +1,19 @@
 #pragma once
 #include "controlLoop.h"
 
+#define CMD_LEN 16
+#define ARG_LEN 16
+
 typedef struct message_S {
     char* key;
     double value;
     struct message_S* next;
 } Message;
+
+typedef struct {
+    char cmd[CMD_LEN];
+    char arg[ARG_LEN];
+} Cmd_t;
 
 Message* parseMessage(char* dataPacket, uint32_t len);
 
@@ -66,5 +74,5 @@ Data* decode_data(char* dataPacket);
 *   Decodes incoming commands. Command messages contain 1 commands in the
 *   format CMD&ARG and trigger routines running on the ESP32.
 */
-esp_err_t decodeCommand(char* commandPacket);
+Cmd_t decodeCommand(char* commandPacket);
 

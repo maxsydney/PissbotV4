@@ -16,6 +16,7 @@
 #include "nvs_flash.h"
 #include "driver/gpio.h"
 #include "ota.h"
+#include "webServer.h"
 
 #define OTA_SERVER_PREFIX "http://"
 #define OTA_SERVER_SUFFIX ":8070/distillerFirmware.bin"
@@ -23,15 +24,13 @@
 #define HASH_LEN 32 /* SHA-256 digest length */
 
 static char TAG[] = "OTA handler";
-char OTA_IP[128];
-/*an ota data write buffer ready to write to the flash*/
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 
 static void http_cleanup(esp_http_client_handle_t client)
 {
     esp_http_client_close(client);
     esp_http_client_cleanup(client);
-}
+} 
 
 static void __attribute__((noreturn)) task_fatal_error()
 {
@@ -46,6 +45,12 @@ static void __attribute__((noreturn)) task_fatal_error()
 void ota_update_task(void *pvParameter)
 {
     esp_err_t err;
+    ota_t ota = *((ota_t*) pvParameter);
+    char OTA_IP[16] = {0};
+    strncpy(OTA_IP, ota.ip, ota.len);
+    OTA_IP[ota.len] = '\0';                 // TODO: Make this more robust;
+
+    ESP_LOGI(TAG, "Received request to run OTA with ip (%s)", OTA_IP);
     /* update handle : set by esp_ota_begin(), must be freed via esp_ota_end() */
     esp_ota_handle_t update_handle = 0 ;
     const esp_partition_t *update_partition = NULL;

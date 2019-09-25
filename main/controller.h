@@ -6,9 +6,11 @@ extern "C" {
 
 #include "controlLoop.h"
 #include "pump.h"
+#include "messages.h"
 
 constexpr uint16_t PUMP_MIN_OUTPUT = 1600;
 constexpr uint16_t PUMP_MAX_OUTPUT = 8190;
+constexpr uint16_t FLUSH_SPEED = 5000;
 
 class Controller
 {
@@ -21,6 +23,7 @@ class Controller
 
         void updatePumpSpeed(double temp);
         void updateComponents();
+        void processCommand(Cmd_t cmd);
 
         // Setters
         void setFanState(bool state) {_fanState = state;};
@@ -52,7 +55,8 @@ class Controller
 
     private:
         void _initComponents() const;
-        void _initPumps() const;
+        void _initPumps(gpio_num_t P1_pin, ledc_channel_t P1_channel, ledc_timer_t timerChannel1, 
+                        gpio_num_t P2_pin, ledc_channel_t P2_channel, ledc_timer_t timerChannel2);
     
         uint8_t _updateFreq;
         float _updatePeriod;
