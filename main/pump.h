@@ -19,7 +19,7 @@ class Pump
 
         void commandPump();
 
-        void setSpeed(uint16_t speed);
+        void setSpeed(int16_t speed);
         void setMode(pumpMode_t mode) {_mode = mode;};
 
         uint16_t getSpeed() const {return _pumpSpeed;};

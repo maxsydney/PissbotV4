@@ -8,9 +8,9 @@ extern "C" {
 #include "pump.h"
 #include "messages.h"
 
-constexpr uint16_t PUMP_MIN_OUTPUT = 1600;
-constexpr uint16_t PUMP_MAX_OUTPUT = 8190;
-constexpr uint16_t FLUSH_SPEED = 5000;
+constexpr uint16_t PUMP_MIN_OUTPUT = 100;
+constexpr uint16_t PUMP_MAX_OUTPUT = 1024;
+constexpr uint16_t FLUSH_SPEED = 800;
 
 class Controller
 {
@@ -49,12 +49,13 @@ class Controller
         double getPGain() const {return _settings.P_gain;};
         double getIGain() const {return _settings.I_gain;};
         double getDGain() const {return _settings.D_gain;};
-        Data getControllerSettings() const {return _settings;};
+        Data getControllerSettings() {return _settings;};
         pumpMode_t getRefluxPumpMode() const {return _refluxPump.getMode();};
         pumpMode_t getProductPumpMode() const {return _prodPump.getMode();};
 
     private:
         void _initComponents() const;
+        void _handleProductPump(double temp);
         void _initPumps(gpio_num_t P1_pin, ledc_channel_t P1_channel, ledc_timer_t timerChannel1, 
                         gpio_num_t P2_pin, ledc_channel_t P2_channel, ledc_timer_t timerChannel2);
     

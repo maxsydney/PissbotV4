@@ -1,5 +1,5 @@
 - Fix ongoing controller performance issues                                     - Controller tuned
-- Migrate to fully ESP32 based webserver
+- Migrate to fully ESP32 based webserver                                        - Done
     - Fix crashing issue on browser reload/exit                                 - Mostly fixed. Still crashes on odd occaison
     - Implement handling of multiple connections                                      
 - D-term filtering                                                              - Unsure if beneficial
@@ -21,3 +21,13 @@
 - Write alcohol concentration estimator for vapour and liquid phases            - Done
 - Increase stability of pushbutton input                                        - Done
 - Fix OTA crashing on reboot bug
+- Transmit settings to webserver
+- Change to PI controller 
+- Include Feedforward control 
+- Configurable minimum pump speeds
+- Fix max pump speed issue
+- Increase chart upper limit to 100 degrees
+- Install flowmeters
+- Update browser on states when connecting
+- Fix LCD bug while running pumps
+- Calibrate flow meter
