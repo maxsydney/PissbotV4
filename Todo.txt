@@ -25,8 +25,8 @@
 - Change to PI controller 
 - Include Feedforward control 
 - Configurable minimum pump speeds
-- Fix max pump speed issue
-- Increase chart upper limit to 100 degrees
+- Fix max pump speed issue                                                      - Done
+- Increase chart upper limit to 100 degrees                                     - Done 
 - Install flowmeters
 - Update browser on states when connecting
 - Fix LCD bug while running pumps

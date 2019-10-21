@@ -24,6 +24,7 @@ extern "C" {
 #include "libesphttpd/cgiwebsocket.h"
 #include "libesphttpd/httpd-freertos.h"
 #include "libesphttpd/route.h"
+#include "cJSON.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,6 +55,7 @@ static const char *tag = "Webserver";
 static HttpdFreertosInstance httpdFreertosInstance;
 
 static bool checkWebsocketActive(Websock* ws);
+static void sendStates(Websock* ws);
 
 xTaskHandle socketSendHandle;
 
@@ -144,10 +146,30 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
     }
 }
 
-static void myWebsocketConnect(Websock *ws) {
+static void myWebsocketConnect(Websock *ws) 
+{
 	ws->recvCb=myWebsocketRecv;
     ESP_LOGI(tag, "Socket connected!!\n");
+    sendStates(ws);
     xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 0);
+}
+
+static void sendStates(Websock* ws) 
+{
+    // Send initial states to client to configure settings
+    cJSON *root;
+	root = cJSON_CreateObject();	
+
+    bool fanState = get_fan_state();
+    bool flush = getFlush();
+    bool elementState = get_element_status();
+
+    cJSON_AddNumberToObject(root, "fanState", fanState ? 1 : 0);
+    cJSON_AddNumberToObject(root, "flush", flush  ? 1 : 0);
+    cJSON_AddNumberToObject(root, "elementState", elementState  ? 1 : 0);
+
+    printf("JSON state message\n");
+    printf("%s\n", cJSON_Print(root));
 }
 
 HttpdBuiltInUrl builtInUrls[]={
