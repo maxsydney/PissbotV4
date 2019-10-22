@@ -39,6 +39,7 @@
 #define DNS_SERVER		"8.8.8.8"
 
 static char tag[] = "socket server";
+bool wifiConnected = false;
 
 void wifi_connect(void)
 {
@@ -101,10 +102,12 @@ esp_err_t WiFi_event_handler(void *ctx, system_event_t *event)
         // Blink LED 
         flash_pin(LED_PIN, 100);
         ESP_LOGI(tag, "Connected to WiFi!\n");
+        wifiConnected = true;
     } else if (event->event_id ==SYSTEM_EVENT_STA_DISCONNECTED) {
         // This is a workaround as ESP32 WiFi libs don't currently auto-reassociate.
         flash_pin(LED_PIN, 100);
         ESP_LOGI(tag, "disconnect reason: %d", event->event_info.disconnected.reason);
+        wifiConnected = false;
         esp_err_t eet = esp_wifi_connect();
         ESP_LOGI(tag, "reconnected Ok or error: %d, authmode: %d", eet, event->event_info.connected.authmode);
     }

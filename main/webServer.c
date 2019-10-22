@@ -6,7 +6,7 @@ extern "C" {
 #include "esp_wifi.h"
 #include "esp_system.h"
 #include "esp_event.h"
-#include "esp_event_loop.h"
+#include "esp_event.h"
 #include "nvs_flash.h"
 #include "driver/gpio.h"
 #include "esp_err.h"
@@ -50,43 +50,48 @@ extern "C" {
 #define DNS_SERVER		"8.8.8.8"
 
 static char connectionMemory[sizeof(RtosConnType) * MAX_CONNECTIONS];
-
 static const char *tag = "Webserver";
 static HttpdFreertosInstance httpdFreertosInstance;
+xTaskHandle socketSendHandle;
 
 static bool checkWebsocketActive(Websock* ws);
 static void sendStates(Websock* ws);
 
-xTaskHandle socketSendHandle;
-
 void websocket_task(void *pvParameters) 
 {
     Websock *ws = (Websock*) pvParameters;
+    cJSON *root;
     float temps[n_tempSensors] = {0};
     float flowRate;
-    char buff[3848];
+    char buff[512];
     Data ctrlSet;
     int64_t uptime_uS;
 
     while (true) {
         getTemperatures(temps);
+        root = cJSON_CreateObject();
         ctrlSet = get_controller_settings();
         uptime_uS = esp_timer_get_time() / 1000000;
         flowRate = get_flowRate();
-        snprintf(buff, 3848, "[%f, %f, %f, %f, %f, %f, %lld, %f, 0, %f, %f, %f, %f, %f]", temps[T_refluxHot], 
-                                                                                   temps[T_refluxCold],
-                                                                                   temps[T_productHot],
-                                                                                   temps[T_productCold],
-                                                                                   temps[T_boiler],
-                                                                                   ctrlSet.setpoint, 
-                                                                                   uptime_uS, 
-                                                                                   flowRate,
-                                                                                   ctrlSet.P_gain, 
-                                                                                   ctrlSet.I_gain, 
-                                                                                   ctrlSet.D_gain,
-                                                                                   getBoilerConcentration(96),
-                                                                                   getVapourConcentration(temps[T_refluxHot]+50));
 
+        // Construct JSON object
+        cJSON_AddStringToObject(root, "type", "data");
+        cJSON_AddNumberToObject(root, "T_vapour", temps[T_refluxHot]);
+        cJSON_AddNumberToObject(root, "T_refluxInflow", temps[T_refluxCold]);
+        cJSON_AddNumberToObject(root, "T_productInflow", temps[T_productHot]);
+        cJSON_AddNumberToObject(root, "T_radiator", temps[T_productCold]);
+        cJSON_AddNumberToObject(root, "T_boiler", temps[T_boiler]);
+        cJSON_AddNumberToObject(root, "setpoint", ctrlSet.setpoint);
+        cJSON_AddNumberToObject(root, "uptime", uptime_uS);
+        cJSON_AddNumberToObject(root, "flowrate", flowRate);
+        cJSON_AddNumberToObject(root, "P_gain", ctrlSet.P_gain);
+        cJSON_AddNumberToObject(root, "I_gain", ctrlSet.I_gain);
+        cJSON_AddNumberToObject(root, "D_gain", ctrlSet.D_gain);
+        cJSON_AddNumberToObject(root, "boilerConc", getBoilerConcentration(96));
+        cJSON_AddNumberToObject(root, "vapourConc", getVapourConcentration(temps[T_refluxHot]+50));
+        strcpy(buff, cJSON_Print(root));
+        cJSON_Delete(root);
+        
         if ((!checkWebsocketActive(ws))) {
             ESP_LOGE(tag, "Deleting send task");
             vTaskDelete(NULL);
@@ -103,7 +108,7 @@ static bool checkWebsocketActive(Websock* ws)
 {
     bool active = true;
 
-    if (ws->conn == 0x0) {
+    if (ws->conn == 0x0 || !wifiConnected) {
         ESP_LOGE(tag, "Closing connection");
         active = false;
     } else if (ws->conn->isConnectionClosed) {
@@ -151,25 +156,31 @@ static void myWebsocketConnect(Websock *ws)
 	ws->recvCb=myWebsocketRecv;
     ESP_LOGI(tag, "Socket connected!!\n");
     sendStates(ws);
-    xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 0);
+    xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 1);
 }
 
 static void sendStates(Websock* ws) 
 {
     // Send initial states to client to configure settings
     cJSON *root;
-	root = cJSON_CreateObject();	
+	root = cJSON_CreateObject();
+    char buff[128];
 
     bool fanState = get_fan_state();
     bool flush = getFlush();
     bool elementState = get_element_status();
 
-    cJSON_AddNumberToObject(root, "fanState", fanState ? 1 : 0);
-    cJSON_AddNumberToObject(root, "flush", flush  ? 1 : 0);
-    cJSON_AddNumberToObject(root, "elementState", elementState  ? 1 : 0);
+    cJSON_AddStringToObject(root, "type", "status");
+    cJSON_AddNumberToObject(root, "fanState", fanState);
+    cJSON_AddNumberToObject(root, "flush", flush);
+    cJSON_AddNumberToObject(root, "elementState", elementState);
 
     printf("JSON state message\n");
     printf("%s\n", cJSON_Print(root));
+    printf("JSON length: %d\n", strlen(cJSON_Print(root)));
+    strcpy(buff, cJSON_Print(root));
+    cJSON_Delete(root);
+    cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
 }
 
 HttpdBuiltInUrl builtInUrls[]={
