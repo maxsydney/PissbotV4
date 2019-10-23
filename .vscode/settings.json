@@ -23,7 +23,9 @@
         "regex": "c",
         "locale": "c",
         "httpd-platform.h": "c",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "ostream": "cpp",
+        "rope": "cpp"
     },
     "python.linting.pylintEnabled": false
 }

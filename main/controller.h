@@ -45,11 +45,13 @@ class Controller
         uint16_t getProductSpeed() const {return _prodPump.getSpeed();}
         bool getElem24State() const {return _elementState_24;};
         bool getElem3State() const {return _elementState_3;};
+        bool getFlush() const {return _flush;};
+        bool getProdManual() const {return _prodManual;};
         double getSetpoint() const {return _settings.setpoint;};
         double getPGain() const {return _settings.P_gain;};
         double getIGain() const {return _settings.I_gain;};
         double getDGain() const {return _settings.D_gain;};
-        Data getControllerSettings() {return _settings;};
+        Data getControllerSettings() const {return _settings;};
         pumpMode_t getRefluxPumpMode() const {return _refluxPump.getMode();};
         pumpMode_t getProductPumpMode() const {return _prodPump.getMode();};
 
@@ -65,10 +67,12 @@ class Controller
         Pump _refluxPump;
         Pump _prodPump;
         bool _fanState;
+        bool _flush;
+        bool _prodManual;
         gpio_num_t _fanPin;
         bool _elementState_24;
         gpio_num_t _elem24Pin;
-        bool _elementState_3;
+        bool _elementState_3; 
         gpio_num_t _elem3Pin;
         double _prevError;
         double _integral;

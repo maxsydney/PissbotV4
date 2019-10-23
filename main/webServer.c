@@ -89,9 +89,11 @@ void websocket_task(void *pvParameters)
         cJSON_AddNumberToObject(root, "D_gain", ctrlSet.D_gain);
         cJSON_AddNumberToObject(root, "boilerConc", getBoilerConcentration(96));
         cJSON_AddNumberToObject(root, "vapourConc", getVapourConcentration(temps[T_refluxHot]+50));
-        strcpy(buff, cJSON_Print(root));
+        char* JSONptr = cJSON_Print(root);
+        strncpy(buff, JSONptr, 512);
         cJSON_Delete(root);
-        
+        free(JSONptr);      // Must free string pointer to avoid memory leak
+
         if ((!checkWebsocketActive(ws))) {
             ESP_LOGE(tag, "Deleting send task");
             vTaskDelete(NULL);
@@ -156,7 +158,7 @@ static void myWebsocketConnect(Websock *ws)
 	ws->recvCb=myWebsocketRecv;
     ESP_LOGI(tag, "Socket connected!!\n");
     sendStates(ws);
-    xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 1);
+    xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 0);
 }
 
 static void sendStates(Websock* ws) 
@@ -168,18 +170,24 @@ static void sendStates(Websock* ws)
 
     bool fanState = get_fan_state();
     bool flush = getFlush();
-    bool elementState = get_element_status();
+    bool element1State = get_element1_status();
+    bool element2State = get_element2_status();
+    bool prodCondensorManual = get_productCondensorManual();
 
     cJSON_AddStringToObject(root, "type", "status");
     cJSON_AddNumberToObject(root, "fanState", fanState);
     cJSON_AddNumberToObject(root, "flush", flush);
-    cJSON_AddNumberToObject(root, "elementState", elementState);
+    cJSON_AddNumberToObject(root, "element1State", element1State);
+    cJSON_AddNumberToObject(root, "element2State", element2State);
+    cJSON_AddNumberToObject(root, "prodCondensorManual", prodCondensorManual);
 
     printf("JSON state message\n");
     printf("%s\n", cJSON_Print(root));
     printf("JSON length: %d\n", strlen(cJSON_Print(root)));
-    strcpy(buff, cJSON_Print(root));
+    char* JSONptr = cJSON_Print(root);
+    strcpy(buff, JSONptr);
     cJSON_Delete(root);
+    free(JSONptr);
     cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
 }
 
