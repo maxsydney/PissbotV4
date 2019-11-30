@@ -13,10 +13,10 @@
 
 typedef enum {
     T_refluxHot,
-    T_refluxCold,
+    T_boiler,
     T_productHot,
     T_productCold,
-    T_boiler,
+    T_refluxCold,
     n_tempSensors
 } tempSensor;
 
