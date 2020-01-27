@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/c++  -std=c++11 -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/hello.dir/willItCompile.cpp.o  -o hello 
