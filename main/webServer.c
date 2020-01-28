@@ -10,7 +10,8 @@ extern "C" {
 #include "nvs_flash.h"
 #include "driver/gpio.h"
 #include "esp_err.h"
-#include "tcpip_adapter.h"
+// #include "tcpip_adapter.h"
+#include "esp_netif.h"
 #include "esp_log.h"
 #include <libesphttpd/esp.h>
 #include "libesphttpd/httpd.h"
@@ -18,9 +19,9 @@ extern "C" {
 #include "libesphttpd/cgiflash.h"
 #include "libesphttpd/auth.h"
 #include "libesphttpd/captdns.h"
-#include "libesphttpd/httpdespfs.h"
-#include "libesphttpd/espfs.h"
-#include "libesphttpd/webpages-espfs.h"
+#include "libesphttpd/httpd-espfs.h"
+#include "espfs.h"
+// #include "libesphttpd/webpages-espfs.h"
 #include "libesphttpd/cgiwebsocket.h"
 #include "libesphttpd/httpd-freertos.h"
 #include "libesphttpd/route.h"
@@ -200,8 +201,11 @@ HttpdBuiltInUrl builtInUrls[]={
 
 void webServer_init(void)
 {
-    espFsInit((void*)(webpages_espfs_start));
-	tcpip_adapter_init();
+    EspFsConfig conf;
+    EspFs* fs = espFsInit(&conf);
+    httpdRegisterEspfs(fs);
+	// tcpip_adapter_init();
+    esp_netif_init();
 	httpdFreertosInit(&httpdFreertosInstance,
 	                  builtInUrls,
 	                  LISTEN_PORT,

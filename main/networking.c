@@ -63,12 +63,12 @@ void wifi_connect(void)
 	inet_pton(AF_INET, SUBNET_MASK, &ipInfo.netmask);
 	tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
 
-	//Set Main DNS server
-	tcpip_adapter_dns_info_t dnsInfo;
-	inet_pton(AF_INET, DNS_SERVER, &dnsInfo.ip);
-	tcpip_adapter_set_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN,
-			&dnsInfo);
-    esp_event_loop_init(WiFi_event_handler, NULL);
+	// //Set Main DNS server
+	// tcpip_adapter_dns_info_t dnsInfo;
+	// inet_pton(AF_INET, DNS_SERVER, &dnsInfo.ip);
+	// tcpip_adapter_set_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN,
+	// 		&dnsInfo);
+    // esp_event_loop_init(WiFi_event_handler, NULL);
 
     wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&config);
