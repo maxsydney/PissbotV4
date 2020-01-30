@@ -22,6 +22,7 @@ extern "C" {
 #include "libesphttpd/httpd-espfs.h"
 #include "espfs.h"
 // #include "libesphttpd/webpages-espfs.h"
+#include "espfs_image.h"
 #include "libesphttpd/cgiwebsocket.h"
 #include "libesphttpd/httpd-freertos.h"
 #include "libesphttpd/route.h"
@@ -38,8 +39,7 @@ extern "C" {
 #include "main.h"
 #include "ota.h"
 #include "webServer.h"
-
-
+//  10302488
 #define LED_PIN GPIO_NUM_2
 #define GPIO_HIGH   1
 #define GPIO_LOW    0
@@ -54,6 +54,8 @@ static char connectionMemory[sizeof(RtosConnType) * MAX_CONNECTIONS];
 static const char *tag = "Webserver";
 static HttpdFreertosInstance httpdFreertosInstance;
 xTaskHandle socketSendHandle;
+
+// extern const uint8_t fileSystem[] asm("_binary_webpages_espfs_start");
 
 static bool checkWebsocketActive(Websock* ws);
 static void sendStates(Websock* ws);
@@ -201,7 +203,12 @@ HttpdBuiltInUrl builtInUrls[]={
 
 void webServer_init(void)
 {
-    EspFsConfig conf;
+    // EspFsConfig conf;
+    // conf.memAddr = (void*) fileSystem;
+
+    EspFsConfig conf = {
+		.memAddr = espfs_image_bin,
+	};
     EspFs* fs = espFsInit(&conf);
     httpdRegisterEspfs(fs);
 	// tcpip_adapter_init();
