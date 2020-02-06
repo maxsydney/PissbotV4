@@ -8,7 +8,7 @@
 #include "pinDefs.h"
 #include "input.h"
 
-// static char tag[] = "Input";
+static char tag[] = "Input";
 xQueueHandle inputQueue;
 
 esp_err_t init_input(void)
@@ -17,23 +17,71 @@ esp_err_t init_input(void)
     return ESP_OK;
 }
 
-void IRAM_ATTR input_ISR_handler(void* arg)
+void inputButtonTask(void* param)
 {
-    buttonPress btnEvent;
-    btnEvent.button = (uint32_t) arg;
-    btnEvent.time = esp_timer_get_time();
-    xQueueSendFromISR(inputQueue, &btnEvent, pdFALSE);
-}
+    // Setup data storage required
+    portTickType xLastWakeTime = xTaskGetTickCount();
+    uint8_t btnUpCounter = 0;
+    uint8_t btnDownCounter = 0;
+    uint8_t btnLeftCounter = 0;
+    uint8_t btnMidCounter = 0;
+    const int btnThresh = 20;
 
-bool debounceInput(buttonPress btnEvent)
-{
-    static int64_t currTime = 0;
-    bool validPress = false;
+    // Run main loop and poll buttons every n ms
+    while (true) {
+        // Poll pins
+        if (gpio_get_level(INPUT_UP)) {
+            btnUpCounter++;
+        } else {
+            btnUpCounter = 0;
+        }
 
-    if (btnEvent.time - currTime > 500000) {
-        currTime = btnEvent.time;
-        validPress = true;
+        if (gpio_get_level(INPUT_DOWN)) {
+            btnDownCounter++;
+        } else {
+            btnDownCounter = 0;
+        }
+
+        if (gpio_get_level(INPUT_LEFT)) {
+            btnLeftCounter++;
+        } else {
+            btnLeftCounter = 0;
+        }
+
+        if (gpio_get_level(INPUT_MID)) {
+            btnMidCounter++;
+        } else {
+            btnMidCounter = 0;
+        }
+
+        // Check counters
+        if (btnUpCounter >= btnThresh) {
+            buttonPress btn = {.button = input_up};
+            xQueueSend(inputQueue, &btn, 10 / portTICK_PERIOD_MS);
+            btnUpCounter = 0;
+        }
+
+        // Check counters
+        if (btnDownCounter >= btnThresh) {
+            buttonPress btn = {.button = input_down};
+            xQueueSend(inputQueue, &btn, 10 / portTICK_PERIOD_MS);
+            btnDownCounter = 0;
+        }
+
+        // Check counters
+        if (btnLeftCounter >= btnThresh) {
+            buttonPress btn = {.button = input_left};
+            xQueueSend(inputQueue, &btn, 10 / portTICK_PERIOD_MS);
+            btnLeftCounter = 0;
+        }
+
+        // Check counters
+        if (btnMidCounter >= btnThresh) {
+            buttonPress btn = {.button = input_mid};
+            xQueueSend(inputQueue, &btn, 10 / portTICK_PERIOD_MS);
+            btnMidCounter = 0;
+        }
+
+        vTaskDelayUntil(&xLastWakeTime, 5 / portTICK_PERIOD_MS);
     }
-
-    return validPress;
 }
