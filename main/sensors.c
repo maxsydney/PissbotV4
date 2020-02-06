@@ -21,7 +21,7 @@ extern "C" {
 #include "ds18b20.h"
 
 #define MAX_DEVICES          (8)
-#define SAMPLE_PERIOD        (1000)   // milliseconds
+#define SAMPLE_PERIOD        (400)   // milliseconds
 
 static const char* tag = "Sensors";
 static volatile double timeVal;
@@ -103,7 +103,7 @@ void temp_sensor_task(void *pvParameters)
             ESP_LOGI(tag, "Flow rate queue full");
         }
         
-        vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
+        vTaskDelayUntil(&xLastWakeTime, SAMPLE_PERIOD / portTICK_PERIOD_MS);
     }
 }
 

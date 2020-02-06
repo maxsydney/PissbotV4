@@ -32,3 +32,4 @@
 - Fix LCD bug while running pumps
 - Calibrate flow meter
 - Temp sensor assignment routine
+- Change temp sensor resolution to 11bit                                        - Done

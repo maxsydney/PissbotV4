@@ -29,7 +29,7 @@ void app_main()
 {
     // Initialise peripherals and drivers
     nvs_flash_init();
-    sensor_init(ONEWIRE_BUS, DS18B20_RESOLUTION_10_BIT);
+    sensor_init(ONEWIRE_BUS, DS18B20_RESOLUTION_11_BIT);
     nvs_initialize();
     uart_initialize();
     init_timer();
