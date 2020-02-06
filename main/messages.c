@@ -14,7 +14,7 @@
 #define MAX_KEY_LEN 10
 #define MAX_VALUE_LEN 5
 
-static char tag[] = "Messages";
+// static char tag[] = "Messages";
 
 Message* parseMessage(char* dataPacket, uint32_t len)
 {

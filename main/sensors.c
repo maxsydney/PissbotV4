@@ -151,10 +151,8 @@ void readTemps(float sensorTemps[])
         // so use the first device to determine the delay
         ds18b20_wait_for_conversion(devices[0]);
 
-        DS18B20_ERROR errors[MAX_DEVICES] = { 0 };
-
         for (int i = 0; i < num_devices; ++i) {
-            errors[i] = ds18b20_read_temp(devices[i], &sensorTemps[i]);
+            ds18b20_read_temp(devices[i], &sensorTemps[i]);
         }
     }
 }

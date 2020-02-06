@@ -8,7 +8,7 @@
 #include "pinDefs.h"
 #include "input.h"
 
-static char tag[] = "Input";
+// static char tag[] = "Input";
 xQueueHandle inputQueue;
 
 esp_err_t init_input(void)

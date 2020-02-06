@@ -25,7 +25,8 @@
         "httpd-platform.h": "c",
         "*.ipp": "cpp",
         "ostream": "cpp",
-        "rope": "cpp"
+        "rope": "cpp",
+        "httpd-freertos.h": "c"
     },
     "python.linting.pylintEnabled": false
 }

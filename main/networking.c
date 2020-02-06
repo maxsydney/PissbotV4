@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <esp_log.h>
-#include <tcpip_adapter.h>
 #include <esp_wifi.h>
 #include <lwip/sockets.h>
-#include <tcpip_adapter.h>
+#include <esp_netif.h>
 #include <esp_wifi.h>
 #include <esp_err.h>
 #include <esp_timer.h>
@@ -52,8 +51,7 @@ void wifi_connect(void)
             .bssid_set=false
         }
     };
-    tcpip_adapter_init();
-
+    
     //For using of static IP
 	tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // Don't run a DHCP client
 

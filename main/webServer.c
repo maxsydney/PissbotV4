@@ -10,7 +10,6 @@ extern "C" {
 #include "nvs_flash.h"
 #include "driver/gpio.h"
 #include "esp_err.h"
-// #include "tcpip_adapter.h"
 #include "esp_netif.h"
 #include "esp_log.h"
 #include <libesphttpd/esp.h>
@@ -21,7 +20,7 @@ extern "C" {
 #include "libesphttpd/captdns.h"
 #include "libesphttpd/httpd-espfs.h"
 #include "espfs.h"
-// #include "libesphttpd/webpages-espfs.h"
+
 #include "espfs_image.h"
 #include "libesphttpd/cgiwebsocket.h"
 #include "libesphttpd/httpd-freertos.h"
@@ -39,7 +38,7 @@ extern "C" {
 #include "main.h"
 #include "ota.h"
 #include "webServer.h"
-//  10302488
+
 #define LED_PIN GPIO_NUM_2
 #define GPIO_HIGH   1
 #define GPIO_LOW    0
