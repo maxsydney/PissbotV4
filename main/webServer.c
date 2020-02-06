@@ -57,7 +57,7 @@ xTaskHandle socketSendHandle;
 
 // extern const uint8_t fileSystem[] asm("_binary_webpages_espfs_start");
 
-static bool checkWebsocketActive(Websock* ws);
+static bool checkWebsocketActive(volatile Websock* ws);
 static void sendStates(Websock* ws);
 
 void websocket_task(void *pvParameters) 
@@ -109,7 +109,7 @@ void websocket_task(void *pvParameters)
     }
 }
 
-static bool checkWebsocketActive(Websock* ws)
+static bool checkWebsocketActive(volatile Websock* ws)
 {
     bool active = true;
 
