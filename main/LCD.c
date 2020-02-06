@@ -52,14 +52,27 @@ static menu_t tuneControllerMenu = {
     }
 };
 
+static menu_t assignSensorsMenu = {
+    .title = "Assign Sensors",
+    .n_items = 5,
+    .init = true,
+    .optionTable = {
+        {.fieldName = "Head     ", .type = menuItem_none, .fn = mainScreen},
+        {.fieldName = "Boiler   ", .type = menuItem_none, .fn = mainScreen},
+        {.fieldName = "Reflux   ", .type = menuItem_none, .fn = mainScreen},
+        {.fieldName = "Product  ", .type = menuItem_none, .fn = mainScreen},
+        {.fieldName = "Radiator ", .type = menuItem_none, .fn = mainScreen}
+    }
+};
+
 static menu_t mainMenu = {
     .title = "Pissbot V3.0",
-    .n_items = 2,
+    .n_items = 3,
     .init = true,
     .optionTable = {
         {.fieldName = "Main Screen ", .type = menuItem_none, .fn = mainScreen},
         {.fieldName = "Tune PID    ", .type = menuItem_none, .subMenu = &tuneControllerMenu},
-        // {.fieldName = "Settings    ", .type = menuItem_string, .stringVal = "Gaan", .fn = NULL}
+        {.fieldName = "Assign Sens ", .type = menuItem_none, .subMenu = &assignSensorsMenu}
     }
 };
 
