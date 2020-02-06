@@ -3,6 +3,7 @@ extern "C" {
 #endif
 
 #include <driver/i2c.h>
+#include <string.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -16,6 +17,7 @@ extern "C" {
 #include "menu.h"
 #include "input.h"
 #include "networking.h"
+#include "sensors.h"
 
 static char tag[] = "LCD test";
 static menuStack_t menuStack;
@@ -409,11 +411,50 @@ void tuneSetpoint(int btn)
 
 void scanSensorHead(int btn)
 {
-    static bool initScreen = true;
-    static bool found = false;
+    static bool initScreen = true;      // Replace these with state machine
+    static bool searched = false;
+    static int n_found = 0;
+    static bool written = false;
+    static OneWireBus_ROMCode rom_codes[MAX_DEVICES] = {0};     // A bit wasteful of memory, can change max devices to 1 if necessary
 
     if (btn == input_left) {
         initScreen = true;
+        searched = false;
+        n_found = 0;
+        memset(rom_codes, 0, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
+    } else if (btn == input_mid && n_found == 1) {
+        saved_rom_codes[T_refluxHot] = rom_codes[0];
+        writeDeviceRomCodes(saved_rom_codes);
+        written = true;
+    }
+
+    if (written) {
+        LCD_clearScreen();
+        LCD_setCursor(0, 0);
+        LCD_writeStr("Head");
+        LCD_setCursor(0, 2);
+        LCD_writeStr("Sensor saved!");
+        written = false;
+    }
+
+    if (searched) {
+        LCD_clearScreen();
+        LCD_setCursor(0, 0);
+        LCD_writeStr("Head");
+        LCD_setCursor(0, 2);
+
+        if (n_found == 0) {
+            LCD_writeStr("No sensors found");
+        } else if (n_found == 1) {
+            LCD_writeStr("1 sensor found");
+            LCD_setCursor(0, 3);
+            LCD_writeStr("Enter to accept");
+        } else {
+            LCD_writeStr("More than 1");
+            LCD_setCursor(0, 3);
+            LCD_writeStr("sensor found");
+        }
+        searched = false;
     }
 
     if (initScreen) {
@@ -422,10 +463,10 @@ void scanSensorHead(int btn)
         LCD_writeStr("Head");
         LCD_setCursor(0, 2);
         LCD_writeStr("Scanning");
+        n_found = scanTempSensorNetwork(rom_codes);
+        searched = true;
         initScreen = false;
     }
-
-
 }
 
 #ifdef __cplusplus

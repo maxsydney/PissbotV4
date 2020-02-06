@@ -15,7 +15,7 @@ extern xQueueHandle tempQueue;
 extern xQueueHandle hotSideTempQueue;
 extern xQueueHandle coldSideTempQueue;
 extern xQueueHandle flowRateQueue;
-
+extern OneWireBus_ROMCode saved_rom_codes[MAX_DEVICES];
 /*
 *   --------------------------------------------------------------------  
 *   temp_sensor_task
@@ -35,6 +35,10 @@ void temp_sensor_task(void *pvParameters);
 esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res);
 
 int scanTempSensorNetwork(OneWireBus_ROMCode rom_codes[MAX_DEVICES]);
+
+esp_err_t writeDeviceRomCodes(OneWireBus_ROMCode code[MAX_DEVICES]);
+
+esp_err_t loadSavedSensors(OneWireBus_ROMCode devices[MAX_DEVICES]);
 
 /*
 *   --------------------------------------------------------------------  

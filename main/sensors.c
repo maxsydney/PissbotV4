@@ -7,6 +7,8 @@ extern "C" {
 #include <esp_log.h>
 #include <esp_err.h>
 #include <esp_timer.h>
+#include "nvs_flash.h"
+#include "nvs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -26,6 +28,8 @@ static const char* tag = "Sensors";
 static volatile double timeVal;
 
 static OneWireBus_ROMCode device_rom_codes[MAX_DEVICES] = {0};
+OneWireBus_ROMCode saved_rom_codes[MAX_DEVICES] = {0};
+static int savedSensorMap[MAX_DEVICES] = {0};
 static DS18B20_Info * devices[MAX_DEVICES] = {0};
 static OneWireBus * owb;
 static owb_rmt_driver_info rmt_driver_info;
@@ -34,6 +38,75 @@ int num_devices = 0;
 xQueueHandle tempQueue;
 xQueueHandle flowRateQueue;
 
+esp_err_t loadSavedSensors(OneWireBus_ROMCode devices[MAX_DEVICES])
+{
+    nvs_handle nvs;
+    
+    esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
+    if (err != ESP_OK) {
+        ESP_LOGI(tag, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        ESP_LOGI(tag, "NVS handle opened successfully\n");
+    }
+
+    // Read the size of memory space required for blob
+    size_t required_size = 0;  // value will default to 0, if not set yet in NVS
+    err = nvs_get_blob(nvs, "devices", NULL, &required_size);
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGI(tag, "Error (%s) reading size of devices!", esp_err_to_name(err));
+    } else {
+        ESP_LOGI(tag, "Size of devices is %zu", required_size);
+    }
+
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        esp_err_t internal = nvs_set_blob(nvs, "devices", &devices, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
+
+        if (internal != ESP_OK) {
+            ESP_LOGI(tag, "Error (%s) writing empty data structure", esp_err_to_name(internal));
+        } else {
+            ESP_LOGI(tag, "Successfully wrote empty data structure to nvs");
+        }
+    }
+
+    if (err == ESP_OK) {
+        err = nvs_get_blob(nvs, "devices", &devices, &required_size);
+        if (err != ESP_OK) {
+            ESP_LOGI(tag, "Error (%s) reading DS18b20 devices from NVS", esp_err_to_name(err));
+        } else {
+            ESP_LOGI(tag, "Successfully read DS18b20 devices from nvs");
+        }
+    }
+
+    nvs_commit(nvs);
+    nvs_close(nvs);
+    return ESP_OK;
+}
+
+esp_err_t writeDeviceRomCodes(OneWireBus_ROMCode code[MAX_DEVICES])
+{
+    nvs_handle nvs;
+    esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
+    if (err != ESP_OK) {
+        ESP_LOGI(tag, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        ESP_LOGI(tag, "NVS handle opened successfully\n");
+    }
+ 
+    if (err == ESP_OK) {
+        esp_err_t internal = nvs_set_blob(nvs, "devices", &devices, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
+
+        if (internal != ESP_OK) {
+            ESP_LOGI(tag, "Error (%s) writing empty data structure", esp_err_to_name(internal));
+        } else {
+            ESP_LOGI(tag, "Successfully wrote empty data structure to nvs");
+        }
+    }
+    ESP_ERROR_CHECK(nvs_commit(nvs));
+    nvs_close(nvs);
+
+    return err;
+}
+
 esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
 {
     // Create a 1-Wire bus, using the RMT timeslot driver
@@ -41,7 +114,11 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
     owb_use_crc(owb, true);  // enable CRC check for ROM code
 
     num_devices = scanTempSensorNetwork(device_rom_codes);
-    printf("Found %d device%s\n", num_devices, num_devices == 1 ? "" : "s");
+    printf("Found %d device%s on oneWire network\n", num_devices, num_devices == 1 ? "" : "s");
+
+    loadSavedSensors(saved_rom_codes);
+
+    // ESP_LOGI(tag, "First byte of sensor addr: 0x%X", saved_rom_codes[0].bytes[0]);
 
     // Create DS18B20 devices on the 1-Wire bus
     for (int i = 0; i < num_devices; ++i) {
