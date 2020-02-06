@@ -51,4 +51,3 @@ typedef struct {
     int n_items;
     menu_t *menus[MAX_MENU_DEPTH];
 } menuStack_t;
-

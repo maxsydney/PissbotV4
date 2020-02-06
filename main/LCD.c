@@ -30,6 +30,11 @@ void tunePGain(int btn);
 void tuneIGain(int btn);
 void tuneDGain(int btn);
 void tuneSetpoint(int btn);
+void scanSensorHead(int btn);
+// void scanSensorBoiler(int btn);
+// void scanSensorReflux(int btn);
+// void scanSensorProduct(int btn);
+// void scanSensorRadiator(int btn);
 
 // Menu handling functions
 static void runMenu(menu_t *menu, inputType btn);
@@ -57,7 +62,7 @@ static menu_t assignSensorsMenu = {
     .n_items = 5,
     .init = true,
     .optionTable = {
-        {.fieldName = "Head     ", .type = menuItem_none, .fn = mainScreen},
+        {.fieldName = "Head     ", .type = menuItem_none, .fn = scanSensorHead},
         {.fieldName = "Boiler   ", .type = menuItem_none, .fn = mainScreen},
         {.fieldName = "Reflux   ", .type = menuItem_none, .fn = mainScreen},
         {.fieldName = "Product  ", .type = menuItem_none, .fn = mainScreen},
@@ -70,9 +75,9 @@ static menu_t mainMenu = {
     .n_items = 3,
     .init = true,
     .optionTable = {
-        {.fieldName = "Main Screen ", .type = menuItem_none, .fn = mainScreen},
-        {.fieldName = "Tune PID    ", .type = menuItem_none, .subMenu = &tuneControllerMenu},
-        {.fieldName = "Assign Sens ", .type = menuItem_none, .subMenu = &assignSensorsMenu}
+        {.fieldName = "Main Screen    ", .type = menuItem_none, .fn = mainScreen},
+        {.fieldName = "Tune PID       ", .type = menuItem_none, .subMenu = &tuneControllerMenu},
+        {.fieldName = "Assign Sensors ", .type = menuItem_none, .subMenu = &assignSensorsMenu}
     }
 };
 
@@ -120,6 +125,7 @@ void menu_task(void* param)
         if (uxQueueMessagesWaiting(inputQueue)) {
             xQueueReceive(inputQueue, &btnEvent, 50 / portTICK_PERIOD_MS);
             xQueueReset(inputQueue);
+            ESP_LOGI(tag, "%d items in queue\n", uxQueueMessagesWaiting(inputQueue));
             if (debounceInput(btnEvent)) {
                 ESP_LOGI(tag, "Button pressed: %d", btnEvent.button);
             }
@@ -403,6 +409,27 @@ void tuneSetpoint(int btn)
     snprintf(dataBuffer, 5, "%4d", setpoint_local);
     LCD_setCursor(10, 0);
     LCD_writeStr(dataBuffer);
+}
+
+void scanSensorHead(int btn)
+{
+    static bool initScreen = true;
+    static bool found = false;
+
+    if (btn == input_left) {
+        initScreen = true;
+    }
+
+    if (initScreen) {
+        LCD_clearScreen();
+        LCD_setCursor(0, 0);
+        LCD_writeStr("Head");
+        LCD_setCursor(0, 2);
+        LCD_writeStr("Scanning");
+        initScreen = false;
+    }
+
+
 }
 
 #ifdef __cplusplus
