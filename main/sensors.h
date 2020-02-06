@@ -8,6 +8,8 @@ extern "C" {
 #include "freertos/queue.h"
 #include "ds18b20.h"
 
+#define MAX_DEVICES          (8)
+
 // Expose queue handles for passing data between tasks
 extern xQueueHandle tempQueue;
 extern xQueueHandle hotSideTempQueue;
@@ -31,6 +33,8 @@ void temp_sensor_task(void *pvParameters);
 *   between tasks
 */
 esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res);
+
+int scanTempSensorNetwork(OneWireBus_ROMCode rom_codes[MAX_DEVICES]);
 
 /*
 *   --------------------------------------------------------------------  

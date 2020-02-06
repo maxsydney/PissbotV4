@@ -20,7 +20,6 @@ extern "C" {
 #include "owb_rmt.h"
 #include "ds18b20.h"
 
-#define MAX_DEVICES          (8)
 #define SAMPLE_PERIOD        (400)   // milliseconds
 
 static const char* tag = "Sensors";
@@ -41,17 +40,7 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
     owb = owb_rmt_initialize(&rmt_driver_info, ds_pin, RMT_CHANNEL_1, RMT_CHANNEL_0);
     owb_use_crc(owb, true);  // enable CRC check for ROM code
 
-    OneWireBus_SearchState search_state = {0};
-    bool found = false;
-    owb_search_first(owb, &search_state, &found);
-    while (found) {
-        char rom_code_s[17];
-        owb_string_from_rom_code(search_state.rom_code, rom_code_s, sizeof(rom_code_s));
-        printf("  %d : %s\n", num_devices, rom_code_s);
-        device_rom_codes[num_devices] = search_state.rom_code;
-        ++num_devices;
-        owb_search_next(owb, &search_state, &found);
-    }
+    num_devices = scanTempSensorNetwork(device_rom_codes);
     printf("Found %d device%s\n", num_devices, num_devices == 1 ? "" : "s");
 
     // Create DS18B20 devices on the 1-Wire bus
@@ -73,6 +62,24 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
     flowRateQueue = xQueueCreate(10, sizeof(float));
 
     return ESP_OK;
+}
+
+int scanTempSensorNetwork(OneWireBus_ROMCode rom_codes[MAX_DEVICES])
+{
+    OneWireBus_SearchState search_state = {0};
+    bool found = false;
+    int n_devices = 0;
+    owb_search_first(owb, &search_state, &found);
+    while (found) {
+        char rom_code_s[17];
+        owb_string_from_rom_code(search_state.rom_code, rom_code_s, sizeof(rom_code_s));
+        printf("  %d : %s\n", n_devices, rom_code_s);
+        rom_codes[n_devices] = search_state.rom_code;
+        ++n_devices;
+        owb_search_next(owb, &search_state, &found);
+    }
+
+    return n_devices;
 }
 
 esp_err_t init_timer(void)
@@ -127,7 +134,7 @@ void flowmeter_task(void *pvParameters)
         if (ret == errQUEUE_FULL) {
             ESP_LOGI(tag, "Flow rate queue full");
         }
-        vTaskDelayUntil(&xLastWakeTime, 500 / portTICK_PERIOD_MS);     // Run every second
+        vTaskDelayUntil(&xLastWakeTime, 500 / portTICK_PERIOD_MS);
     }
 }
 
