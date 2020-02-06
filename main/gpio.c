@@ -28,7 +28,6 @@ void gpio_init(void)
     gpio_config(&io_conf);
 
     // Set input up button pin
-    io_conf.intr_type = GPIO_PIN_INTR_POSEDGE;
     io_conf.pin_bit_mask = GPIO_PIN_BITMASK(INPUT_UP);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
@@ -36,7 +35,6 @@ void gpio_init(void)
     gpio_config(&io_conf);  
 
     // Set input down button pin
-    io_conf.intr_type = GPIO_PIN_INTR_POSEDGE;
     io_conf.pin_bit_mask = GPIO_PIN_BITMASK(INPUT_DOWN);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
@@ -44,7 +42,6 @@ void gpio_init(void)
     gpio_config(&io_conf); 
 
     // Set input left button pin
-    io_conf.intr_type = GPIO_PIN_INTR_POSEDGE;
     io_conf.pin_bit_mask = GPIO_PIN_BITMASK(INPUT_LEFT);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
@@ -52,7 +49,6 @@ void gpio_init(void)
     gpio_config(&io_conf); 
 
     // Set input mid button pin
-    io_conf.intr_type = GPIO_PIN_INTR_POSEDGE;
     io_conf.pin_bit_mask = GPIO_PIN_BITMASK(INPUT_MID);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
@@ -66,10 +62,6 @@ void gpio_init(void)
     }
 
     gpio_isr_handler_add(REFLUX_FLOW, flowmeter_ISR, NULL);
-    gpio_isr_handler_add(INPUT_UP, input_ISR_handler, (void*)input_up);
-    gpio_isr_handler_add(INPUT_DOWN, input_ISR_handler, (void*)input_down);
-    gpio_isr_handler_add(INPUT_LEFT, input_ISR_handler, (void*)input_left); 
-    gpio_isr_handler_add(INPUT_MID, input_ISR_handler, (void*)input_mid);  
 
     // Set up fan control pin
     gpio_pad_select_gpio(FAN_SWITCH);

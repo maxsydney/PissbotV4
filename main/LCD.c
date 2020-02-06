@@ -125,10 +125,6 @@ void menu_task(void* param)
         if (uxQueueMessagesWaiting(inputQueue)) {
             xQueueReceive(inputQueue, &btnEvent, 50 / portTICK_PERIOD_MS);
             xQueueReset(inputQueue);
-            ESP_LOGI(tag, "%d items in queue\n", uxQueueMessagesWaiting(inputQueue));
-            if (debounceInput(btnEvent)) {
-                ESP_LOGI(tag, "Button pressed: %d", btnEvent.button);
-            }
         }
 
         runMenu(menuStack_peek(), btnEvent.button);

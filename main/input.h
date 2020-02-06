@@ -33,11 +33,4 @@ esp_err_t init_input(void);
 */
 bool debounceInput(buttonPress btnEvent);
 
-/*
-*   --------------------------------------------------------------------  
-*   input_ISR_handler
-*   --------------------------------------------------------------------
-*   Handles all incoming signals on input pins and passes them to the
-*   input queue
-*/
-void IRAM_ATTR input_ISR_handler(void* arg);
+void inputButtonTask(void* param);
