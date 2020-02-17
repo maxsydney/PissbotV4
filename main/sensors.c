@@ -28,8 +28,8 @@ static const char* tag = "Sensors";
 static volatile double timeVal;
 
 static OneWireBus_ROMCode device_rom_codes[MAX_DEVICES] = {0};
-// OneWireBus_ROMCode saved_rom_codes[MAX_DEVICES] = {0};
-// static int savedSensorMap[MAX_DEVICES] = {0};
+OneWireBus_ROMCode saved_rom_codes[MAX_DEVICES] = {0};
+static int savedSensorMap[MAX_DEVICES] = {0};
 static DS18B20_Info * devices[MAX_DEVICES] = {0};
 static OneWireBus * owb;
 static owb_rmt_driver_info rmt_driver_info;
@@ -38,10 +38,10 @@ int num_devices = 0;
 xQueueHandle tempQueue;
 xQueueHandle flowRateQueue;
 
-esp_err_t loadSavedSensors(OneWireBus_ROMCode devices[MAX_DEVICES])
+esp_err_t loadSavedSensors(OneWireBus_ROMCode saved_devices[MAX_DEVICES])
 {
     nvs_handle nvs;
-    
+
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
     if (err != ESP_OK) {
         ESP_LOGI(tag, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
@@ -59,25 +59,20 @@ esp_err_t loadSavedSensors(OneWireBus_ROMCode devices[MAX_DEVICES])
     }
 
     if (err == ESP_ERR_NVS_NOT_FOUND) {
-        esp_err_t internal = nvs_set_blob(nvs, "devices", &devices, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
+        esp_err_t internal = nvs_set_blob(nvs, "devices", saved_devices, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
 
         if (internal != ESP_OK) {
             ESP_LOGI(tag, "Error (%s) writing empty data structure", esp_err_to_name(internal));
         } else {
             ESP_LOGI(tag, "Successfully wrote empty data structure to nvs");
+            ESP_ERROR_CHECK(nvs_commit(nvs));
         }
     }
 
     if (err == ESP_OK) {
-        err = nvs_get_blob(nvs, "devices", &devices, &required_size);
-        if (err != ESP_OK) {
-            ESP_LOGI(tag, "Error (%s) reading DS18b20 devices from NVS", esp_err_to_name(err));
-        } else {
-            ESP_LOGI(tag, "Successfully read DS18b20 devices from nvs");
-        }
+        ESP_ERROR_CHECK(nvs_get_blob(nvs, "devices", saved_devices, &required_size));
     }
 
-    nvs_commit(nvs);
     nvs_close(nvs);
     return ESP_OK;
 }
@@ -93,15 +88,16 @@ esp_err_t writeDeviceRomCodes(OneWireBus_ROMCode code[MAX_DEVICES])
     }
  
     if (err == ESP_OK) {
-        esp_err_t internal = nvs_set_blob(nvs, "devices", &devices, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
+        esp_err_t internal = nvs_set_blob(nvs, "devices", code, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
 
         if (internal != ESP_OK) {
             ESP_LOGI(tag, "Error (%s) writing empty data structure", esp_err_to_name(internal));
         } else {
-            ESP_LOGI(tag, "Successfully wrote empty data structure to nvs");
+            ESP_LOGI(tag, "Successfully wrote rom code to NVS");
+            ESP_ERROR_CHECK(nvs_commit(nvs));
         }
     }
-    ESP_ERROR_CHECK(nvs_commit(nvs));
+    
     nvs_close(nvs);
 
     return err;
@@ -116,9 +112,13 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
     num_devices = scanTempSensorNetwork(device_rom_codes);
     printf("Found %d device%s on oneWire network\n", num_devices, num_devices == 1 ? "" : "s");
 
-    // loadSavedSensors(saved_rom_codes);
+    loadSavedSensors(saved_rom_codes);
 
-    // ESP_LOGI(tag, "First byte of sensor addr: 0x%X", saved_rom_codes[0].bytes[0]);
+    ESP_LOGI(tag, "Printing address of first saved sensor");
+    for (int i = 0; i < 8; i++) {
+        printf("0x%X ", saved_rom_codes[0].bytes[i]);
+    }
+    printf("\n");
 
     // Create DS18B20 devices on the 1-Wire bus
     for (int i = 0; i < num_devices; ++i) {
@@ -135,6 +135,7 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
         ds18b20_set_resolution(ds18b20_info, res);
     }
 
+    ESP_LOGI(tag, "Setting up tempQueue");
     tempQueue = xQueueCreate(10, sizeof(float[5]));
     flowRateQueue = xQueueCreate(10, sizeof(float));
 

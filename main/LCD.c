@@ -3,7 +3,7 @@ extern "C" {
 #endif
 
 #include <driver/i2c.h>
-// #include <string.h>
+#include <string.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -421,10 +421,10 @@ void scanSensorHead(int btn)
         initScreen = true;
         searched = false;
         n_found = 0;
-        // memset(rom_codes, 0, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
+        memset(rom_codes, 0, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
     } else if (btn == input_mid && n_found == 1) {
-        // saved_rom_codes[T_refluxHot] = rom_codes[0];
-        // writeDeviceRomCodes(saved_rom_codes);
+        saved_rom_codes[T_refluxHot] = rom_codes[0];
+        writeDeviceRomCodes(saved_rom_codes);
         written = true;
     }
 

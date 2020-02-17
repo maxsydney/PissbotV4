@@ -52,7 +52,6 @@ esp_err_t controller_init(uint8_t frequency)
     cmdQueue = xQueueCreate(10, sizeof(Cmd_t));
     ctrl_loop_period_ms = 1.0 / frequency * 1000;
     flushSystem = false;
-    controllerSettings = getSettingsFromNVM();
 
     return ESP_OK;
 }
@@ -64,6 +63,7 @@ void nvs_initialize(void)
     if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
         // NVS partition was truncated and needs to be erased
         // Retry nvs_flash_init
+        ESP_LOGI(tag, "NVS init failed: ESP_ERR_NVS_NO_FREE_PAGES");
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
     }
@@ -143,10 +143,12 @@ void control_loop(void* params)
 {
     float temperatures[n_tempSensors] = {0};
     Data settings = getSettingsFromNVM();
+    controllerSettings= settings;
     Cmd_t cmdSettings;
     Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, settings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_1, ELEMENT_2);
     portTickType xLastWakeTime = xTaskGetTickCount();
 
+    
     while (true) {
         if (uxQueueMessagesWaiting(dataQueue)) {
             xQueueReceive(dataQueue, &controllerSettings, 50 / portTICK_PERIOD_MS);

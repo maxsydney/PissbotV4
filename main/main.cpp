@@ -29,20 +29,19 @@ void app_main()
 {
     // Initialise peripherals and drivers
     nvs_flash_init();
-    sensor_init(ONEWIRE_BUS, DS18B20_RESOLUTION_11_BIT);
     nvs_initialize();
     uart_initialize();
     init_timer();
     gpio_init();
     wifi_connect();
-    // initPumps();
-    controller_init(CONTROL_LOOP_FREQUENCY);
     LCD_init(LCD_ADDR, LCD_SDA, LCD_SCL, LCD_COLS, LCD_ROWS);
+    sensor_init(ONEWIRE_BUS, DS18B20_RESOLUTION_11_BIT);
+    controller_init(CONTROL_LOOP_FREQUENCY);
     webServer_init();
     init_input();
-    
+
     // Schedule tasks
-    xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 4096, NULL, 7, NULL, 1);
+    xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 2048, NULL, 7, NULL, 1);
     // xTaskCreatePinnedToCore(&flowmeter_task, "Flowrate", 2048, NULL, 7, NULL, 1);
     xTaskCreatePinnedToCore(&control_loop, "Controller", 8192, NULL, 6, NULL, 0);
     xTaskCreatePinnedToCore(&menu_task, "LCD task", 2048, NULL, 3, NULL, 0);
