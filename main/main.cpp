@@ -46,7 +46,7 @@ void app_main()
     // xTaskCreatePinnedToCore(&flowmeter_task, "Flowrate", 2048, NULL, 7, NULL, 1);
     xTaskCreatePinnedToCore(&control_loop, "Controller", 8192, NULL, 6, NULL, 0);
     xTaskCreatePinnedToCore(&menu_task, "LCD task", 2048, NULL, 3, NULL, 0);
-    xTaskCreatePinnedToCore(&inputButtonTask, "Input button task", 2048, NULL, 3, NULL, 0);
+    xTaskCreatePinnedToCore(&inputButtonTask, "Input button task", 1024, NULL, 5, NULL, 1);
 }
 
 #ifdef __cplusplus

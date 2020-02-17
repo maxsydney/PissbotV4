@@ -28,8 +28,8 @@ static const char* tag = "Sensors";
 static volatile double timeVal;
 
 static OneWireBus_ROMCode device_rom_codes[MAX_DEVICES] = {0};
-OneWireBus_ROMCode saved_rom_codes[MAX_DEVICES] = {0};
-static int savedSensorMap[MAX_DEVICES] = {0};
+// OneWireBus_ROMCode saved_rom_codes[MAX_DEVICES] = {0};
+// static int savedSensorMap[MAX_DEVICES] = {0};
 static DS18B20_Info * devices[MAX_DEVICES] = {0};
 static OneWireBus * owb;
 static owb_rmt_driver_info rmt_driver_info;
@@ -116,7 +116,7 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
     num_devices = scanTempSensorNetwork(device_rom_codes);
     printf("Found %d device%s on oneWire network\n", num_devices, num_devices == 1 ? "" : "s");
 
-    loadSavedSensors(saved_rom_codes);
+    // loadSavedSensors(saved_rom_codes);
 
     // ESP_LOGI(tag, "First byte of sensor addr: 0x%X", saved_rom_codes[0].bytes[0]);
 
