@@ -103,6 +103,7 @@ void LCD_init(uint8_t addr, uint8_t dataPin, uint8_t clockPin, uint8_t cols, uin
     ets_delay_us(80); 
 
     LCD_writeByte(LCD_DISPLAY_ON, LCD_COMMAND);                         // Ensure LCD is set to on
+    ESP_LOGI(tag, "LCD controller initialized");
 }
 
 void LCD_setCursor(uint8_t col, uint8_t row)

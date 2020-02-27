@@ -37,7 +37,7 @@ extern "C" {
 #define ETH_B 1332.04
 #define ETH_C 199.200
 
-static char tag[] = "Controller";
+static char tag[] = "Control Loop";
 static bool element1_status = 0, element2_status = 0, flushSystem = 0, prodManual = 0;
 static int fanState = 0;
 
@@ -52,6 +52,8 @@ esp_err_t controller_init(uint8_t frequency)
     cmdQueue = xQueueCreate(10, sizeof(Cmd_t));
     ctrl_loop_period_ms = 1.0 / frequency * 1000;
     flushSystem = false;
+
+    ESP_LOGI(tag, "Controller initialized");
 
     return ESP_OK;
 }
@@ -78,9 +80,9 @@ Data getSettingsFromNVM(void)
     int32_t setpoint, P_gain, I_gain, D_gain;
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
     if (err != ESP_OK) {
-        ESP_LOGI(tag, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+        ESP_LOGI(tag, "Error (%s) opening NVS handle!", esp_err_to_name(err));
     } else {
-        ESP_LOGI(tag, "NVS handle opened successfully\n");
+        ESP_LOGI(tag, "NVS handle opened successfully");
     }
 
     err = nvs_get_i32(nvs, "setpoint", &setpoint);
@@ -147,14 +149,14 @@ void control_loop(void* params)
     Cmd_t cmdSettings;
     Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, settings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_1, ELEMENT_2);
     portTickType xLastWakeTime = xTaskGetTickCount();
-
+    ESP_LOGI(tag, "Control loop active");
     
     while (true) {
         if (uxQueueMessagesWaiting(dataQueue)) {
             xQueueReceive(dataQueue, &controllerSettings, 50 / portTICK_PERIOD_MS);
             flash_pin(LED_PIN, 100);
             Ctrl.setControllerSettings(controllerSettings);
-            ESP_LOGI(tag, "%s\n", "Received data from queue");
+            ESP_LOGI(tag, "Controller settings updated");
         }
 
         if (uxQueueMessagesWaiting(cmdQueue)) {
@@ -166,14 +168,12 @@ void control_loop(void* params)
             element2_status = Ctrl.getElem3State();
             flushSystem = Ctrl.getFlush();
             prodManual = Ctrl.getProdManual();
-            ESP_LOGI(tag, "%s\n", "Received command from queue");
         }
         
         updateTemperatures(temperatures);
         checkFan(getTemperature(temperatures, T_refluxHot));
 
         Ctrl.updatePumpSpeed(temperatures[0]);
-        // ESP_LOGI("wifi", "free Heap:%zu,%zu", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));
         vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
     }
 }
@@ -239,11 +239,10 @@ bool getFlush(void)
 
 void setFanState(int state)
 {
+    ESP_LOGI(tag, "Switched radiator fan %s", state ? "on" : "off");
     if (state) {
-        printf("Switching fan on\n");
         setPin(FAN_SWITCH, state);
     } else {
-        printf("Switching fan off\n");
         setPin(FAN_SWITCH, state);
     }
     fanState = state;
@@ -251,7 +250,7 @@ void setFanState(int state)
 
 void setFlush(bool state)
 {
-    printf("setFlush called with state %d\n", state);
+    ESP_LOGI(tag, "setFlush called with state %d\n", state);
     flushSystem = state;
 }
 

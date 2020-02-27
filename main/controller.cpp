@@ -71,7 +71,6 @@ void Controller::updatePumpSpeed(double temp)
 
     double output = _settings.P_gain * err + _settings.D_gain * d_error + _settings.I_gain * _integral;
 
-    // ESP_LOGI(tag, "P: %lf - I: %lf - D: %lf - Output: %lf", err, _integral, d_error, output);
     _handleProductPump(temp);
     _refluxPump.setSpeed(output);
     _refluxPump.commandPump();
@@ -115,9 +114,11 @@ void Controller::processCommand(Cmd_t cmd)
     } else if (strncmp(cmd.cmd, "element1", 128) == 0)  {
         bool state = atof(cmd.arg);
         setElem24State(state);
+        ESP_LOGI(tag, "Switched 2.4kW element to %s", state ? "on" : "off");
     } else if (strncmp(cmd.cmd, "element2", 128) == 0) {
         bool state = atof(cmd.arg);
         setElem3State(state);
+        ESP_LOGI(tag, "Switched 3.0kW element to %s", state ? "on" : "off");
     } else if (strncmp(cmd.cmd, "prod", 128) == 0) {
         _prodManual = atof(cmd.arg);
         if (_prodManual) {

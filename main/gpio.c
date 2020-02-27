@@ -6,9 +6,12 @@
 #include "main.h"
 #include "pinDefs.h"
 #include "input.h"
+#include "esp_log.h"
 
 #define GPIO_PIN_BITMASK(pin) (1Ull << pin)
 #define ESP_INTR_FLAG_DEFAULT 0
+
+static const char* tag = "GPIO";
 
 void gpio_init(void)
 {
@@ -58,7 +61,7 @@ void gpio_init(void)
     // Install interrupt services
     err = gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     if (err != ESP_OK) {
-        printf("Something went wrong installing interrupts\n");
+        ESP_LOGW(tag, "Something went wrong installing interrupts");
     }
 
     gpio_isr_handler_add(REFLUX_FLOW, flowmeter_ISR, NULL);

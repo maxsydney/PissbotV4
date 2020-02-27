@@ -92,12 +92,12 @@ void uart_initialize(void)
 esp_err_t WiFi_event_handler(void *ctx, system_event_t *event)
 {
     if (event->event_id == SYSTEM_EVENT_STA_GOT_IP) {
-        printf("Our IP address is " IPSTR "\n", IP2STR(&event->event_info.got_ip.ip_info.ip));
-        printf("We have now connected to a station and can do things...\n");
+        ESP_LOGI(tag, "Our IP address is " IPSTR, IP2STR(&event->event_info.got_ip.ip_info.ip));
+        ESP_LOGI(tag, "We have now connected to a station and can serve the dashboard");
     } else if (event->event_id == SYSTEM_EVENT_STA_CONNECTED) {
         // Blink LED 
         flash_pin(LED_PIN, 100);
-        ESP_LOGI(tag, "Connected to WiFi!\n");
+        ESP_LOGI(tag, "Connected to WiFi!");
         wifiConnected = true;
     } else if (event->event_id ==SYSTEM_EVENT_STA_DISCONNECTED) {
         // This is a workaround as ESP32 WiFi libs don't currently auto-reassociate.

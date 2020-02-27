@@ -24,7 +24,7 @@ void Pump::_initPump() const
     // Configure timer for PWM drivers
     ledc_timer_config_t PWM_timer;
     PWM_timer.duty_resolution = LEDC_TIMER_10_BIT;
-    PWM_timer.freq_hz = 500;
+    PWM_timer.freq_hz = 50;
     PWM_timer.speed_mode = LEDC_HIGH_SPEED_MODE;
     PWM_timer.timer_num = _timerChannel;
 
@@ -56,7 +56,6 @@ void Pump::commandPump()
 
     ledc_set_duty(LEDC_HIGH_SPEED_MODE, _PWMChannel, speed);
 	ledc_update_duty(LEDC_HIGH_SPEED_MODE, _PWMChannel);
-    // ESP_LOGI(tag, "Pump %d speed set to: %d", _PWMChannel, speed);
 }
 
 void Pump::setSpeed(int16_t speed)

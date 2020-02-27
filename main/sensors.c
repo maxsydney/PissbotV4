@@ -136,6 +136,8 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
     ESP_LOGI(tag, "Setting up tempQueue");
     tempQueue = xQueueCreate(10, sizeof(float[5]));
     flowRateQueue = xQueueCreate(10, sizeof(float));
+    ESP_LOGI(tag, "TempQueue initialized");
+    ESP_LOGI(tag, "Sensor network initialized");
 
     return ESP_OK;
 }
@@ -246,8 +248,9 @@ void readTemps(float sensorTemps[])
 int generateSensorMap(void)
 {
     int matchedDevices = 0;
+    ESP_LOGI(tag, "Generating sensor map");
 
-    // Forget all devices. Memset was playing up here
+    // Forget all devices
     for (int i = 0; i < MAX_DEVICES; i++) {
         savedSensorMap[i] = MAX_DEVICES - 1;
     }

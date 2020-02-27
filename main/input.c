@@ -14,6 +14,7 @@ xQueueHandle inputQueue;
 esp_err_t init_input(void)
 {
     inputQueue = xQueueCreate(10, sizeof(buttonPress));
+    ESP_LOGI(tag, "Inputs initialized");
     return ESP_OK;
 }
 

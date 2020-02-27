@@ -7,7 +7,7 @@
 - I-term engage only once still is up to temperature                            
 - Set fan to function automatically                                             - Completed
 - Remove support for Python client                                              - Completed
-- Modify drivers to work with new PCB
+- Modify drivers to work with new PCB                                           - Completed
 - Fix compiler warnings                                                         - Completed
 - Record current process data in RAM                
 - Change messaging protocol to JSON                                             - Done
@@ -15,7 +15,6 @@
 - Write drivers for flowrate sensors
 - Write drivers for input 
 - Write drivers for SSR                                                         - 2.4kW element implemented
-- Init screen
 - Fix crash when LCD is not plugged in                                          - Done
 - Write menu and screen functionality                                           - Done
 - Write alcohol concentration estimator for vapour and liquid phases            - Done
@@ -28,8 +27,11 @@
 - Fix max pump speed issue                                                      - Done
 - Increase chart upper limit to 100 degrees                                     - Done 
 - Install flowmeters
-- Update browser on states when connecting
-- Fix LCD bug while running pumps
+- Update browser on states when connecting                                      - Done
+- Fix LCD bug while running pumps                                               - Done
 - Calibrate flow meter
-- Temp sensor assignment routine
+- Temp sensor assignment routine                                                - Done
 - Change temp sensor resolution to 11bit                                        - Done
+- Print meaningful logs                                                         - Done
+- Add browser based OTA terminal
+- Add process phase tracking

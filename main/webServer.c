@@ -54,8 +54,6 @@ static const char *tag = "Webserver";
 static HttpdFreertosInstance httpdFreertosInstance;
 xTaskHandle socketSendHandle;
 
-// extern const uint8_t fileSystem[] asm("_binary_webpages_espfs_start");
-
 static bool checkWebsocketActive(volatile Websock* ws);
 static void sendStates(Websock* ws);
 
@@ -97,7 +95,7 @@ void websocket_task(void *pvParameters)
         free(JSONptr);      // Must free string pointer to avoid memory leak
 
         if ((!checkWebsocketActive(ws))) {
-            ESP_LOGE(tag, "Deleting send task");
+            ESP_LOGW(tag, "Deleting send task");
             vTaskDelete(NULL);
         } else {
             cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
@@ -113,11 +111,11 @@ static bool checkWebsocketActive(volatile Websock* ws)
     bool active = true;
 
     if (ws->conn == 0x0 || !wifiConnected) {
-        ESP_LOGE(tag, "Closing connection");
+        ESP_LOGW(tag, "Websocket inactive. Closing connection");
         active = false;
     } else if (ws->conn->isConnectionClosed) {
         // This check is not redundant, if conn = 0x00 then this check causes panic handler to be invoked
-        ESP_LOGE(tag, "Closing connection");
+        ESP_LOGW(tag, "Websocket inactive. Closing connection");
         active = false;
     }
     return active;
@@ -142,11 +140,11 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
         Cmd_t cmd = decodeCommand(message);
         if (strncmp(cmd.cmd, "OTA", 16) == 0) {
             // We have received new OTA request. Run OTA
-            printf("Received OTA message");
+            ESP_LOGI(tag, "Received OTA request");
             ota_t ota;
             ota.len = strlen(cmd.arg);
             memcpy(ota.ip, cmd.arg, ota.len);
-            printf("OTA IP set to %s\n", OTA_IP);
+            ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
             xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
         } else {
             // Command is for controller
@@ -202,15 +200,12 @@ HttpdBuiltInUrl builtInUrls[]={
 
 void webServer_init(void)
 {
-    // EspFsConfig conf;
-    // conf.memAddr = (void*) fileSystem;
-
+    ESP_LOGI(tag, "Initializing webserver");
     EspFsConfig conf = {
 		.memAddr = espfs_image_bin,
 	};
     EspFs* fs = espFsInit(&conf);
     httpdRegisterEspfs(fs);
-	// tcpip_adapter_init();
     esp_netif_init();
 	httpdFreertosInit(&httpdFreertosInstance,
 	                  builtInUrls,
@@ -219,6 +214,7 @@ void webServer_init(void)
 	                  MAX_CONNECTIONS,
 	                  HTTPD_FLAG_NONE);
 	httpdFreertosStart(&httpdFreertosInstance);
+    ESP_LOGI(tag, "Webserver waiting for connections");
 }
 
 #ifdef __cplusplus
