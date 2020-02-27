@@ -9,7 +9,7 @@ extern "C" {
 #include "freertos/queue.h"
 #include "ds18b20.h"
 
-#define MAX_DEVICES          (8)
+#define MAX_DEVICES 8
 
 // Expose queue handles for passing data between tasks
 extern xQueueHandle tempQueue;
@@ -98,7 +98,7 @@ bool matchSensor(OneWireBus_ROMCode matchAddr, OneWireBus_ROMCode deviceAddr);
 *   Generates mapping from discovered sensors on network to saved sensor
 *   addresses
 */
-int generateSensorMap(int deviceMap[MAX_DEVICES]);
+int generateSensorMap(void);
 
 /*
 *   --------------------------------------------------------------------  

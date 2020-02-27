@@ -173,7 +173,7 @@ void control_loop(void* params)
         checkFan(getTemperature(temperatures, T_refluxHot));
 
         Ctrl.updatePumpSpeed(temperatures[0]);
-        ESP_LOGI("wifi", "free Heap:%zu,%zu", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));
+        // ESP_LOGI("wifi", "free Heap:%zu,%zu", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));
         vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
     }
 }

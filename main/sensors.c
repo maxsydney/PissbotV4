@@ -114,12 +114,9 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
     printf("Found %d device%s on oneWire network\n", num_devices, num_devices == 1 ? "" : "s");
 
     loadSavedSensors(saved_rom_codes);
+    int n_knownSensors = generateSensorMap();
 
-    ESP_LOGI(tag, "Printing address of first saved sensor");
-    for (int i = 0; i < 8; i++) {
-        printf("0x%X ", saved_rom_codes[0].bytes[i]);
-    }
-    printf("\n");
+    ESP_LOGI(tag, "Recognized %d device%s", n_knownSensors, n_knownSensors == 1 ? "" : "s");
 
     // Create DS18B20 devices on the 1-Wire bus
     for (int i = 0; i < num_devices; ++i) {
@@ -183,6 +180,11 @@ void temp_sensor_task(void *pvParameters)
 
     while (1) 
     {
+        // Zero temperature array
+        for (int i = 0; i < 5; i++) {
+            sensorTemps[i] = 0;
+        }
+
         readTemps(sensorTemps);
         ret = xQueueSend(tempQueue, sensorTemps, 100 / portTICK_PERIOD_MS);
         if (ret == errQUEUE_FULL) {
@@ -241,15 +243,20 @@ void readTemps(float sensorTemps[])
     }
 }
 
-int generateSensorMap(int deviceMap[MAX_DEVICES])
+int generateSensorMap(void)
 {
     int matchedDevices = 0;
-    memset(deviceMap, MAX_DEVICES-1, sizeof(int[MAX_DEVICES]));             // Forget all devices
+
+    // Forget all devices. Memset was playing up here
+    for (int i = 0; i < MAX_DEVICES; i++) {
+        savedSensorMap[i] = MAX_DEVICES - 1;
+    }
 
     for (int i = 0; i < MAX_DEVICES; i++) {
         for (int j = 0; j < MAX_DEVICES; j++) {
             if (matchSensor(saved_rom_codes[i], device_rom_codes[j])) {
-                deviceMap[i] = j;
+                ESP_LOGI(tag, "Mapping sensor %d to address index %d", i, j);
+                savedSensorMap[i] = j;
                 matchedDevices++;
             }
         }
@@ -277,7 +284,7 @@ float getTemperature(float storedTemps[n_tempSensors], tempSensor sensor)
     int sensorIdx = savedSensorMap[sensor];
 
     if (sensorIdx >= MAX_DEVICES) {
-        ESP_LOGW(tag, "READ FAILED: Attempted to access sensor index out of range.");
+        ESP_LOGW(tag, "READ FAILED: Attempted to access sensor index out of range (%d).", sensorIdx);
         return 0.0;
     }
 
