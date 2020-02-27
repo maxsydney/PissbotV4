@@ -26,12 +26,12 @@ typedef struct {
 
 /*
 *   --------------------------------------------------------------------  
-*   getTemperatures
+*   updateTemperatures
 *   --------------------------------------------------------------------
 *   Retrieves the most recently read temperatures and writes them into
 *   tempArray
 */
-esp_err_t getTemperatures(float tempArray[]);
+esp_err_t updateTemperatures(float tempArray[]);
 
 /*
 *   --------------------------------------------------------------------  

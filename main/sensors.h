@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 
+#include "main.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "ds18b20.h"
@@ -81,6 +82,32 @@ void readTemps(float sensorTemps[]);
 *   power mode
 */
 void checkPowerSupply(void);
+
+/*
+*   --------------------------------------------------------------------  
+*   matchSensor
+*   --------------------------------------------------------------------
+*   Checks if matchAddr is equal to deviceAddr
+*/
+bool matchSensor(OneWireBus_ROMCode matchAddr, OneWireBus_ROMCode deviceAddr);
+
+/*
+*   --------------------------------------------------------------------  
+*   generateSensorMap
+*   --------------------------------------------------------------------
+*   Generates mapping from discovered sensors on network to saved sensor
+*   addresses
+*/
+int generateSensorMap(int deviceMap[MAX_DEVICES]);
+
+/*
+*   --------------------------------------------------------------------  
+*   getTemperature
+*   --------------------------------------------------------------------
+*   Retrieve the temperature from a specific sensor. Returns 0 if sensor
+*   not found
+*/
+float getTemperature(float storedTemps[n_tempSensors], tempSensor sensor);
 
 #ifdef __cplusplus
 }

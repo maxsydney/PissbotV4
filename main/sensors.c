@@ -7,6 +7,7 @@ extern "C" {
 #include <esp_log.h>
 #include <esp_err.h>
 #include <esp_timer.h>
+#include <string.h>
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "freertos/FreeRTOS.h"
@@ -227,8 +228,6 @@ void IRAM_ATTR flowmeter_ISR(void* arg)
 void readTemps(float sensorTemps[])
 {
     // Read temperatures more efficiently by starting conversions on all devices at the same time
-    // int errors_count[MAX_DEVICES] = {0};
-    // int sample_count = 0;
     if (num_devices > 0) {
         ds18b20_convert_all(owb);
 
@@ -240,6 +239,49 @@ void readTemps(float sensorTemps[])
             ds18b20_read_temp(devices[i], &sensorTemps[i]);
         }
     }
+}
+
+int generateSensorMap(int deviceMap[MAX_DEVICES])
+{
+    int matchedDevices = 0;
+    memset(deviceMap, MAX_DEVICES-1, sizeof(int[MAX_DEVICES]));             // Forget all devices
+
+    for (int i = 0; i < MAX_DEVICES; i++) {
+        for (int j = 0; j < MAX_DEVICES; j++) {
+            if (matchSensor(saved_rom_codes[i], device_rom_codes[j])) {
+                deviceMap[i] = j;
+                matchedDevices++;
+            }
+        }
+    }
+
+    return matchedDevices;
+}
+
+bool matchSensor(OneWireBus_ROMCode matchAddr, OneWireBus_ROMCode deviceAddr)
+{
+    bool matched = true;
+
+    for (int i = 0; i < 8; i++) {
+        if (matchAddr.bytes[i] != deviceAddr.bytes[i]) {
+            matched = false;
+            break;
+        }
+    }
+
+    return matched;
+}
+
+float getTemperature(float storedTemps[n_tempSensors], tempSensor sensor)
+{
+    int sensorIdx = savedSensorMap[sensor];
+
+    if (sensorIdx >= MAX_DEVICES) {
+        ESP_LOGW(tag, "READ FAILED: Attempted to access sensor index out of range.");
+        return 0.0;
+    }
+
+    return storedTemps[sensorIdx];
 }
 
 #ifdef __cplusplus

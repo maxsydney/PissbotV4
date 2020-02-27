@@ -169,8 +169,8 @@ void control_loop(void* params)
             ESP_LOGI(tag, "%s\n", "Received command from queue");
         }
         
-        getTemperatures(temperatures);
-        checkFan(temperatures[T_refluxHot]);
+        updateTemperatures(temperatures);
+        checkFan(getTemperature(temperatures, T_refluxHot));
 
         Ctrl.updatePumpSpeed(temperatures[0]);
         ESP_LOGI("wifi", "free Heap:%zu,%zu", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));
@@ -178,7 +178,7 @@ void control_loop(void* params)
     }
 }
 
-esp_err_t getTemperatures(float tempArray[])
+esp_err_t updateTemperatures(float tempArray[])
 {
     static float temperatures[n_tempSensors] = {0};
     if (xQueueReceive(tempQueue, temperatures, 100 / portTICK_PERIOD_MS)) {

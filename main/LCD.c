@@ -249,26 +249,26 @@ void mainScreen(int btn)
         initScreen = true;
     }
 
-    getTemperatures(temps);
+    updateTemperatures(temps);
         
     LCD_setCursor(4, 1);
-    snprintf(txtBuf, 6, "%.2f", temps[T_refluxHot]);
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_refluxHot));
     LCD_writeStr(txtBuf);
 
     LCD_setCursor(14, 1);
-    snprintf(txtBuf, 6, "%.2f", temps[T_refluxCold]);
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_refluxCold));
     LCD_writeStr(txtBuf);
 
     LCD_setCursor(4, 2);
-    snprintf(txtBuf, 6, "%.2f", temps[T_productHot]);
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_productHot));
     LCD_writeStr(txtBuf);
 
     LCD_setCursor(14, 2);
-    snprintf(txtBuf, 6, "%.2f", temps[T_productCold]);
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_productCold));
     LCD_writeStr(txtBuf);
 
     LCD_setCursor(8, 3);
-    snprintf(txtBuf, 6, "%.2f", temps[T_boiler]);
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_boiler));
     LCD_writeStr(txtBuf);
 }
 

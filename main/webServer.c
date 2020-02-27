@@ -20,7 +20,6 @@ extern "C" {
 #include "libesphttpd/captdns.h"
 #include "libesphttpd/httpd-espfs.h"
 #include "espfs.h"
-
 #include "espfs_image.h"
 #include "libesphttpd/cgiwebsocket.h"
 #include "libesphttpd/httpd-freertos.h"
@@ -38,6 +37,7 @@ extern "C" {
 #include "main.h"
 #include "ota.h"
 #include "webServer.h"
+#include "sensors.h"
 
 #define LED_PIN GPIO_NUM_2
 #define GPIO_HIGH   1
@@ -70,7 +70,7 @@ void websocket_task(void *pvParameters)
     int64_t uptime_uS;
 
     while (true) {
-        getTemperatures(temps);
+        updateTemperatures(temps);
         root = cJSON_CreateObject();
         ctrlSet = get_controller_settings();
         uptime_uS = esp_timer_get_time() / 1000000;
@@ -78,19 +78,19 @@ void websocket_task(void *pvParameters)
 
         // Construct JSON object
         cJSON_AddStringToObject(root, "type", "data");
-        cJSON_AddNumberToObject(root, "T_vapour", temps[T_refluxHot]);
-        cJSON_AddNumberToObject(root, "T_refluxInflow", temps[T_refluxCold]);
-        cJSON_AddNumberToObject(root, "T_productInflow", temps[T_productHot]);
-        cJSON_AddNumberToObject(root, "T_radiator", temps[T_productCold]);
-        cJSON_AddNumberToObject(root, "T_boiler", temps[T_boiler]);
+        cJSON_AddNumberToObject(root, "T_vapour", getTemperature(temps, T_refluxHot));
+        cJSON_AddNumberToObject(root, "T_refluxInflow", getTemperature(temps, T_refluxCold));
+        cJSON_AddNumberToObject(root, "T_productInflow", getTemperature(temps, T_productHot));
+        cJSON_AddNumberToObject(root, "T_radiator", getTemperature(temps, T_productCold));
+        cJSON_AddNumberToObject(root, "T_boiler", getTemperature(temps, T_boiler));
         cJSON_AddNumberToObject(root, "setpoint", ctrlSet.setpoint);
         cJSON_AddNumberToObject(root, "uptime", uptime_uS);
         cJSON_AddNumberToObject(root, "flowrate", flowRate);
         cJSON_AddNumberToObject(root, "P_gain", ctrlSet.P_gain);
         cJSON_AddNumberToObject(root, "I_gain", ctrlSet.I_gain);
         cJSON_AddNumberToObject(root, "D_gain", ctrlSet.D_gain);
-        cJSON_AddNumberToObject(root, "boilerConc", getBoilerConcentration(96));
-        cJSON_AddNumberToObject(root, "vapourConc", getVapourConcentration(temps[T_refluxHot]+50));
+        cJSON_AddNumberToObject(root, "boilerConc", getBoilerConcentration(getTemperature(temps, T_boiler)));
+        cJSON_AddNumberToObject(root, "vapourConc", getVapourConcentration(getTemperature(temps, T_refluxHot)));
         char* JSONptr = cJSON_Print(root);
         strncpy(buff, JSONptr, 512);
         cJSON_Delete(root);
