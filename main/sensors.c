@@ -113,6 +113,7 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
     num_devices = scanTempSensorNetwork(device_rom_codes);
     printf("Found %d device%s on oneWire network\n", num_devices, num_devices == 1 ? "" : "s");
 
+    memset(saved_rom_codes, 0xFF, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
     loadSavedSensors(saved_rom_codes);
     int n_knownSensors = generateSensorMap();
 

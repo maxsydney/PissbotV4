@@ -17,6 +17,7 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "networking.h"
+#include "pinDefs.h"
 #include "messages.h"
 #include "controlLoop.h"
 #include "main.h"

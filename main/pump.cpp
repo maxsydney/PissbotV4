@@ -23,10 +23,12 @@ void Pump::_initPump() const
 {
     // Configure timer for PWM drivers
     ledc_timer_config_t PWM_timer;
-    PWM_timer.duty_resolution = LEDC_TIMER_10_BIT;
-    PWM_timer.freq_hz = 50;
+
+    PWM_timer.duty_resolution = LEDC_TIMER_9_BIT;
+    PWM_timer.freq_hz = 5000;
     PWM_timer.speed_mode = LEDC_HIGH_SPEED_MODE;
     PWM_timer.timer_num = _timerChannel;
+    PWM_timer.clk_cfg = LEDC_AUTO_CLK;
 
     // Configure pump channels
     ledc_channel_config_t channelConfig;

@@ -19,6 +19,7 @@ void gpio_init(void)
     gpio_config_t io_conf;
 
     // Set LED pin
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[LED_PIN], PIN_FUNC_GPIO);
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
     gpio_set_level(LED_PIN, 0);
 

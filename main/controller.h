@@ -9,8 +9,8 @@ extern "C" {
 #include "messages.h"
 
 constexpr uint16_t PUMP_MIN_OUTPUT = 100;
-constexpr uint16_t PUMP_MAX_OUTPUT = 1024;
-constexpr uint16_t FLUSH_SPEED = 800;
+constexpr uint16_t PUMP_MAX_OUTPUT = 512;
+constexpr uint16_t FLUSH_SPEED = 512;
 
 class Controller
 {
