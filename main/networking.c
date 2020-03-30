@@ -129,3 +129,17 @@ void write_nvs(Data* data)
     ESP_ERROR_CHECK(nvs_commit(nvs));
     nvs_close(nvs);
 }
+
+void heartBeatTask(void* param)
+{
+    // Provide visual indication that things are still running
+    portTickType xLastWakeTime = xTaskGetTickCount();
+
+    // TODO: Get state and change LED patter/message based on state
+
+    while (true) {
+        flash_pin(LED_PIN, 100);
+        ESP_LOGI("Pissbot", "HEARTBEAT");
+        vTaskDelayUntil(&xLastWakeTime, 1000 / portTICK_PERIOD_MS);
+    }
+}

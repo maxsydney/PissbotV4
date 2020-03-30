@@ -48,3 +48,11 @@ void uart_initialize(void);
 *   pi webserver
 */
 void write_nvs(Data* data);
+
+/*
+*   --------------------------------------------------------------------  
+*   heartBeatTask
+*   --------------------------------------------------------------------
+*   Send out a periodic message indicating the health of the firmware
+*/
+void heartBeatTask(void* param);
