@@ -140,6 +140,6 @@ void heartBeatTask(void* param)
     while (true) {
         flash_pin(LED_PIN, 100);
         ESP_LOGI("Pissbot", "HEARTBEAT");
-        vTaskDelayUntil(&xLastWakeTime, 1000 / portTICK_PERIOD_MS);
+        vTaskDelayUntil(&xLastWakeTime, 5000 / portTICK_PERIOD_MS);
     }
 }

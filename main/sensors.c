@@ -110,10 +110,9 @@ esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
     owb = owb_rmt_initialize(&rmt_driver_info, ds_pin, RMT_CHANNEL_1, RMT_CHANNEL_0);
     owb_use_crc(owb, true);  // enable CRC check for ROM code
 
+    memset(device_rom_codes, 0xFF, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
     num_devices = scanTempSensorNetwork(device_rom_codes);
     printf("Found %d device%s on oneWire network\n", num_devices, num_devices == 1 ? "" : "s");
-
-    memset(device_rom_codes, 0xFF, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
     loadSavedSensors(saved_rom_codes);
     int n_knownSensors = generateSensorMap();
 
