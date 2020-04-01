@@ -22,17 +22,19 @@ class Pump
         void setSpeed(int16_t speed);
         void setMode(pumpMode_t mode) {_mode = mode;};
 
-        uint16_t getSpeed() const {return _pumpSpeed;};
-        pumpMode_t getMode() const {return _mode;};
+        uint16_t getSpeed() const {return _pumpSpeed;}
+        pumpMode_t getMode() const {return _mode;}
+        bool isConfigured(void) const {return _isConfigured;}
 
     private:
-        void _initPump() const;
+        esp_err_t _initPump() const;
 
-        uint16_t _pumpSpeed;
-        pumpMode_t _mode;
-        ledc_channel_t _PWMChannel;
-        int _pin;
-        ledc_timer_t _timerChannel;
+        bool _isConfigured = false;
+        uint16_t _pumpSpeed = 0;;
+        pumpMode_t _mode = pumpCtrl_active;
+        ledc_channel_t _PWMChannel = LEDC_CHANNEL_0;
+        int _pin = 0;
+        ledc_timer_t _timerChannel = LEDC_TIMER_0;
 };
 
 #ifdef __cplusplus

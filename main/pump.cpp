@@ -16,10 +16,15 @@ static char tag[] = "Pump";
 Pump::Pump(gpio_num_t pin, ledc_channel_t PWMChannel, ledc_timer_t timerChannel):
     _PWMChannel(PWMChannel), _pin(pin), _timerChannel(timerChannel)
 {
-    _initPump();
+    esp_err_t err = _initPump();
+    if (err == ESP_OK) {
+        _isConfigured = true;
+    } else {
+        _isConfigured = false;
+    }
 }
 
-void Pump::_initPump() const
+esp_err_t Pump::_initPump() const
 {
     // Configure timer for PWM drivers
     ledc_timer_config_t PWM_timer;
@@ -39,10 +44,16 @@ void Pump::_initPump() const
     channelConfig.timer_sel  = _timerChannel;
     channelConfig.hpoint = 0xff;
 
-    ledc_timer_config(&PWM_timer);
+    esp_err_t err = ledc_timer_config(&PWM_timer);
     ledc_channel_config(&channelConfig);
 
-    ESP_LOGI(tag, "Pump configured on channel %d", _PWMChannel);
+    if (err == ESP_OK) {
+        ESP_LOGI(tag, "Pump configured on channel %d", _PWMChannel);
+    } else {
+        ESP_LOGW(tag, "Unable to configure pump on channel %d", _PWMChannel);
+    }
+    
+    return err;
 }
 
 void Pump::commandPump()
