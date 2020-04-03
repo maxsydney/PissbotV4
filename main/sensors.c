@@ -291,7 +291,7 @@ float getTemperature(float storedTemps[n_tempSensors], tempSensor sensor)
         return 0.0;
     }
 
-    return storedTemps[sensorIdx];
+    return storedTemps[0];
 }
 
 #ifdef __cplusplus

@@ -147,7 +147,7 @@ void control_loop(void* params)
     Data settings = getSettingsFromNVM();
     controllerSettings= settings;
     Cmd_t cmdSettings;
-    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, settings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_1, ELEMENT_2);
+    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, settings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
     portTickType xLastWakeTime = xTaskGetTickCount();
     ESP_LOGI(tag, "Control loop active");
     

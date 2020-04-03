@@ -73,9 +73,10 @@ void gpio_init(void)
     gpio_set_level(FAN_SWITCH, 0);    
 
     // Set up 2.4kW element control pin
-    gpio_pad_select_gpio(ELEMENT_1);
-    gpio_set_direction(ELEMENT_1, GPIO_MODE_OUTPUT);
-    gpio_set_level(ELEMENT_1, 0);    
+    // PIN_FUNC_SELECT( IO_MUX_GPIO13_REG, PIN_FUNC_GPIO);
+    gpio_pad_select_gpio(ELEMENT_2);
+    gpio_set_direction(ELEMENT_2, GPIO_MODE_OUTPUT);
+    gpio_set_level(ELEMENT_2, 0);    
 }
 
 void flash_pin(gpio_num_t pin, uint16_t delay)
