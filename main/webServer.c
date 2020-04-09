@@ -44,7 +44,7 @@ extern "C" {
 #define GPIO_LOW    0
 #define LISTEN_PORT     80u
 #define MAX_CONNECTIONS 32u
-#define STATIC_IP		"192.168.1.201"
+#define STATIC_IP		"192.168.1.202"
 #define SUBNET_MASK		"255.255.255.0"
 #define GATE_WAY		"192.168.1.1"
 #define DNS_SERVER		"8.8.8.8"
@@ -122,9 +122,11 @@ static bool checkWebsocketActive(volatile Websock* ws)
 }
 
 static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
-    char *msg = strtok(data, "\n");
-    ESP_LOGI(tag, "Received msg: %s", msg);
-	char* header = strtok(msg, "&");
+    char msgBuffer[len + 1];
+    memcpy(msgBuffer, data, len);
+    msgBuffer[len] = '\0';
+    ESP_LOGI(tag, "Received msg: %s (len = %d)", msgBuffer, len);
+	char* header = strtok(msgBuffer, "&");
     char* message = strtok(NULL, "&");
 
     if (strncmp(header, "INFO", 4) == 0) { 
@@ -146,10 +148,14 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
             memcpy(ota.ip, cmd.arg, ota.len);
             ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
             xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
+        } else if (strncmp(cmd.cmd, "ASSIGN", 6) == 0) {
+            ESP_LOGI(tag, "Received command to assign sensors");
         } else {
             // Command is for controller
             xQueueSend(cmdQueue, &cmd, 50);
         }
+    } else {
+        ESP_LOGW(tag, "Could not decode message with header: %s Argument: %s", header, message);
     }
 }
 

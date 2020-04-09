@@ -187,11 +187,14 @@ void temp_sensor_task(void *pvParameters)
             sensorTemps[i] = 0;
         }
 
-        readTemps(sensorTemps);
-        ret = xQueueSend(tempQueue, sensorTemps, 100 / portTICK_PERIOD_MS);
-        if (ret == errQUEUE_FULL) {
-            ESP_LOGI(tag, "Flow rate queue full");
+        esp_err_t err = readTemps(sensorTemps);
+        if (err == ESP_OK) {
+            ret = xQueueSend(tempQueue, sensorTemps, 100 / portTICK_PERIOD_MS);
+            if (ret == errQUEUE_FULL) {
+                ESP_LOGI(tag, "Flow rate queue full");
+            }
         }
+
         
         vTaskDelayUntil(&xLastWakeTime, SAMPLE_PERIOD / portTICK_PERIOD_MS);
     }
@@ -229,7 +232,7 @@ void IRAM_ATTR flowmeter_ISR(void* arg)
     timeVal = timeTemp;
 }
 
-void readTemps(float sensorTemps[])
+esp_err_t readTemps(float sensorTemps[])
 {
     // Read temperatures more efficiently by starting conversions on all devices at the same time
     if (num_devices > 0) {
@@ -240,9 +243,13 @@ void readTemps(float sensorTemps[])
         ds18b20_wait_for_conversion(devices[0]);
 
         for (int i = 0; i < num_devices; ++i) {
-            ds18b20_read_temp(devices[i], &sensorTemps[i]);
+            if (ds18b20_read_temp(devices[i], &sensorTemps[i]) != DS18B20_OK) {
+                return ESP_FAIL;
+            }
         }
     }
+
+    return ESP_OK;
 }
 
 int generateSensorMap(void)

@@ -34,7 +34,7 @@
 #define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
 #define ECHO_TEST_CTS  (UART_PIN_NO_CHANGE)
 #define BUF_SIZE (1024)
-#define STATIC_IP		"192.168.1.201"
+#define STATIC_IP		"192.168.1.202"
 #define SUBNET_MASK		"255.255.255.0"
 #define GATE_WAY		"192.168.1.1"
 #define DNS_SERVER		"8.8.8.8"

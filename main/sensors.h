@@ -72,7 +72,7 @@ esp_err_t init_timer(void);
 *   Reads the temperatures from all connected sensors and loads them
 *   into sensorTemps array
 */
-void readTemps(float sensorTemps[]);
+esp_err_t readTemps(float sensorTemps[]);
 
 /*
 *   --------------------------------------------------------------------  
