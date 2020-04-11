@@ -55,6 +55,7 @@ static HttpdFreertosInstance httpdFreertosInstance;
 xTaskHandle socketSendHandle;
 
 static bool checkWebsocketActive(volatile Websock* ws);
+static void cleanJSONString(char* inputBuffer, char* destBuffer);
 static void sendStates(Websock* ws);
 
 void websocket_task(void *pvParameters) 
@@ -129,13 +130,14 @@ static void cleanJSONString(char* inputBuffer, char* destBuffer)
             destBuffer[idx++] = inputBuffer[i];
         }
     }
+    destBuffer[idx] = '\0';
 }
 
 static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
     char* type = NULL;
     char* arg = NULL;
-    char msgBuffer[len];
-    char cleanJSON[len];
+    char msgBuffer[len] = {};
+    char cleanJSON[len] = {};
     memcpy(msgBuffer, ++data, len-2);        // Drop leading "
     msgBuffer[len-2] = '\0';
 
@@ -183,6 +185,10 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
         }
     } else {
         ESP_LOGW(tag, "Could not decode message with header: %s Argument: %s", type, arg);
+    }
+
+    if (root != NULL) {
+        cJSON_Delete(root);
     }
 }
 

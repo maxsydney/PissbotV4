@@ -8,6 +8,7 @@
 #include "ds18b20.h"
 #include "networking.h"
 #include "controlLoop.h"
+#include "cJSON.h"
 #include "ota.h"
 
 #define MAX_LINE_LEN 40
@@ -101,22 +102,13 @@ int freeMessages(Message* head)
 	return 1;
 }
 
-Data* decode_data(char* dataPacket)
+Data* decode_data(cJSON* JSON_data)
 {
-    
-    uint16_t len = strlen(dataPacket) - 1; 
-    Message* head = parseMessage(dataPacket, len);
-    if (head == NULL) {
-        printf("Could not read message\n");
-        return 0;
-    }
-
     Data* data = malloc(sizeof(Data));
-    data->setpoint = findByKey(head, "setpoint");
-    data->P_gain = findByKey(head, "P");
-    data->I_gain = findByKey(head, "I");
-    data->D_gain = findByKey(head, "D");
-    freeMessages(head);
+    data->setpoint = cJSON_GetObjectItem(JSON_data, "setpoint")->valuedouble;
+    data->P_gain = cJSON_GetObjectItem(JSON_data, "P_gain")->valuedouble;
+    data->I_gain = cJSON_GetObjectItem(JSON_data, "I_gain")->valuedouble;
+    data->D_gain = cJSON_GetObjectItem(JSON_data, "D_gain")->valuedouble;
     return data;    
 }
 

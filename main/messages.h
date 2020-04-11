@@ -1,5 +1,6 @@
 #pragma once
 #include "controlLoop.h"
+#include "cJSON.h"
 
 #define CMD_LEN 16
 #define ARG_LEN 16
@@ -65,7 +66,7 @@ int freeMessages(Message* head);
 *   server to begin serving data. INFO messages contain a packet of 
 *   updated controller settings. 
 */
-Data* decode_data(char* dataPacket);
+Data* decode_data(cJSON* JSON_data);
 
 /*
 *   --------------------------------------------------------------------  
