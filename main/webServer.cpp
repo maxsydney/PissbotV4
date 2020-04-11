@@ -121,41 +121,68 @@ static bool checkWebsocketActive(volatile Websock* ws)
     return active;
 }
 
-static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
-    char msgBuffer[len + 1];
-    memcpy(msgBuffer, data, len);
-    msgBuffer[len] = '\0';
-    ESP_LOGI(tag, "Received msg: %s (len = %d)", msgBuffer, len);
-	char* header = strtok(msgBuffer, "&");
-    char* message = strtok(NULL, "&");
+static void cleanJSONString(char* inputBuffer, char* destBuffer)
+{
+    int idx = 0;
+    for (int i=0; i < strlen(inputBuffer); i++) {
+        if (inputBuffer[i] != '\\') {
+            destBuffer[idx++] = inputBuffer[i];
+        }
+    }
+}
 
-    if (strncmp(header, "INFO", 4) == 0) { 
+static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
+    char* type = NULL;
+    char* arg = NULL;
+    char msgBuffer[len];
+    char cleanJSON[len];
+    memcpy(msgBuffer, ++data, len-2);        // Drop leading "
+    msgBuffer[len-2] = '\0';
+
+    cleanJSONString(msgBuffer, cleanJSON);
+    cJSON* root = cJSON_Parse(cleanJSON);
+
+    if (root != NULL) {
+        type = cJSON_GetObjectItem(root, "type")->valuestring;
+        arg = cJSON_GetObjectItem(root, "arg")->valuestring;
+    } else {
+        ESP_LOGW(tag, "Unable to parse JSON string");
+    }
+
+    if (type != NULL) {
+        ESP_LOGI(tag, "Type is: %s", type);
+    }
+
+    if (arg != NULL) {
+        ESP_LOGI(tag, "Arg is: %s", arg);
+    }
+
+    if (strncmp(type, "INFO", 4) == 0) { 
         // Hand new data packet to controller      
         ESP_LOGI(tag, "Received INFO message\n");
-        Data* data = decode_data(message);
+        Data* data = decode_data(root);
         write_nvs(data);
         xQueueSend(dataQueue, data, 50);
         free(data);
-    } else if (strncmp(header, "CMD", 3) == 0) {
+    } else if (strncmp(type, "CMD", 3) == 0) {
         // Received new command
         ESP_LOGI(tag, "Received CMD message\n");
-        Cmd_t cmd = decodeCommand(message);
-        if (strncmp(cmd.cmd, "OTA", 16) == 0) {
+        if (strncmp(arg, "OTA", 16) == 0) {
             // We have received new OTA request. Run OTA
             ESP_LOGI(tag, "Received OTA request");
-            ota_t ota;
-            ota.len = strlen(cmd.arg);
-            memcpy(ota.ip, cmd.arg, ota.len);
-            ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
-            xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
-        } else if (strncmp(cmd.cmd, "ASSIGN", 6) == 0) {
+            // ota_t ota;
+            // ota.len = strlen(cmd.arg);
+            // memcpy(ota.ip, cmd.arg, ota.len);
+            // ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
+            // xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
+        } else if (strncmp(arg, "ASSIGN", 6) == 0) {
             ESP_LOGI(tag, "Received command to assign sensors");
         } else {
             // Command is for controller
-            xQueueSend(cmdQueue, &cmd, 50);
+            // xQueueSend(cmdQueue, &cmd, 50);
         }
     } else {
-        ESP_LOGW(tag, "Could not decode message with header: %s Argument: %s", header, message);
+        ESP_LOGW(tag, "Could not decode message with header: %s Argument: %s", type, arg);
     }
 }
 
