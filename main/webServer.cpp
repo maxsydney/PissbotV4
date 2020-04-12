@@ -52,9 +52,12 @@ extern "C" {
 static char connectionMemory[sizeof(RtosConnType) * MAX_CONNECTIONS];
 static const char *tag = "Webserver";
 static HttpdFreertosInstance httpdFreertosInstance;
-xTaskHandle socketSendHandle;
+static SemaphoreHandle_t xSemaphore = NULL;
+xTaskHandle socketSendHandle = NULL;
+xTaskHandle assignSensorHandle = NULL;
 
 static bool checkWebsocketActive(volatile Websock* ws);
+static void sensorAssignTask(void *pvParameters);
 static void cleanJSONString(char* inputBuffer, char* destBuffer);
 static void sendStates(Websock* ws);
 
@@ -99,8 +102,16 @@ void websocket_task(void *pvParameters)
             ESP_LOGW(tag, "Deleting send task");
             vTaskDelete(NULL);
         } else {
-            cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
-                        ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
+            if (xSemaphore != NULL) {
+                if(xSemaphoreTake(xSemaphore, (TickType_t) 10 ) == pdTRUE) {
+                    cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
+                                     ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
+                    xSemaphoreGive( xSemaphore );
+                } else {
+                    ESP_LOGI(tag, "Unable to access websocket shared resource to send data");
+                }
+            }
+            
         }
 
         vTaskDelay(250 / portTICK_PERIOD_MS);
@@ -182,7 +193,15 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
             ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
             xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
         } else if (strncmp(subType, "ASSIGN", 6) == 0) {
+            int start = cJSON_GetObjectItem(root, "start")->valueint;
             ESP_LOGI(tag, "Received command to assign sensors");
+            if (start) {
+                xTaskCreate(&sensorAssignTask, "Sensor assign task", 8192, (void*) ws, 7, &assignSensorHandle);
+            } else {
+                ESP_LOGI(tag, "Deleting sensor assign task");
+                vTaskDelete(assignSensorHandle);
+                assignSensorHandle = NULL;
+            } 
         } 
     } else {
         ESP_LOGW(tag, "Could not decode message with header: %s Subtype: %s", type, subType);
@@ -224,7 +243,55 @@ static void sendStates(Websock* ws)
     strcpy(buff, JSONptr);
     cJSON_Delete(root);
     free(JSONptr);
-    cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
+    if (xSemaphore != NULL) {
+        if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
+            cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
+            xSemaphoreGive(xSemaphore);
+        } else {
+            ESP_LOGI(tag, "Unable to access websocket shared resource to send states");
+        }
+    }
+}
+
+static void sensorAssignTask(void *pvParameters)
+{
+    Websock* ws = (Websock*) pvParameters;
+    OneWireBus_ROMCode rom_codes[MAX_DEVICES] = {0}; 
+    char buff[256];
+    int n_found;
+
+    while (true) {
+        cJSON* root = cJSON_CreateObject();
+        cJSON* sensors = cJSON_CreateArray();
+        cJSON_AddStringToObject(root, "type", "sensorID");
+        cJSON_AddItemToObject(root, "sensors", sensors);
+        n_found = scanTempSensorNetwork(rom_codes);
+        printf("Found %d devices\n", n_found);
+        for (int i=0; i < n_found; i++) {
+            cJSON* bytes = cJSON_CreateArray();
+            for (int j=7; j >= 0; j--) {
+                cJSON* byte = cJSON_CreateNumber((int) rom_codes[i].bytes[j]);
+                cJSON_AddItemToArray(bytes, byte);
+            }
+            cJSON_AddItemToArray(sensors, bytes);
+        }
+       
+        char* JSONptr = cJSON_Print(root);
+        cJSON_Delete(root);
+        strcpy(buff, JSONptr);
+        free(JSONptr);
+        if (xSemaphore != NULL) {
+            if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
+                printf("Len is %d\n", strlen(buff));
+                cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
+                xSemaphoreGive(xSemaphore);
+            } else {
+                ESP_LOGI(tag, "Unable to access websocket shared resource to send sensors");
+            }
+        }
+        
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
+    }
 }
 
 HttpdBuiltInUrl builtInUrls[]={
@@ -241,6 +308,7 @@ void webServer_init(void)
 		.memAddr = espfs_image_bin,
 	};
     EspFs* fs = espFsInit(&conf);
+    xSemaphore = xSemaphoreCreateMutex();
     httpdRegisterEspfs(fs);
     esp_netif_init();
 	httpdFreertosInit(&httpdFreertosInstance,
