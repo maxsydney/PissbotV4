@@ -104,44 +104,7 @@ void control_loop(void* params);
 */
 ctrlParams_t get_controller_params(void);
 
-/*
-*   --------------------------------------------------------------------  
-*   setFanState
-*   --------------------------------------------------------------------
-*   Switches the radiator fan on and off. Not currently implemented but
-*   will be available in coming PCB revisions
-*/
-void setFanState(int state);
-
-/*
-*   --------------------------------------------------------------------  
-*   setFlush
-*   --------------------------------------------------------------------
-*   Sets the pump to a fixed speed to flush all air out of the system
-*/
-void setFlush(bool state);
-
-/*
-*   --------------------------------------------------------------------  
-*   checkFan
-*   --------------------------------------------------------------------
-*   Enables automatic handling of radiator fan. Fan will automatically switch
-*   on when the hot side temperature is above a threshold, and switched off
-*   when the system has cooled below the threshold 
-*/
-void checkFan(double T1);
-
-bool get_fan_state(void);
-
-bool getFlush(void);
-
-/*
-*   --------------------------------------------------------------------  
-*   setElementState
-*   --------------------------------------------------------------------
-*   Switches power to 2.4kW heating element
-*/
-void setElementState(int state);
+ctrlSettings_t getControllerSettings(void);
 
 /*
 *   --------------------------------------------------------------------  

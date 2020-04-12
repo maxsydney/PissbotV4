@@ -38,10 +38,8 @@ extern "C" {
 #define ETH_C 199.200
 
 static char tag[] = "Control Loop";
-static bool element1_status = 0, element2_status = 0, flushSystem = 0, prodManual = 0;
-static int fanState = 0;
-
-static ctrlParams_t controllerParams;
+static ctrlParams_t controllerParams = {};
+static ctrlSettings_t controllerSettings = {};
 xQueueHandle ctrlParamsQueue;
 xQueueHandle ctrlSettingsQueue;
 uint16_t ctrl_loop_period_ms;
@@ -51,11 +49,48 @@ esp_err_t controller_init(uint8_t frequency)
     ctrlParamsQueue = xQueueCreate(10, sizeof(ctrlParams_t));
     ctrlSettingsQueue = xQueueCreate(10, sizeof(ctrlSettings_t));
     ctrl_loop_period_ms = 1.0 / frequency * 1000;
-    flushSystem = false;
 
     ESP_LOGI(tag, "Controller initialized");
 
     return ESP_OK;
+}
+
+void control_loop(void* params)
+{
+    float temperatures[n_tempSensors] = {0};
+    ctrlParams_t ctrlParams = getSettingsFromNVM();
+    controllerParams = ctrlParams;
+    ctrlSettings_t ctrlSettings = {};
+    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, ctrlParams, ctrlSettings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    portTickType xLastWakeTime = xTaskGetTickCount();
+    ESP_LOGI(tag, "Control loop active");
+    
+    while (true) {
+        if (uxQueueMessagesWaiting(ctrlParamsQueue)) {
+            xQueueReceive(ctrlParamsQueue, &ctrlParams, 50 / portTICK_PERIOD_MS);
+            flash_pin(LED_PIN, 100);
+            controllerParams = ctrlParams;
+            Ctrl.setControllerParams(ctrlParams);
+            ESP_LOGI(tag, "Controller parameters updated");
+        }
+
+        if (uxQueueMessagesWaiting(ctrlSettingsQueue)) {
+            xQueueReceive(ctrlSettingsQueue, &ctrlSettings, 50 / portTICK_PERIOD_MS);
+            flash_pin(LED_PIN, 100);
+            Ctrl.setControllerSettings(ctrlSettings);
+            controllerSettings = ctrlSettings;
+            ESP_LOGI(tag, "Fanstate: %d", ctrlSettings.fanState);
+            ESP_LOGI(tag, "Flush: %d", ctrlSettings.flush);
+            ESP_LOGI(tag, "Element low: %d", ctrlSettings.elementLow);
+            ESP_LOGI(tag, "Element high: %d", ctrlSettings.elementHigh);
+            ESP_LOGI(tag, "Prod condensor: %d", ctrlSettings.prodCondensor);
+            ESP_LOGI(tag, "Controller settings updated");
+        }
+        
+        updateTemperatures(temperatures);
+        Ctrl.updatePumpSpeed(temperatures[0]);
+        vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
+    }
 }
 
 void nvs_initialize(void)
@@ -141,43 +176,6 @@ ctrlParams_t getSettingsFromNVM(void)
     return ctrlParams;
 }
 
-void control_loop(void* params)
-{
-    float temperatures[n_tempSensors] = {0};
-    ctrlParams_t ctrlParams = getSettingsFromNVM();
-    controllerParams = ctrlParams;
-    ctrlSettings_t ctrlSettings;
-    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, ctrlParams, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
-    portTickType xLastWakeTime = xTaskGetTickCount();
-    ESP_LOGI(tag, "Control loop active");
-    
-    while (true) {
-        if (uxQueueMessagesWaiting(ctrlParamsQueue)) {
-            xQueueReceive(ctrlParamsQueue, &ctrlParams, 50 / portTICK_PERIOD_MS);
-            flash_pin(LED_PIN, 100);
-            Ctrl.setControllerParams(ctrlParams);
-            ESP_LOGI(tag, "Controller settings updated");
-        }
-
-        if (uxQueueMessagesWaiting(ctrlSettingsQueue)) {
-            xQueueReceive(ctrlSettingsQueue, &ctrlSettings, 50 / portTICK_PERIOD_MS);
-            flash_pin(LED_PIN, 100);
-            Ctrl.setControllerSettings(ctrlSettings);
-            fanState = Ctrl.getFanState();
-            element1_status = Ctrl.getElem24State();
-            element2_status = Ctrl.getElem3State();
-            flushSystem = Ctrl.getFlush();
-            prodManual = Ctrl.getProdManual();
-        }
-        
-        updateTemperatures(temperatures);
-        checkFan(getTemperature(temperatures, T_refluxHot));
-
-        Ctrl.updatePumpSpeed(temperatures[0]);
-        vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
-    }
-}
-
 esp_err_t updateTemperatures(float tempArray[])
 {
     static float temperatures[n_tempSensors] = {0};
@@ -202,78 +200,14 @@ float get_flowRate(void)
 }
 
 // Public access to control element states
-float get_setpoint(void)
-{
-    return controllerParams.setpoint;
-}
-
-bool get_element1_status(void)
-{
-    return element1_status;
-}
-
-bool get_element2_status(void)
-{
-    return element2_status;
-}
-
-bool get_productCondensorManual(void)
-{
-    return prodManual;
-}
-
 ctrlParams_t get_controller_params(void)
 {
     return controllerParams;
 }
 
-bool get_fan_state(void)
+ctrlSettings_t getControllerSettings(void)
 {
-    return fanState;
-}
-
-bool getFlush(void)
-{
-    return flushSystem;
-}
-
-void setFanState(int state)
-{
-    ESP_LOGI(tag, "Switched radiator fan %s", state ? "on" : "off");
-    if (state) {
-        setPin(FAN_SWITCH, state);
-    } else {
-        setPin(FAN_SWITCH, state);
-    }
-    fanState = state;
-}
-
-void setFlush(bool state)
-{
-    ESP_LOGI(tag, "setFlush called with state %d\n", state);
-    flushSystem = state;
-}
-
-void checkFan(double T1)
-{
-    if (T1 > FAN_THRESH && !fanState) {
-        setPin(FAN_SWITCH, 1);
-        fanState = 1;
-    } else if (T1 <= FAN_THRESH) {
-        setPin(FAN_SWITCH, 0);
-        fanState = 0;
-    }
-}
-
-void setElementState(int state)
-{
-    if (state) {
-        printf("Switching element on\n");
-        setPin(ELEMENT_1, state);
-    } else {
-        printf("Switching element off\n");
-        setPin(ELEMENT_1, state);
-    }
+    return controllerSettings;
 }
 
 // Compute the partial vapour pressure in kPa based on the

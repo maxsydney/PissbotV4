@@ -10,12 +10,12 @@ extern "C" {
 
 static char tag[] = "Controller";
 
-Controller::Controller(uint8_t freq, ctrlParams_t settings, gpio_num_t P1_pin, ledc_channel_t P1_channel, 
-                       ledc_timer_t timerChannel1, gpio_num_t P2_pin, ledc_channel_t P2_channel, 
-                       ledc_timer_t timerChannel2, gpio_num_t fanPin, gpio_num_t elem24Pin, 
-                       gpio_num_t elem3Pin):
-            _updateFreq(freq), _ctrlParams(settings), _fanPin(fanPin),
-            _elem24Pin(elem24Pin), _elem3Pin(elem3Pin)
+Controller::Controller(uint8_t freq, ctrlParams_t params, ctrlSettings_t settings, gpio_num_t P1_pin, 
+                       ledc_channel_t P1_channel, ledc_timer_t timerChannel1, gpio_num_t P2_pin, 
+                       ledc_channel_t P2_channel, ledc_timer_t timerChannel2, gpio_num_t fanPin, 
+                       gpio_num_t elem24Pin, gpio_num_t elem3Pin):
+            _updateFreq(freq), _ctrlParams(params), _ctrlSettings(settings), 
+            _fanPin(fanPin), _elem24Pin(elem24Pin), _elem3Pin(elem3Pin)
 {
     _updatePeriod = 1.0 / _updateFreq;
     _initPumps(P1_pin, P1_channel, timerChannel1, P2_pin, P2_channel, timerChannel2);
@@ -88,53 +88,42 @@ void Controller::_handleProductPump(double temp)
 
 void Controller::updateComponents()
 {
-    setPin(_fanPin, _fanState);;
-    setPin(_elem24Pin, _elementState_24);
+    setPin(_fanPin, _ctrlSettings.fanState);
+    setPin(_elem24Pin, _ctrlSettings.elementLow);
+    setPin(_elem3Pin, _ctrlSettings.elementHigh);
 }
 
 void Controller::setControllerSettings(ctrlSettings_t ctrlSettings)
 {
-    // if (strncmp(cmd.cmd, "fanState", 128) == 0) {
-    //     _fanState = atof(cmd.arg);
-    //     setFanState(_fanState);
-    // } else if (strncmp(cmd.cmd, "flush", 128) == 0) {
-    //     _flush = atof(cmd.arg);
-    //     if (_flush) {
-    //         ESP_LOGI(tag, "Setting both pumps to flush");
-    //         setRefluxSpeed(FLUSH_SPEED);
-    //         setProductSpeed(FLUSH_SPEED);
-    //         setRefluxPumpMode(pumpCtrl_fixed);
-    //         setProductPumpMode(pumpCtrl_fixed);
-    //     } else {
-    //         ESP_LOGI(tag, "Setting both pumps to active");
-    //         setRefluxPumpMode(pumpCtrl_active);
-    //         setProductPumpMode(pumpCtrl_active);
-    //         setProductSpeed(PUMP_MIN_OUTPUT);
-    //     }
-    // } else if (strncmp(cmd.cmd, "element1", 128) == 0)  {
-    //     bool state = atof(cmd.arg);
-    //     setElem24State(state);
-    //     ESP_LOGI(tag, "Switched 2.4kW element to %s", state ? "on" : "off");
-    // } else if (strncmp(cmd.cmd, "element2", 128) == 0) {
-    //     bool state = atof(cmd.arg);
-    //     setElem3State(state);
-    //     ESP_LOGI(tag, "Switched 3.0kW element to %s", state ? "on" : "off");
-    // } else if (strncmp(cmd.cmd, "prod", 128) == 0) {
-    //     _prodManual = atof(cmd.arg);
-    //     if (_prodManual) {
-    //         ESP_LOGI(tag, "Setting prod pump to flush");
-    //         setProductSpeed(FLUSH_SPEED);
-    //         setProductPumpMode(pumpCtrl_fixed);
-    //     } else {
-    //         ESP_LOGI(tag, "Setting prod pump to active");
-    //         setProductPumpMode(pumpCtrl_active);
-    //         setProductSpeed(PUMP_MIN_OUTPUT);
-    //     }
-    // } else {
-    //     ESP_LOGE(tag, "Unrecognised command");
-    // }
+    _ctrlSettings = ctrlSettings;
+    
+    if (ctrlSettings.flush) {
+        ESP_LOGI(tag, "Setting both pumps to flush");
+        setRefluxSpeed(FLUSH_SPEED);
+        setProductSpeed(FLUSH_SPEED);
+        setRefluxPumpMode(pumpCtrl_fixed);
+        setProductPumpMode(pumpCtrl_fixed);
+    } else {
+        ESP_LOGI(tag, "Setting both pumps to active");
+        setRefluxPumpMode(pumpCtrl_active);
+        setProductPumpMode(pumpCtrl_active);
+    }
 
-    // updateComponents();
+    if (ctrlSettings.prodCondensor) {
+        ESP_LOGI(tag, "Setting prod pump to flush");
+        setProductSpeed(FLUSH_SPEED);
+        setProductPumpMode(pumpCtrl_fixed);
+    } else {
+        ESP_LOGI(tag, "Setting prod pump to active");
+        setProductPumpMode(pumpCtrl_active);
+        setProductSpeed(PUMP_MIN_OUTPUT);
+    }
+
+    ESP_LOGI(tag, "Settings updated");
+    ESP_LOGI(tag, "Fan: %d | 2.4kW Element: %d | 3kW Element: %d | Flush: %d | Product Condensor: %d", ctrlSettings.fanState,
+             ctrlSettings.elementLow, ctrlSettings.elementHigh, ctrlSettings.flush, ctrlSettings.prodCondensor); 
+
+    updateComponents();
 }
 
 #ifdef __cplusplus

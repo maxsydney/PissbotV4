@@ -168,33 +168,25 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
             free(ctrlParams);
         } else if (strncmp(subType, "ctrlSettings", 10) == 0) {
             ctrlSettings_t* ctrlSettings = readCtrlSettings(root);
-            xQueueSend(ctrlSettingsQueue, &ctrlSettings, 50);
+            xQueueSend(ctrlSettingsQueue, ctrlSettings, 50);
             free(ctrlSettings);
         }
-
+    }
     // } else if (strncmp(type, "CMD", 3) == 0) {
-    //     // Received new command
     //     ESP_LOGI(tag, "Received CMD message\n");
     //     if (strncmp(arg, "OTA", 16) == 0) {
-    //         // We have received new OTA request. Run OTA
     //         ESP_LOGI(tag, "Received OTA request");
-    //         // ota_t ota;
-    //         // ota.len = strlen(cmd.arg);
-    //         // memcpy(ota.ip, cmd.arg, ota.len);
-    //         // ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
-    //         // xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
+    //         ota_t ota;
+    //         ota.len = strlen(cmd.arg);
+    //         memcpy(ota.ip, cmd.arg, ota.len);
+    //         ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
+    //         xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
     //     } else if (strncmp(arg, "ASSIGN", 6) == 0) {
     //         ESP_LOGI(tag, "Received command to assign sensors");
-    //     } else {
-    //         // Command is for controller
-    //         Cmd_t cmd;
-    //         strncpy(cmd.cmd, type, CMD_LEN);
-    //         strncpy(cmd.arg, arg, ARG_LEN);
-    //         xQueueSend(ctrlSettingsQueue, &cmd, 50);
-    //     }
+    //     } 
     // } else {
     //     ESP_LOGW(tag, "Could not decode message with header: %s Argument: %s", type, arg);
-    }
+    // }
 
     if (root != NULL) {
         cJSON_Delete(root);
@@ -206,7 +198,7 @@ static void myWebsocketConnect(Websock *ws)
 	ws->recvCb=myWebsocketRecv;
     ESP_LOGI(tag, "Socket connected!!\n");
     sendStates(ws);
-    xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 0);
+    xTaskCreatePinnedToCore(&websocket_task, "webServer", 16384, ws, 3, &socketSendHandle, 0);
 }
 
 static void sendStates(Websock* ws) 
@@ -216,18 +208,14 @@ static void sendStates(Websock* ws)
 	root = cJSON_CreateObject();
     char buff[128];
 
-    bool fanState = get_fan_state();
-    bool flush = getFlush();
-    bool element1State = get_element1_status();
-    bool element2State = get_element2_status();
-    bool prodCondensorManual = get_productCondensorManual();
+    ctrlSettings_t ctrlSettings = getControllerSettings();
 
     cJSON_AddStringToObject(root, "type", "status");
-    cJSON_AddNumberToObject(root, "fanState", fanState);
-    cJSON_AddNumberToObject(root, "flush", flush);
-    cJSON_AddNumberToObject(root, "elementLow", element1State);
-    cJSON_AddNumberToObject(root, "elementHigh", element2State);
-    cJSON_AddNumberToObject(root, "prodCondensor", prodCondensorManual);
+    cJSON_AddNumberToObject(root, "fanState", ctrlSettings.fanState);
+    cJSON_AddNumberToObject(root, "flush", ctrlSettings.flush);
+    cJSON_AddNumberToObject(root, "elementLow", ctrlSettings.elementLow);
+    cJSON_AddNumberToObject(root, "elementHigh", ctrlSettings.elementHigh);
+    cJSON_AddNumberToObject(root, "prodCondensor", ctrlSettings.prodCondensor);
 
     printf("JSON state message\n");
     printf("%s\n", cJSON_Print(root));
