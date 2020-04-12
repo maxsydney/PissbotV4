@@ -171,22 +171,22 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
             xQueueSend(ctrlSettingsQueue, ctrlSettings, 50);
             free(ctrlSettings);
         }
+    } else if (strncmp(type, "CMD", 3) == 0) {
+        ESP_LOGI(tag, "Received CMD message\n");
+        if (strncmp(subType, "OTA", 3) == 0) {
+            ESP_LOGI(tag, "Received OTA request");
+            ota_t ota;
+            char* OTA_IP = cJSON_GetObjectItem(root, "IP")->valuestring;
+            ota.len = strlen(OTA_IP);
+            memcpy(ota.ip, OTA_IP, ota.len);
+            ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
+            xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
+        } else if (strncmp(subType, "ASSIGN", 6) == 0) {
+            ESP_LOGI(tag, "Received command to assign sensors");
+        } 
+    } else {
+        ESP_LOGW(tag, "Could not decode message with header: %s Subtype: %s", type, subType);
     }
-    // } else if (strncmp(type, "CMD", 3) == 0) {
-    //     ESP_LOGI(tag, "Received CMD message\n");
-    //     if (strncmp(arg, "OTA", 16) == 0) {
-    //         ESP_LOGI(tag, "Received OTA request");
-    //         ota_t ota;
-    //         ota.len = strlen(cmd.arg);
-    //         memcpy(ota.ip, cmd.arg, ota.len);
-    //         ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
-    //         xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
-    //     } else if (strncmp(arg, "ASSIGN", 6) == 0) {
-    //         ESP_LOGI(tag, "Received command to assign sensors");
-    //     } 
-    // } else {
-    //     ESP_LOGW(tag, "Could not decode message with header: %s Argument: %s", type, arg);
-    // }
 
     if (root != NULL) {
         cJSON_Delete(root);
