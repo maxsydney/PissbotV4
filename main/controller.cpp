@@ -10,11 +10,11 @@ extern "C" {
 
 static char tag[] = "Controller";
 
-Controller::Controller(uint8_t freq, Data settings, gpio_num_t P1_pin, ledc_channel_t P1_channel, 
+Controller::Controller(uint8_t freq, ctrlParams_t settings, gpio_num_t P1_pin, ledc_channel_t P1_channel, 
                        ledc_timer_t timerChannel1, gpio_num_t P2_pin, ledc_channel_t P2_channel, 
                        ledc_timer_t timerChannel2, gpio_num_t fanPin, gpio_num_t elem24Pin, 
                        gpio_num_t elem3Pin):
-            _updateFreq(freq), _settings(settings), _fanPin(fanPin),
+            _updateFreq(freq), _ctrlParams(settings), _fanPin(fanPin),
             _elem24Pin(elem24Pin), _elem3Pin(elem3Pin)
 {
     _updatePeriod = 1.0 / _updateFreq;
@@ -56,20 +56,20 @@ void Controller::_initPumps(gpio_num_t P1_pin, ledc_channel_t P1_channel, ledc_t
 void Controller::updatePumpSpeed(double temp)
 {
     uint16_t pumpSpeed = _refluxPump.getSpeed();
-    double err = temp - _settings.setpoint;
+    double err = temp - _ctrlParams.setpoint;
     double d_error = (err - _prevError) / _updatePeriod;
     _prevError = err;
 
     // Basic anti integral windup strategy
     if (pumpSpeed > PUMP_MAX_OUTPUT) {
-        _integral = (PUMP_MAX_OUTPUT - _settings.P_gain * err - _settings.D_gain * d_error) / _settings.I_gain;
+        _integral = (PUMP_MAX_OUTPUT - _ctrlParams.P_gain * err - _ctrlParams.D_gain * d_error) / _ctrlParams.I_gain;
     } else if (pumpSpeed < PUMP_MIN_OUTPUT) {
-        _integral = (PUMP_MIN_OUTPUT - _settings.P_gain * err - _settings.D_gain * d_error) / _settings.I_gain;
+        _integral = (PUMP_MIN_OUTPUT - _ctrlParams.P_gain * err - _ctrlParams.D_gain * d_error) / _ctrlParams.I_gain;
     } else {
         _integral += err * _updatePeriod;
     }
 
-    double output = _settings.P_gain * err + _settings.D_gain * d_error + _settings.I_gain * _integral;
+    double output = _ctrlParams.P_gain * err + _ctrlParams.D_gain * d_error + _ctrlParams.I_gain * _integral;
 
     _handleProductPump(temp);
     _refluxPump.setSpeed(output);
@@ -92,49 +92,49 @@ void Controller::updateComponents()
     setPin(_elem24Pin, _elementState_24);
 }
 
-void Controller::processCommand(Cmd_t cmd)
+void Controller::setControllerSettings(ctrlSettings_t ctrlSettings)
 {
-    if (strncmp(cmd.cmd, "fanState", 128) == 0) {
-        _fanState = atof(cmd.arg);
-        setFanState(_fanState);
-    } else if (strncmp(cmd.cmd, "flush", 128) == 0) {
-        _flush = atof(cmd.arg);
-        if (_flush) {
-            ESP_LOGI(tag, "Setting both pumps to flush");
-            setRefluxSpeed(FLUSH_SPEED);
-            setProductSpeed(FLUSH_SPEED);
-            setRefluxPumpMode(pumpCtrl_fixed);
-            setProductPumpMode(pumpCtrl_fixed);
-        } else {
-            ESP_LOGI(tag, "Setting both pumps to active");
-            setRefluxPumpMode(pumpCtrl_active);
-            setProductPumpMode(pumpCtrl_active);
-            setProductSpeed(PUMP_MIN_OUTPUT);
-        }
-    } else if (strncmp(cmd.cmd, "element1", 128) == 0)  {
-        bool state = atof(cmd.arg);
-        setElem24State(state);
-        ESP_LOGI(tag, "Switched 2.4kW element to %s", state ? "on" : "off");
-    } else if (strncmp(cmd.cmd, "element2", 128) == 0) {
-        bool state = atof(cmd.arg);
-        setElem3State(state);
-        ESP_LOGI(tag, "Switched 3.0kW element to %s", state ? "on" : "off");
-    } else if (strncmp(cmd.cmd, "prod", 128) == 0) {
-        _prodManual = atof(cmd.arg);
-        if (_prodManual) {
-            ESP_LOGI(tag, "Setting prod pump to flush");
-            setProductSpeed(FLUSH_SPEED);
-            setProductPumpMode(pumpCtrl_fixed);
-        } else {
-            ESP_LOGI(tag, "Setting prod pump to active");
-            setProductPumpMode(pumpCtrl_active);
-            setProductSpeed(PUMP_MIN_OUTPUT);
-        }
-    } else {
-        ESP_LOGE(tag, "Unrecognised command");
-    }
+    // if (strncmp(cmd.cmd, "fanState", 128) == 0) {
+    //     _fanState = atof(cmd.arg);
+    //     setFanState(_fanState);
+    // } else if (strncmp(cmd.cmd, "flush", 128) == 0) {
+    //     _flush = atof(cmd.arg);
+    //     if (_flush) {
+    //         ESP_LOGI(tag, "Setting both pumps to flush");
+    //         setRefluxSpeed(FLUSH_SPEED);
+    //         setProductSpeed(FLUSH_SPEED);
+    //         setRefluxPumpMode(pumpCtrl_fixed);
+    //         setProductPumpMode(pumpCtrl_fixed);
+    //     } else {
+    //         ESP_LOGI(tag, "Setting both pumps to active");
+    //         setRefluxPumpMode(pumpCtrl_active);
+    //         setProductPumpMode(pumpCtrl_active);
+    //         setProductSpeed(PUMP_MIN_OUTPUT);
+    //     }
+    // } else if (strncmp(cmd.cmd, "element1", 128) == 0)  {
+    //     bool state = atof(cmd.arg);
+    //     setElem24State(state);
+    //     ESP_LOGI(tag, "Switched 2.4kW element to %s", state ? "on" : "off");
+    // } else if (strncmp(cmd.cmd, "element2", 128) == 0) {
+    //     bool state = atof(cmd.arg);
+    //     setElem3State(state);
+    //     ESP_LOGI(tag, "Switched 3.0kW element to %s", state ? "on" : "off");
+    // } else if (strncmp(cmd.cmd, "prod", 128) == 0) {
+    //     _prodManual = atof(cmd.arg);
+    //     if (_prodManual) {
+    //         ESP_LOGI(tag, "Setting prod pump to flush");
+    //         setProductSpeed(FLUSH_SPEED);
+    //         setProductPumpMode(pumpCtrl_fixed);
+    //     } else {
+    //         ESP_LOGI(tag, "Setting prod pump to active");
+    //         setProductPumpMode(pumpCtrl_active);
+    //         setProductSpeed(PUMP_MIN_OUTPUT);
+    //     }
+    // } else {
+    //     ESP_LOGE(tag, "Unrecognised command");
+    // }
 
-    updateComponents();
+    // updateComponents();
 }
 
 #ifdef __cplusplus

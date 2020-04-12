@@ -112,7 +112,7 @@ esp_err_t WiFi_event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-void write_nvs(Data* data)
+void write_nvs(ctrlParams_t* data)
 {
     nvs_handle nvs;
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);

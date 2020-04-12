@@ -41,15 +41,15 @@ static char tag[] = "Control Loop";
 static bool element1_status = 0, element2_status = 0, flushSystem = 0, prodManual = 0;
 static int fanState = 0;
 
-static Data controllerSettings;
-xQueueHandle dataQueue;
-xQueueHandle cmdQueue;
+static ctrlParams_t controllerParams;
+xQueueHandle ctrlParamsQueue;
+xQueueHandle ctrlSettingsQueue;
 uint16_t ctrl_loop_period_ms;
 
 esp_err_t controller_init(uint8_t frequency)
 {
-    dataQueue = xQueueCreate(10, sizeof(Data));
-    cmdQueue = xQueueCreate(10, sizeof(Cmd_t));
+    ctrlParamsQueue = xQueueCreate(10, sizeof(ctrlParams_t));
+    ctrlSettingsQueue = xQueueCreate(10, sizeof(ctrlSettings_t));
     ctrl_loop_period_ms = 1.0 / frequency * 1000;
     flushSystem = false;
 
@@ -72,11 +72,11 @@ void nvs_initialize(void)
     ESP_ERROR_CHECK(err);
 }
 
-Data getSettingsFromNVM(void)
+ctrlParams_t getSettingsFromNVM(void)
 {
     nvs_handle nvs;
-    Data settings;
-    memset(&settings, 0, sizeof(Data));
+    ctrlParams_t ctrlParams;
+    memset(&ctrlParams, 0, sizeof(ctrlParams_t));
     int32_t setpoint, P_gain, I_gain, D_gain;
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
     if (err != ESP_OK) {
@@ -88,10 +88,10 @@ Data getSettingsFromNVM(void)
     err = nvs_get_i32(nvs, "setpoint", &setpoint);
     switch (err) {
         case ESP_OK:
-            settings.setpoint = (float) setpoint / 1000;
+            ctrlParams.setpoint = (float) setpoint / 1000;
             break;
         case ESP_ERR_NVS_NOT_FOUND:
-            nvs_set_i32(nvs, "setpoint", (int32_t)(settings.setpoint * 1000));
+            nvs_set_i32(nvs, "setpoint", (int32_t)(ctrlParams.setpoint * 1000));
             break;
         default:
             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
@@ -100,10 +100,10 @@ Data getSettingsFromNVM(void)
     err = nvs_get_i32(nvs, "P_gain", &P_gain);
     switch (err) {
         case ESP_OK:
-            settings.P_gain = (float) P_gain / 1000;
+            ctrlParams.P_gain = (float) P_gain / 1000;
             break;
         case ESP_ERR_NVS_NOT_FOUND:
-            nvs_set_i32(nvs, "P_gain", (int32_t)(settings.P_gain * 1000));
+            nvs_set_i32(nvs, "P_gain", (int32_t)(ctrlParams.P_gain * 1000));
             break;
         default:
             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
@@ -112,10 +112,10 @@ Data getSettingsFromNVM(void)
     err = nvs_get_i32(nvs, "I_gain", &I_gain);
     switch (err) {
         case ESP_OK:
-            settings.I_gain = (float) I_gain / 1000;
+            ctrlParams.I_gain = (float) I_gain / 1000;
             break;
         case ESP_ERR_NVS_NOT_FOUND:
-            nvs_set_i32(nvs, "I_gain", (int32_t)(settings.I_gain * 1000));
+            nvs_set_i32(nvs, "I_gain", (int32_t)(ctrlParams.I_gain * 1000));
             break;
         default:
             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
@@ -124,10 +124,10 @@ Data getSettingsFromNVM(void)
     err = nvs_get_i32(nvs, "D_gain", &D_gain);
     switch (err) {
         case ESP_OK:
-            settings.D_gain = (float) D_gain / 1000;
+            ctrlParams.D_gain = (float) D_gain / 1000;
             break;
         case ESP_ERR_NVS_NOT_FOUND:
-            nvs_set_i32(nvs, "D_gain", (int32_t)(settings.D_gain * 1000));
+            nvs_set_i32(nvs, "D_gain", (int32_t)(ctrlParams.D_gain * 1000));
             break;
         default:
             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
@@ -138,31 +138,31 @@ Data getSettingsFromNVM(void)
         ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
     }
     nvs_close(nvs);
-    return settings;
+    return ctrlParams;
 }
 
 void control_loop(void* params)
 {
     float temperatures[n_tempSensors] = {0};
-    Data settings = getSettingsFromNVM();
-    controllerSettings= settings;
-    Cmd_t cmdSettings;
-    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, settings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    ctrlParams_t ctrlParams = getSettingsFromNVM();
+    controllerParams = ctrlParams;
+    ctrlSettings_t ctrlSettings;
+    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, ctrlParams, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
     portTickType xLastWakeTime = xTaskGetTickCount();
     ESP_LOGI(tag, "Control loop active");
     
     while (true) {
-        if (uxQueueMessagesWaiting(dataQueue)) {
-            xQueueReceive(dataQueue, &controllerSettings, 50 / portTICK_PERIOD_MS);
+        if (uxQueueMessagesWaiting(ctrlParamsQueue)) {
+            xQueueReceive(ctrlParamsQueue, &ctrlParams, 50 / portTICK_PERIOD_MS);
             flash_pin(LED_PIN, 100);
-            Ctrl.setControllerSettings(controllerSettings);
+            Ctrl.setControllerParams(ctrlParams);
             ESP_LOGI(tag, "Controller settings updated");
         }
 
-        if (uxQueueMessagesWaiting(cmdQueue)) {
-            xQueueReceive(cmdQueue, &cmdSettings, 50 / portTICK_PERIOD_MS);
+        if (uxQueueMessagesWaiting(ctrlSettingsQueue)) {
+            xQueueReceive(ctrlSettingsQueue, &ctrlSettings, 50 / portTICK_PERIOD_MS);
             flash_pin(LED_PIN, 100);
-            Ctrl.processCommand(cmdSettings);
+            Ctrl.setControllerSettings(ctrlSettings);
             fanState = Ctrl.getFanState();
             element1_status = Ctrl.getElem24State();
             element2_status = Ctrl.getElem3State();
@@ -204,7 +204,7 @@ float get_flowRate(void)
 // Public access to control element states
 float get_setpoint(void)
 {
-    return controllerSettings.setpoint;
+    return controllerParams.setpoint;
 }
 
 bool get_element1_status(void)
@@ -222,9 +222,9 @@ bool get_productCondensorManual(void)
     return prodManual;
 }
 
-Data get_controller_settings(void)
+ctrlParams_t get_controller_params(void)
 {
-    return controllerSettings;
+    return controllerParams;
 }
 
 bool get_fan_state(void)

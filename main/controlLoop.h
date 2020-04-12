@@ -12,8 +12,8 @@ extern "C" {
 #define SENSOR_SAMPLE_RATE 5.0f
 #define SENSOR_SAMPLE_PERIOD 1.0f / SENSOR_SAMPLE_RATE
 
-extern xQueueHandle dataQueue;
-extern xQueueHandle cmdQueue;
+extern xQueueHandle ctrlParamsQueue;
+extern xQueueHandle ctrlSettingsQueue;
 
 // Controller Settings
 // Must remain in this header so other C files can include it
@@ -22,7 +22,15 @@ typedef struct {
     float P_gain;
     float I_gain;
     float D_gain;
-} Data;
+} ctrlParams_t;
+
+typedef struct {
+    int fanState;
+    int flush;
+    int elementLow;
+    int elementHigh;
+    int prodCondensor;
+} ctrlSettings_t;
 
 /*
 *   --------------------------------------------------------------------  
@@ -94,7 +102,7 @@ void control_loop(void* params);
 *   --------------------------------------------------------------------
 *   Returns a struct containing all controller parameters
 */
-Data get_controller_settings(void);
+ctrlParams_t get_controller_params(void);
 
 /*
 *   --------------------------------------------------------------------  
@@ -164,7 +172,7 @@ float getBoilerConcentration(float boilerTemp);
 
 float getVapourConcentration(float vapourTemp);
 
-Data getSettingsFromNVM(void);
+ctrlParams_t getSettingsFromNVM(void);
 
 #ifdef __cplusplus
 }

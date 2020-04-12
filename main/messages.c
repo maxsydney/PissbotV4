@@ -102,14 +102,27 @@ int freeMessages(Message* head)
 	return 1;
 }
 
-Data* decode_data(cJSON* JSON_data)
+ctrlParams_t* readCtrlParams(cJSON* JSON_root)
 {
-    Data* data = malloc(sizeof(Data));
-    data->setpoint = cJSON_GetObjectItem(JSON_data, "setpoint")->valuedouble;
-    data->P_gain = cJSON_GetObjectItem(JSON_data, "P_gain")->valuedouble;
-    data->I_gain = cJSON_GetObjectItem(JSON_data, "I_gain")->valuedouble;
-    data->D_gain = cJSON_GetObjectItem(JSON_data, "D_gain")->valuedouble;
-    return data;    
+    ctrlParams_t* ctrlParams = malloc(sizeof(ctrlParams_t));
+    ctrlParams->setpoint = cJSON_GetObjectItem(JSON_root, "setpoint")->valuedouble;
+    ctrlParams->P_gain = cJSON_GetObjectItem(JSON_root, "P_gain")->valuedouble;
+    ctrlParams->I_gain = cJSON_GetObjectItem(JSON_root, "I_gain")->valuedouble;
+    ctrlParams->D_gain = cJSON_GetObjectItem(JSON_root, "D_gain")->valuedouble;
+
+    return ctrlParams;    
+}
+
+ctrlSettings_t* readCtrlSettings(cJSON* JSON_root)
+{
+    ctrlSettings_t* ctrlSettings = malloc(sizeof(ctrlSettings_t));
+    ctrlSettings->fanState = cJSON_GetObjectItem(JSON_root, "fanState")->valueint;
+    ctrlSettings->flush = cJSON_GetObjectItem(JSON_root, "flush")->valueint;
+    ctrlSettings->elementLow = cJSON_GetObjectItem(JSON_root, "elementLow")->valueint;
+    ctrlSettings->elementHigh = cJSON_GetObjectItem(JSON_root, "elementHigh")->valueint;
+    ctrlSettings->prodCondensor = cJSON_GetObjectItem(JSON_root, "prodCondensor")->valueint;
+
+    return ctrlSettings;
 }
 
 Cmd_t decodeCommand(char* commandPacket)

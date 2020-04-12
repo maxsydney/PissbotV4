@@ -15,7 +15,7 @@ constexpr uint16_t FLUSH_SPEED = 512;
 class Controller
 {
     public:
-        Controller(uint8_t freq, Data settings, gpio_num_t P1_pin, ledc_channel_t P1_channel, 
+        Controller(uint8_t freq, ctrlParams_t ctrlParams, gpio_num_t P1_pin, ledc_channel_t P1_channel, 
                    ledc_timer_t timerChannel1, gpio_num_t P2_pin, ledc_channel_t P2_channel, 
                    ledc_timer_t timerChannel2, gpio_num_t fanPin, gpio_num_t elem24Pin, 
                    gpio_num_t elem3Pin);
@@ -23,7 +23,7 @@ class Controller
 
         void updatePumpSpeed(double temp);
         void updateComponents();
-        void processCommand(Cmd_t cmd);
+        void setControllerSettings(ctrlSettings_t ctrlSettings);
 
         // Setters
         void setFanState(bool state) {_fanState = state;};
@@ -31,11 +31,11 @@ class Controller
         void setProductSpeed(uint16_t speed) {_prodPump.setSpeed(speed);};
         void setElem24State(bool state) {_elementState_24 = state;};
         void setElem3State(bool state) {_elementState_3 = state;};
-        void setSetPoint(double sp) {_settings.setpoint = sp;};
-        void setPGain(float P) {_settings.P_gain = P;};
-        void setIGain(float I) {_settings.I_gain = I;};
-        void setDGain(float D) {_settings.D_gain = D;};
-        void setControllerSettings(Data settings) {_settings = settings;};
+        void setSetPoint(double sp) {_ctrlParams.setpoint = sp;};
+        void setPGain(float P) {_ctrlParams.P_gain = P;};
+        void setIGain(float I) {_ctrlParams.I_gain = I;};
+        void setDGain(float D) {_ctrlParams.D_gain = D;};
+        void setControllerParams(ctrlParams_t ctrlParams) {_ctrlParams = ctrlParams;};
         void setRefluxPumpMode(pumpMode_t mode) {_refluxPump.setMode(mode);};
         void setProductPumpMode(pumpMode_t mode) {_prodPump.setMode(mode);};
 
@@ -47,11 +47,11 @@ class Controller
         bool getElem3State() const {return _elementState_3;};
         bool getFlush() const {return _flush;};
         bool getProdManual() const {return _prodManual;};
-        double getSetpoint() const {return _settings.setpoint;};
-        double getPGain() const {return _settings.P_gain;};
-        double getIGain() const {return _settings.I_gain;};
-        double getDGain() const {return _settings.D_gain;};
-        Data getControllerSettings() const {return _settings;};
+        double getSetpoint() const {return _ctrlParams.setpoint;};
+        double getPGain() const {return _ctrlParams.P_gain;};
+        double getIGain() const {return _ctrlParams.I_gain;};
+        double getDGain() const {return _ctrlParams.D_gain;};
+        ctrlParams_t getControllerParams() const {return _ctrlParams;};
         pumpMode_t getRefluxPumpMode() const {return _refluxPump.getMode();};
         pumpMode_t getProductPumpMode() const {return _prodPump.getMode();};
 
@@ -63,7 +63,7 @@ class Controller
     
         uint8_t _updateFreq;
         float _updatePeriod;
-        Data _settings;
+        ctrlParams_t _ctrlParams;
         Pump _refluxPump;
         Pump _prodPump;
         bool _fanState;

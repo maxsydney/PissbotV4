@@ -47,7 +47,7 @@ void uart_initialize(void);
 *   Initializes the UART for bi-directional communications with raspberry
 *   pi webserver
 */
-void write_nvs(Data* data);
+void write_nvs(ctrlParams_t* data);
 
 /*
 *   --------------------------------------------------------------------  

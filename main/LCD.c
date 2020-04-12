@@ -44,7 +44,7 @@ static void drawMenuItem(menu_t *menu, int index, int offset);
 static void drawMenuItems(menu_t* menu);
 
 // Get data for menu items
-static void loadControllerSettings(void);
+static void loadControllerParams(void);
 
 // Define menus 
 static menu_t tuneControllerMenu = {
@@ -122,7 +122,7 @@ void menu_task(void* param)
     while (true) {
         btnEvent.button = input_none;
 
-        loadControllerSettings();
+        loadControllerParams();
 
         if (uxQueueMessagesWaiting(inputQueue)) {
             xQueueReceive(inputQueue, &btnEvent, 50 / portTICK_PERIOD_MS);
@@ -272,13 +272,13 @@ void mainScreen(int btn)
     LCD_writeStr(txtBuf);
 }
 
-static void loadControllerSettings(void)
+static void loadControllerParams(void)
 {
-    Data settings = get_controller_settings();
-    setpoint = settings.setpoint;
-    P_gain = settings.P_gain;
-    I_gain = settings.I_gain;
-    D_gain = settings.D_gain;
+    ctrlParams_t ctrlParams = get_controller_params();
+    setpoint = ctrlParams.setpoint;
+    P_gain = ctrlParams.P_gain;
+    I_gain = ctrlParams.I_gain;
+    D_gain = ctrlParams.D_gain;
 }
 
 void tunePGain(int btn)
@@ -300,11 +300,11 @@ void tunePGain(int btn)
     } else if (btn == input_down) {
         P_gain_local--;
     } else if (btn == input_left) {
-        Data updateData = get_controller_settings();
+        ctrlParams_t updateData = get_controller_params();
         updateData.P_gain = P_gain_local;
         P_gain = P_gain_local;
         write_nvs(&updateData);
-        xQueueSend(dataQueue, &updateData, 50);
+        xQueueSend(ctrlParamsQueue, &updateData, 50);
         initScreen = true;
     }
 
@@ -332,11 +332,11 @@ void tuneIGain(int btn)
     } else if (btn == input_down) {
         I_gain_local--;
     } else if (btn == input_left) {
-        Data updateData = get_controller_settings();
+        ctrlParams_t updateData = get_controller_params();
         updateData.I_gain = I_gain_local;
         I_gain = I_gain_local;
         write_nvs(&updateData);
-        xQueueSend(dataQueue, &updateData, 50);
+        xQueueSend(ctrlParamsQueue, &updateData, 50);
         initScreen = true;
     }
 
@@ -364,11 +364,11 @@ void tuneDGain(int btn)
     } else if (btn == input_down) {
         D_gain_local--;
     } else if (btn == input_left) {
-        Data updateData = get_controller_settings();
+        ctrlParams_t updateData = get_controller_params();
         updateData.D_gain = D_gain_local;
         D_gain = D_gain_local;
         write_nvs(&updateData);
-        xQueueSend(dataQueue, &updateData, 50);
+        xQueueSend(ctrlParamsQueue, &updateData, 50);
         initScreen = true;
     }
 
@@ -396,11 +396,11 @@ void tuneSetpoint(int btn)
     } else if (btn == input_down) {
         setpoint_local--;
     } else if (btn == input_left) {
-        Data updateData = get_controller_settings();
+        ctrlParams_t updateData = get_controller_params();
         updateData.setpoint = setpoint_local;
         setpoint = setpoint_local;
         write_nvs(&updateData);
-        xQueueSend(dataQueue, &updateData, 50);
+        xQueueSend(ctrlParamsQueue, &updateData, 50);
         initScreen = true;
     }
 

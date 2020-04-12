@@ -59,14 +59,19 @@ int freeMessages(Message* head);
 
 /*
 *   --------------------------------------------------------------------  
-*   decode_data
+*   readCtrlParams
 *   --------------------------------------------------------------------
-*   Decodes incoming messages. Messages can be either of type
-*   INFO or CONN. CONN messages signify a new connection and prompt the
-*   server to begin serving data. INFO messages contain a packet of 
-*   updated controller settings. 
+*   Decodes incoming messages with type INFO and subtype ctrlParams. 
 */
-Data* decode_data(cJSON* JSON_data);
+ctrlParams_t* readCtrlParams(cJSON* JSON_root);
+
+/*
+*   --------------------------------------------------------------------  
+*   readCtrlSettings
+*   --------------------------------------------------------------------
+*   Decodes incoming messages with type INFO and subtype ctrlSettings. 
+*/
+ctrlSettings_t* readCtrlSettings(cJSON* JSON_root);
 
 /*
 *   --------------------------------------------------------------------  

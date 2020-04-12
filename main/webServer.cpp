@@ -65,29 +65,29 @@ void websocket_task(void *pvParameters)
     float temps[n_tempSensors] = {0};
     float flowRate;
     char buff[512];
-    Data ctrlSet;
+    ctrlParams_t ctrlParams;
     int64_t uptime_uS;
 
     while (true) {
         updateTemperatures(temps);
         root = cJSON_CreateObject();
-        ctrlSet = get_controller_settings();
+        ctrlParams = get_controller_params();
         uptime_uS = esp_timer_get_time() / 1000000;
         flowRate = get_flowRate();
 
         // Construct JSON object
         cJSON_AddStringToObject(root, "type", "data");
-        cJSON_AddNumberToObject(root, "T_vapour", getTemperature(temps, T_refluxHot));
-        cJSON_AddNumberToObject(root, "T_refluxInflow", getTemperature(temps, T_refluxCold));
-        cJSON_AddNumberToObject(root, "T_productInflow", getTemperature(temps, T_productHot));
+        cJSON_AddNumberToObject(root, "T_head", getTemperature(temps, T_refluxHot));
+        cJSON_AddNumberToObject(root, "T_reflux", getTemperature(temps, T_refluxCold));
+        cJSON_AddNumberToObject(root, "T_prod", getTemperature(temps, T_productHot));
         cJSON_AddNumberToObject(root, "T_radiator", getTemperature(temps, T_productCold));
         cJSON_AddNumberToObject(root, "T_boiler", getTemperature(temps, T_boiler));
-        cJSON_AddNumberToObject(root, "setpoint", ctrlSet.setpoint);
+        cJSON_AddNumberToObject(root, "setpoint", ctrlParams.setpoint);
+        cJSON_AddNumberToObject(root, "P_gain", ctrlParams.P_gain);
+        cJSON_AddNumberToObject(root, "I_gain", ctrlParams.I_gain);
+        cJSON_AddNumberToObject(root, "D_gain", ctrlParams.D_gain);
         cJSON_AddNumberToObject(root, "uptime", uptime_uS);
         cJSON_AddNumberToObject(root, "flowrate", flowRate);
-        cJSON_AddNumberToObject(root, "P_gain", ctrlSet.P_gain);
-        cJSON_AddNumberToObject(root, "I_gain", ctrlSet.I_gain);
-        cJSON_AddNumberToObject(root, "D_gain", ctrlSet.D_gain);
         cJSON_AddNumberToObject(root, "boilerConc", getBoilerConcentration(getTemperature(temps, T_boiler)));
         cJSON_AddNumberToObject(root, "vapourConc", getVapourConcentration(getTemperature(temps, T_refluxHot)));
         char* JSONptr = cJSON_Print(root);
@@ -135,7 +135,7 @@ static void cleanJSONString(char* inputBuffer, char* destBuffer)
 
 static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
     char* type = NULL;
-    char* arg = NULL;
+    char* subType = NULL;
     char msgBuffer[len] = {};
     char cleanJSON[len] = {};
     memcpy(msgBuffer, ++data, len-2);        // Drop leading "
@@ -146,7 +146,7 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
 
     if (root != NULL) {
         type = cJSON_GetObjectItem(root, "type")->valuestring;
-        arg = cJSON_GetObjectItem(root, "arg")->valuestring;
+        subType = cJSON_GetObjectItem(root, "subType")->valuestring;
     } else {
         ESP_LOGW(tag, "Unable to parse JSON string");
     }
@@ -155,36 +155,45 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
         ESP_LOGI(tag, "Type is: %s", type);
     }
 
-    if (arg != NULL) {
-        ESP_LOGI(tag, "Arg is: %s", arg);
+    if (subType != NULL) {
+        ESP_LOGI(tag, "Subtype is: %s", subType);
     }
 
     if (strncmp(type, "INFO", 4) == 0) { 
-        // Hand new data packet to controller      
-        ESP_LOGI(tag, "Received INFO message\n");
-        Data* data = decode_data(root);
-        write_nvs(data);
-        xQueueSend(dataQueue, data, 50);
-        free(data);
-    } else if (strncmp(type, "CMD", 3) == 0) {
-        // Received new command
-        ESP_LOGI(tag, "Received CMD message\n");
-        if (strncmp(arg, "OTA", 16) == 0) {
-            // We have received new OTA request. Run OTA
-            ESP_LOGI(tag, "Received OTA request");
-            // ota_t ota;
-            // ota.len = strlen(cmd.arg);
-            // memcpy(ota.ip, cmd.arg, ota.len);
-            // ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
-            // xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
-        } else if (strncmp(arg, "ASSIGN", 6) == 0) {
-            ESP_LOGI(tag, "Received command to assign sensors");
-        } else {
-            // Command is for controller
-            // xQueueSend(cmdQueue, &cmd, 50);
+        // Hand new data packet to controller    
+        if (strncmp(subType, "ctrlParams", 10) == 0) {
+            ctrlParams_t* ctrlParams = readCtrlParams(root);
+            write_nvs(ctrlParams);
+            xQueueSend(ctrlParamsQueue, ctrlParams, 50);
+            free(ctrlParams);
+        } else if (strncmp(subType, "ctrlSettings", 10) == 0) {
+            ctrlSettings_t* ctrlSettings = readCtrlSettings(root);
+            xQueueSend(ctrlSettingsQueue, &ctrlSettings, 50);
+            free(ctrlSettings);
         }
-    } else {
-        ESP_LOGW(tag, "Could not decode message with header: %s Argument: %s", type, arg);
+
+    // } else if (strncmp(type, "CMD", 3) == 0) {
+    //     // Received new command
+    //     ESP_LOGI(tag, "Received CMD message\n");
+    //     if (strncmp(arg, "OTA", 16) == 0) {
+    //         // We have received new OTA request. Run OTA
+    //         ESP_LOGI(tag, "Received OTA request");
+    //         // ota_t ota;
+    //         // ota.len = strlen(cmd.arg);
+    //         // memcpy(ota.ip, cmd.arg, ota.len);
+    //         // ESP_LOGI(tag, "OTA IP set to %s", OTA_IP);
+    //         // xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
+    //     } else if (strncmp(arg, "ASSIGN", 6) == 0) {
+    //         ESP_LOGI(tag, "Received command to assign sensors");
+    //     } else {
+    //         // Command is for controller
+    //         Cmd_t cmd;
+    //         strncpy(cmd.cmd, type, CMD_LEN);
+    //         strncpy(cmd.arg, arg, ARG_LEN);
+    //         xQueueSend(ctrlSettingsQueue, &cmd, 50);
+    //     }
+    // } else {
+    //     ESP_LOGW(tag, "Could not decode message with header: %s Argument: %s", type, arg);
     }
 
     if (root != NULL) {
@@ -216,9 +225,9 @@ static void sendStates(Websock* ws)
     cJSON_AddStringToObject(root, "type", "status");
     cJSON_AddNumberToObject(root, "fanState", fanState);
     cJSON_AddNumberToObject(root, "flush", flush);
-    cJSON_AddNumberToObject(root, "element1State", element1State);
-    cJSON_AddNumberToObject(root, "element2State", element2State);
-    cJSON_AddNumberToObject(root, "prodCondensorManual", prodCondensorManual);
+    cJSON_AddNumberToObject(root, "elementLow", element1State);
+    cJSON_AddNumberToObject(root, "elementHigh", element2State);
+    cJSON_AddNumberToObject(root, "prodCondensor", prodCondensorManual);
 
     printf("JSON state message\n");
     printf("%s\n", cJSON_Print(root));
