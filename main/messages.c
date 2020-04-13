@@ -9,6 +9,7 @@
 #include "networking.h"
 #include "controlLoop.h"
 #include "cJSON.h"
+#include "ds18b20.h"
 #include "ota.h"
 
 ctrlParams_t* readCtrlParams(cJSON* JSON_root)
@@ -34,4 +35,20 @@ ctrlSettings_t* readCtrlSettings(cJSON* JSON_root)
     ctrlSettings->prodCondensor = cJSON_GetObjectItem(data, "prodCondensor")->valueint;
 
     return ctrlSettings;
+}
+
+DS18B20_t readTempSensorParams(cJSON* JSON_root)
+{
+    DS18B20_t sens = {0};
+    cJSON* data = cJSON_GetObjectItem(JSON_root, "data");
+    cJSON* addr = cJSON_GetObjectItem(data, "addr");
+    cJSON* byte;
+    int i = 0;
+    cJSON_ArrayForEach(byte, addr) {
+        sens.addr.bytes[i++] = (uint8_t) byte->valueint;
+    }
+
+    sens.task = cJSON_GetObjectItem(data, "task")->valueint;
+
+    return sens;
 }

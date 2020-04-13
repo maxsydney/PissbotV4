@@ -80,19 +80,19 @@ void websocket_task(void *pvParameters)
 
         // Construct JSON object
         cJSON_AddStringToObject(root, "type", "data");
-        cJSON_AddNumberToObject(root, "T_head", getTemperature(temps, T_refluxHot));
-        cJSON_AddNumberToObject(root, "T_reflux", getTemperature(temps, T_refluxCold));
-        cJSON_AddNumberToObject(root, "T_prod", getTemperature(temps, T_productHot));
-        cJSON_AddNumberToObject(root, "T_radiator", getTemperature(temps, T_productCold));
-        cJSON_AddNumberToObject(root, "T_boiler", getTemperature(temps, T_boiler));
+        cJSON_AddNumberToObject(root, "T_head", getTemperature(temps, T_head));
+        cJSON_AddNumberToObject(root, "T_reflux", getTemperature(temps, T_boiler));
+        cJSON_AddNumberToObject(root, "T_prod", getTemperature(temps, T_prod));
+        cJSON_AddNumberToObject(root, "T_radiator", getTemperature(temps, T_radiator));
+        cJSON_AddNumberToObject(root, "T_reflux", getTemperature(temps, T_reflux));
         cJSON_AddNumberToObject(root, "setpoint", ctrlParams.setpoint);
         cJSON_AddNumberToObject(root, "P_gain", ctrlParams.P_gain);
         cJSON_AddNumberToObject(root, "I_gain", ctrlParams.I_gain);
         cJSON_AddNumberToObject(root, "D_gain", ctrlParams.D_gain);
         cJSON_AddNumberToObject(root, "uptime", uptime_uS);
         cJSON_AddNumberToObject(root, "flowrate", flowRate);
-        cJSON_AddNumberToObject(root, "boilerConc", getBoilerConcentration(getTemperature(temps, T_boiler)));
-        cJSON_AddNumberToObject(root, "vapourConc", getVapourConcentration(getTemperature(temps, T_refluxHot)));
+        cJSON_AddNumberToObject(root, "boilerConc", getBoilerConcentration(getTemperature(temps, T_reflux)));
+        cJSON_AddNumberToObject(root, "vapourConc", getVapourConcentration(getTemperature(temps, T_head)));
         char* JSONptr = cJSON_Print(root);
         strncpy(buff, JSONptr, 512);
         cJSON_Delete(root);
@@ -181,6 +181,10 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
             ctrlSettings_t* ctrlSettings = readCtrlSettings(root);
             xQueueSend(ctrlSettingsQueue, ctrlSettings, 50);
             free(ctrlSettings);
+        } else if (strncmp(subType, "ASSIGN", 6) == 0) {
+            ESP_LOGI(tag, "Assigning temperature sensor");
+            DS18B20_t sensor = readTempSensorParams(root);
+            insertSavedRomCodes(sensor);
         }
     } else if (strncmp(type, "CMD", 3) == 0) {
         ESP_LOGI(tag, "Received CMD message\n");
@@ -194,9 +198,9 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
             xTaskCreate(&ota_update_task, "ota_update_task", 8192, (void*) &ota, 5, NULL);
         } else if (strncmp(subType, "ASSIGN", 6) == 0) {
             int start = cJSON_GetObjectItem(root, "start")->valueint;
-            ESP_LOGI(tag, "Received command to assign sensors");
             if (start) {
-                xTaskCreate(&sensorAssignTask, "Sensor assign task", 8192, (void*) ws, 7, &assignSensorHandle);
+                ESP_LOGI(tag, "Received command to assign sensors");
+                xTaskCreatePinnedToCore(&sensorAssignTask, "SensorAssign", 4096, (void*) ws, 5, &assignSensorHandle, 1);
             } else {
                 ESP_LOGI(tag, "Deleting sensor assign task");
                 vTaskDelete(assignSensorHandle);
@@ -217,7 +221,7 @@ static void myWebsocketConnect(Websock *ws)
 	ws->recvCb=myWebsocketRecv;
     ESP_LOGI(tag, "Socket connected!!\n");
     sendStates(ws);
-    xTaskCreatePinnedToCore(&websocket_task, "webServer", 16384, ws, 3, &socketSendHandle, 0);
+    xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 0);
 }
 
 static void sendStates(Websock* ws) 
@@ -256,7 +260,6 @@ static void sendStates(Websock* ws)
 static void sensorAssignTask(void *pvParameters)
 {
     Websock* ws = (Websock*) pvParameters;
-    OneWireBus_ROMCode rom_codes[MAX_DEVICES] = {0}; 
     char buff[256];
     int n_found;
 
@@ -265,11 +268,12 @@ static void sensorAssignTask(void *pvParameters)
         cJSON* sensors = cJSON_CreateArray();
         cJSON_AddStringToObject(root, "type", "sensorID");
         cJSON_AddItemToObject(root, "sensors", sensors);
+        OneWireBus_ROMCode rom_codes[MAX_DEVICES] {}; 
         n_found = scanTempSensorNetwork(rom_codes);
-        printf("Found %d devices\n", n_found);
+
         for (int i=0; i < n_found; i++) {
             cJSON* bytes = cJSON_CreateArray();
-            for (int j=7; j >= 0; j--) {
+            for (int j=0; j < 8; j++) {
                 cJSON* byte = cJSON_CreateNumber((int) rom_codes[i].bytes[j]);
                 cJSON_AddItemToArray(bytes, byte);
             }
@@ -277,12 +281,11 @@ static void sensorAssignTask(void *pvParameters)
         }
        
         char* JSONptr = cJSON_Print(root);
-        cJSON_Delete(root);
         strcpy(buff, JSONptr);
+        cJSON_Delete(root);
         free(JSONptr);
         if (xSemaphore != NULL) {
             if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
-                printf("Len is %d\n", strlen(buff));
                 cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
                 xSemaphoreGive(xSemaphore);
             } else {
@@ -290,6 +293,7 @@ static void sensorAssignTask(void *pvParameters)
             }
         }
         
+
         vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }

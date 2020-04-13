@@ -252,23 +252,23 @@ void mainScreen(int btn)
     updateTemperatures(temps);
         
     LCD_setCursor(4, 1);
-    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_refluxHot));
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_head));
     LCD_writeStr(txtBuf);
 
     LCD_setCursor(14, 1);
-    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_refluxCold));
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_boiler));
     LCD_writeStr(txtBuf);
 
     LCD_setCursor(4, 2);
-    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_productHot));
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_prod));
     LCD_writeStr(txtBuf);
 
     LCD_setCursor(14, 2);
-    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_productCold));
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_radiator));
     LCD_writeStr(txtBuf);
 
     LCD_setCursor(8, 3);
-    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_boiler));
+    snprintf(txtBuf, 6, "%.2f", getTemperature(temps, T_reflux));
     LCD_writeStr(txtBuf);
 }
 
@@ -423,7 +423,7 @@ void scanSensorHead(int btn)
         n_found = 0;
         memset(rom_codes, 0, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
     } else if (btn == input_mid && n_found == 1) {
-        saved_rom_codes[T_refluxHot] = rom_codes[0];
+        saved_rom_codes[T_head] = rom_codes[0];
         writeDeviceRomCodes(saved_rom_codes);
         generateSensorMap();
         written = true;
@@ -484,7 +484,7 @@ void scanSensorBoiler(int btn)
         n_found = 0;
         memset(rom_codes, 0, sizeof(OneWireBus_ROMCode[MAX_DEVICES]));
     } else if (btn == input_mid && n_found == 1) {
-        saved_rom_codes[T_boiler] = rom_codes[0];
+        saved_rom_codes[T_reflux] = rom_codes[0];
         writeDeviceRomCodes(saved_rom_codes);
         generateSensorMap();
         written = true;

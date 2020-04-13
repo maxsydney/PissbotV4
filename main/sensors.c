@@ -11,6 +11,7 @@ extern "C" {
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "driver/timer.h"
@@ -26,6 +27,7 @@ extern "C" {
 #define SAMPLE_PERIOD        (400)   // milliseconds
 
 static const char* tag = "Sensors";
+static SemaphoreHandle_t xSemaphore = NULL;
 static volatile double timeVal;
 
 static OneWireBus_ROMCode device_rom_codes[MAX_DEVICES] = {0};
@@ -107,6 +109,7 @@ esp_err_t writeDeviceRomCodes(OneWireBus_ROMCode code[MAX_DEVICES])
 esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
 {
     // Create a 1-Wire bus, using the RMT timeslot driver
+    xSemaphore = xSemaphoreCreateMutex();
     owb = owb_rmt_initialize(&rmt_driver_info, ds_pin, RMT_CHANNEL_1, RMT_CHANNEL_0);
     owb_use_crc(owb, true);  // enable CRC check for ROM code
 
@@ -147,15 +150,24 @@ int scanTempSensorNetwork(OneWireBus_ROMCode rom_codes[MAX_DEVICES])
     OneWireBus_SearchState search_state = {0};
     bool found = false;
     int n_devices = 0;
-    owb_search_first(owb, &search_state, &found);
-    while (found) {
-        char rom_code_s[17];
-        owb_string_from_rom_code(search_state.rom_code, rom_code_s, sizeof(rom_code_s));
-        printf("  %d : %s\n", n_devices, rom_code_s);
-        rom_codes[n_devices] = search_state.rom_code;
-        ++n_devices;
-        owb_search_next(owb, &search_state, &found);
+
+    if (xSemaphore != NULL) {
+        if(xSemaphoreTake(xSemaphore, (TickType_t) 500) == pdTRUE) {
+            owb_search_first(owb, &search_state, &found);
+            while (found) {
+                char rom_code_s[17];
+                owb_string_from_rom_code(search_state.rom_code, rom_code_s, sizeof(rom_code_s));
+                printf("  %d : %s\n", n_devices, rom_code_s);
+                rom_codes[n_devices] = search_state.rom_code;
+                ++n_devices;
+                owb_search_next(owb, &search_state, &found);
+            }
+            xSemaphoreGive(xSemaphore);
+        } else {
+            ESP_LOGI(tag, "Unable to access onewire network shared resource");
+        }
     }
+
 
     return n_devices;
 }
@@ -235,17 +247,26 @@ void IRAM_ATTR flowmeter_ISR(void* arg)
 esp_err_t readTemps(float sensorTemps[])
 {
     // Read temperatures more efficiently by starting conversions on all devices at the same time
-    if (num_devices > 0) {
-        ds18b20_convert_all(owb);
+    if (xSemaphore != NULL) {
+        if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
+            if (num_devices > 0) {
+                ds18b20_convert_all(owb);
 
-        // In this application all devices use the same resolution,
-        // so use the first device to determine the delay
-        ds18b20_wait_for_conversion(devices[0]);
+                // In this application all devices use the same resolution,
+                // so use the first device to determine the delay
+                ds18b20_wait_for_conversion(devices[0]);
 
-        for (int i = 0; i < num_devices; ++i) {
-            if (ds18b20_read_temp(devices[i], &sensorTemps[i]) != DS18B20_OK) {
-                return ESP_FAIL;
+                for (int i = 0; i < num_devices; ++i) {
+                    if (ds18b20_read_temp(devices[i], &sensorTemps[i]) != DS18B20_OK) {
+                        xSemaphoreGive(xSemaphore);
+                        return ESP_FAIL;
+                    }
+                }
             }
+            xSemaphoreGive(xSemaphore);
+        } else {
+            ESP_LOGW(tag, "Unable to access shared resource onewire bus to read temps");
+            return ESP_FAIL;
         }
     }
 
@@ -254,6 +275,8 @@ esp_err_t readTemps(float sensorTemps[])
 
 int generateSensorMap(void)
 {
+    // Create a sensor map from the array of sensors loaded at startup to their correct
+    // position on the distiller. 
     int matchedDevices = 0;
     ESP_LOGI(tag, "Generating sensor map");
 
@@ -298,7 +321,28 @@ float getTemperature(float storedTemps[n_tempSensors], tempSensor sensor)
         return 0.0;
     }
 
-    return storedTemps[0];
+    return storedTemps[sensorIdx];
+}
+
+esp_err_t insertSavedRomCodes(DS18B20_t sensor)
+{
+    if (sensor.task >= n_tempSensors) {
+        ESP_LOGW(tag, "Cannot write to saved sensor at position %d", sensor.task);
+        return ESP_FAIL;
+    }
+
+    // Unassign if sensor already assigned to another position
+    for (int i=0; i < n_tempSensors; i++) {
+        if (matchSensor(saved_rom_codes[i], sensor.addr)) {
+            ESP_LOGI(tag, "Sensor already saved. Wiping from index %d", i);
+            memset(&saved_rom_codes[i], 0, sizeof(OneWireBus_ROMCode));
+        }
+    }
+
+    saved_rom_codes[sensor.task] = sensor.addr;
+    writeDeviceRomCodes(saved_rom_codes);
+    generateSensorMap();
+    return ESP_OK;
 }
 
 #ifdef __cplusplus

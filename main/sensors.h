@@ -11,6 +11,11 @@ extern "C" {
 
 #define MAX_DEVICES 8
 
+typedef struct {
+    OneWireBus_ROMCode addr;
+    tempSensor task;
+} DS18B20_t;
+
 // Expose queue handles for passing data between tasks
 extern xQueueHandle tempQueue;
 extern xQueueHandle hotSideTempQueue;
@@ -108,6 +113,8 @@ int generateSensorMap(void);
 *   not found
 */
 float getTemperature(float storedTemps[n_tempSensors], tempSensor sensor);
+
+esp_err_t insertSavedRomCodes(DS18B20_t sensor);
 
 #ifdef __cplusplus
 }

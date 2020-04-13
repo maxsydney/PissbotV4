@@ -11,11 +11,11 @@
 #define LCD_ROWS 4
 
 typedef enum {
-    T_refluxHot,
+    T_head,
+    T_reflux,
+    T_prod,
+    T_radiator,
     T_boiler,
-    T_productHot,
-    T_productCold,
-    T_refluxCold,
     n_tempSensors
 } tempSensor;
 
