@@ -90,7 +90,7 @@ void Controller::updateComponents()
 {
     setPin(_fanPin, _ctrlSettings.fanState);
     setPin(_elem24Pin, _ctrlSettings.elementLow);
-    setPin(_elem3Pin, _ctrlSettings.elementHigh);
+    setPin(_elem3Pin, _ctrlSettings.elementLow);        // Can only drive one pin right now..
 }
 
 void Controller::setControllerSettings(ctrlSettings_t ctrlSettings)

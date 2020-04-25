@@ -88,7 +88,7 @@ void control_loop(void* params)
         }
         
         updateTemperatures(temperatures);
-        Ctrl.updatePumpSpeed(temperatures[T_head]);     // Eventually controller needs access to all temps
+        Ctrl.updatePumpSpeed(getTemperature(temperatures, T_head));     // Eventually controller needs access to all temps
         vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
     }
 }
