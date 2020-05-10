@@ -39,12 +39,12 @@ void app_main()
     controller_init(CONTROL_LOOP_FREQUENCY);
     webServer_init();
     init_input();
-
+    
     // Schedule tasks
     xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 2048, NULL, 7, NULL, 1);
     // xTaskCreatePinnedToCore(&flowmeter_task, "Flowrate", 2048, NULL, 7, NULL, 1);
     xTaskCreatePinnedToCore(&control_loop, "Controller", 8192, NULL, 9, NULL, 0);
-    xTaskCreatePinnedToCore(&menu_task, "LCD task", 2048, NULL, 3, NULL, 0);
+    // xTaskCreatePinnedToCore(&menu_task, "LCD task", 2048, NULL, 3, NULL, 0);
     xTaskCreatePinnedToCore(&inputButtonTask, "Input button task", 1024, NULL, 5, NULL, 1);
     xTaskCreatePinnedToCore(&heartBeatTask, "Heartbeat task", 2048, NULL, 1, NULL, 1);
 }

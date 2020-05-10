@@ -151,6 +151,8 @@ static void LCD_writeNibble(uint8_t nibble, uint8_t mode)
     i2c_master_cmd_begin(I2C_NUM_0, cmd, 1000 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(cmd);   
 
+    ESP_LOGI(tag, "Sending byte: 0X%X", data);
+
     LCD_pulseEnable(data);                                              // Clock data into LCD
 }
 
