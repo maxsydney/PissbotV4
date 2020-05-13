@@ -12,6 +12,19 @@ extern "C" {
 #define SENSOR_SAMPLE_RATE 5.0f
 #define SENSOR_SAMPLE_PERIOD 1.0f / SENSOR_SAMPLE_RATE
 
+#define P_atm 101.325
+
+// computeVapourPressure equation constants
+#define H20_A (8.07131)
+#define H20_B (1730.63)
+#define H20_C (233.426)
+
+#define ETH_A (7.68117)      // Parameters valid for T in (77, 243) degrees celsius
+#define ETH_B (1332.04)
+#define ETH_C (199.200)
+
+#define mmHg_to_kPa (0.133322387415)
+
 extern xQueueHandle ctrlParamsQueue;
 extern xQueueHandle ctrlSettingsQueue;
 
@@ -110,10 +123,10 @@ ctrlSettings_t getControllerSettings(void);
 *   --------------------------------------------------------------------  
 *   computeVapourPressure
 *   --------------------------------------------------------------------
-*   Computes the partial vapour pressure of a gas in kPa based on Antoine 
+*   Computes the partial vapour pressure of a gas in kPa based on computeVapourPressure 
 *   equation constants.
 */
-float computeVapourPressure(float A, float B, float C, float T);
+float computeVapourPressureAntoine(float A, float B, float C, float T);
 
 /*
 *   --------------------------------------------------------------------  
@@ -122,6 +135,8 @@ float computeVapourPressure(float A, float B, float C, float T);
 *   Computes the mol fraction of ethanol in a boiling mash
 */
 float computeLiquidEthConcentration(float temp);
+
+float computeVapourPressureH20(float temp);
 
 /*
 *   --------------------------------------------------------------------  

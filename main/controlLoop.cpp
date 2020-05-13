@@ -26,16 +26,6 @@ extern "C" {
 #define SENSOR_MIN_OUTPUT 1600
 #define SENSOR_MAX_OUTPUT 8190
 #define FAN_THRESH 30
-#define P_atm 101.325
-
-// Antoine equation constants
-#define H20_A 10.196213
-#define H20_B 1730.63
-#define H20_C 233.426
-
-#define ETH_A 9.806073      // Parameters valid for T in (77, 243) degrees celsius
-#define ETH_B 1332.04
-#define ETH_C 199.200
 
 static char tag[] = "Control Loop";
 static ctrlParams_t controllerParams = {};
@@ -211,19 +201,27 @@ ctrlSettings_t getControllerSettings(void)
 }
 
 // Compute the partial vapour pressure in kPa based on the
-// Antoine equation https://en.wikipedia.org/wiki/Antoine_equation
-float computeVapourPressure(float A, float B, float C, float T)
+// Antoine equation https://en.wikipedia.org/wiki/computeVapourPressure_equation
+float computeVapourPressureAntoine(float A, float B, float C, float T)
 {
     float exp = A - B / (C + T);
-    return pow(10, exp) / 1000;
+    return pow(10, exp) * mmHg_to_kPa;
+}
+
+// Compute the partial pressure of H20 in kPa based on the
+// Buck equation
+// https://en.wikipedia.org/wiki/Arden_Buck_equation
+float computeVapourPressureH20(float temp)
+{
+    return 0.61121 * exp((18.678 - temp/234.5)*(temp / (257.14 + temp)));
 }
 
 // Compute bubble line based on The Compleat Distiller
 // Ch8 - Equilibrium curves
 float computeLiquidEthConcentration(float temp)
 {
-    float P_eth = computeVapourPressure(ETH_A, ETH_B, ETH_C, temp);
-    float P_H20 = computeVapourPressure(H20_A, H20_B, H20_C, temp);
+    float P_eth = computeVapourPressureAntoine(ETH_A, ETH_B, ETH_C, temp);
+    float P_H20 = computeVapourPressureAntoine(H20_A, H20_B, H20_C, temp);
     return (P_atm - P_H20) / (P_eth - P_H20);
 }
 
@@ -232,7 +230,7 @@ float computeLiquidEthConcentration(float temp)
 float computeVapourEthConcentration(float temp)
 {
     float molFractionEth = computeLiquidEthConcentration(temp);
-    float P_eth = computeVapourPressure(ETH_A, ETH_B, ETH_C, temp);
+    float P_eth = computeVapourPressureAntoine(ETH_A, ETH_B, ETH_C, temp);
     return molFractionEth * P_eth / P_atm;
 }
 

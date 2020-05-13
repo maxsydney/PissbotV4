@@ -2,7 +2,7 @@
 # This is a project Makefile for the test subproject.
 #
 
-PROJECT_NAME := unit_test_test
+PROJECT_NAME := PissbotTests
 
 # Include the components directory of the main application:
 #
