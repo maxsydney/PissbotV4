@@ -1,0 +1,7 @@
+menu "Unit Test"
+
+menuconfig IS_UNIT_TEST
+	bool "Is unit test"
+	default y
+
+endmenu
