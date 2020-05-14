@@ -18,6 +18,7 @@ extern "C" {
 #include "driver/gpio.h"
 #include "messages.h"
 #include "pinDefs.h"
+#include "thermo.h"
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -200,47 +201,13 @@ ctrlSettings_t getControllerSettings(void)
     return controllerSettings;
 }
 
-// Compute the partial vapour pressure in kPa based on the
-// Antoine equation https://en.wikipedia.org/wiki/computeVapourPressure_equation
-float computeVapourPressureAntoine(float A, float B, float C, float T)
-{
-    float exp = A - B / (C + T);
-    return pow(10, exp) * mmHg_to_kPa;
-}
-
-// Compute the partial pressure of H20 in kPa based on the
-// Buck equation
-// https://en.wikipedia.org/wiki/Arden_Buck_equation
-float computeVapourPressureH20(float temp)
-{
-    return 0.61121 * exp((18.678 - temp/234.5)*(temp / (257.14 + temp)));
-}
-
-// Compute bubble line based on The Compleat Distiller
-// Ch8 - Equilibrium curves
-float computeLiquidEthConcentration(float temp)
-{
-    float P_eth = computeVapourPressureAntoine(ETH_A, ETH_B, ETH_C, temp);
-    float P_H20 = computeVapourPressureAntoine(H20_A, H20_B, H20_C, temp);
-    return (P_atm - P_H20) / (P_eth - P_H20);
-}
-
-// Compute dew line based on The Compleat Distiller
-// Ch8 - Equilibrium curves
-float computeVapourEthConcentration(float temp)
-{
-    float molFractionEth = computeLiquidEthConcentration(temp);
-    float P_eth = computeVapourPressureAntoine(ETH_A, ETH_B, ETH_C, temp);
-    return molFractionEth * P_eth / P_atm;
-}
-
 float getBoilerConcentration(float boilerTemp)
 {
     float conc = -1;
 
     // Simple criteria for detecting if liquid is boiling or not. Valid for mashes up to ~15% (Confirm with experimental data)
     if (boilerTemp >= 90) {
-        conc = computeLiquidEthConcentration(boilerTemp) * 100;
+        conc = Thermo::computeLiquidEthConcentration(boilerTemp) * 100;
     }
 
     return conc;
@@ -252,7 +219,7 @@ float getVapourConcentration(float vapourTemp)
 
     // Valid range for estimator model
     if (vapourTemp >= 77) {
-        conc = computeVapourEthConcentration(vapourTemp) * 100;
+        conc = Thermo::computeVapourEthConcentration(vapourTemp) * 100;
     }
 
     return conc;
