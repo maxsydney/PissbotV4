@@ -8,10 +8,6 @@ extern "C" {
 #include "pump.h"
 #include "messages.h"
 
-constexpr uint16_t PUMP_MIN_OUTPUT = 25;
-constexpr uint16_t PUMP_MAX_OUTPUT = 512;
-constexpr uint16_t FLUSH_SPEED = 512;
-
 class Controller
 {
     public:
@@ -32,23 +28,25 @@ class Controller
         void setDGain(float D) {_ctrlParams.D_gain = D;}
         void setControllerParams(ctrlParams_t ctrlParams) {_ctrlParams = ctrlParams;}
         void setControllerSettings(ctrlSettings_t ctrlSettings);
-        void setRefluxPumpMode(pumpMode_t mode) {_refluxPump.setMode(mode);}
-        void setProductPumpMode(pumpMode_t mode) {_prodPump.setMode(mode);}
+        void setRefluxPumpMode(PumpMode mode) {_refluxPump.setMode(mode);}
+        void setProductPumpMode(PumpMode mode) {_prodPump.setMode(mode);}
 
         // Getters
-        uint16_t getRefluxSpeed() const {return _refluxPump.getSpeed();}
-        uint16_t getProductSpeed() const {return _prodPump.getSpeed();}
-        double getSetpoint() const {return _ctrlParams.setpoint;}
-        double getPGain() const {return _ctrlParams.P_gain;}
-        double getIGain() const {return _ctrlParams.I_gain;}
-        double getDGain() const {return _ctrlParams.D_gain;}
-        ctrlParams_t getControllerParams() const {return _ctrlParams;}
-        ctrlSettings_t getControllerSettings() const {return _ctrlSettings;}
-        pumpMode_t getRefluxPumpMode() const {return _refluxPump.getMode();}
-        pumpMode_t getProductPumpMode() const {return _prodPump.getMode();}
+        double getSetpoint(void) const {return _ctrlParams.setpoint;}
+        double getPGain(void) const {return _ctrlParams.P_gain;}
+        double getIGain(void) const {return _ctrlParams.I_gain;}
+        double getDGain(void) const {return _ctrlParams.D_gain;}
+        const Pump& getRefluxPump(void) const { return _refluxPump; }
+        const Pump& getProductPump(void) const { return _prodPump; }
+        const ctrlParams_t& getControllerParams(void) const {return _ctrlParams;}
+        const ctrlSettings_t& getControllerSettings(void) const {return _ctrlSettings;}
+        const PumpMode& getRefluxPumpMode(void) const {return _refluxPump.getMode();}
+        const PumpMode& getProductPumpMode(void) const {return _prodPump.getMode();}
+        uint16_t getRefluxPumpSpeed(void) const {return _refluxPump.getSpeed();}
+        uint16_t getProductPumpSpeed(void) const {return _prodPump.getSpeed();}
 
     private:
-        void _initComponents() const;
+        void _initComponents(void) const;
         void _handleProductPump(double temp);
         void _initPumps(gpio_num_t P1_pin, ledc_channel_t P1_channel, ledc_timer_t timerChannel1, 
                         gpio_num_t P2_pin, ledc_channel_t P2_channel, ledc_timer_t timerChannel2);

@@ -47,8 +47,8 @@ void Controller::_initPumps(gpio_num_t P1_pin, ledc_channel_t P1_channel, ledc_t
 {
     _refluxPump = Pump(P1_pin, P1_channel, timerChannel1);
     _prodPump = Pump(P2_pin, P2_channel, timerChannel2);
-    _refluxPump.setMode(pumpCtrl_active);
-    _prodPump.setMode(pumpCtrl_active);
+    _refluxPump.setMode(PumpMode::ACTIVE);
+    _prodPump.setMode(PumpMode::ACTIVE);
     _refluxPump.setSpeed(PUMP_MIN_OUTPUT);
     _prodPump.setSpeed(PUMP_MIN_OUTPUT);
 }
@@ -61,10 +61,11 @@ void Controller::updatePumpSpeed(double temp)
     _prevError = err;
 
     // Basic anti integral windup strategy
-    if (pumpSpeed > PUMP_MAX_OUTPUT) {
-        _integral = (PUMP_MAX_OUTPUT - _ctrlParams.P_gain * err - _ctrlParams.D_gain * d_error) / _ctrlParams.I_gain;
-    } else if (pumpSpeed < PUMP_MIN_OUTPUT) {
-        _integral = (PUMP_MIN_OUTPUT - _ctrlParams.P_gain * err - _ctrlParams.D_gain * d_error) / _ctrlParams.I_gain;
+    // FIXME: Implement more sophisticated anti integral windup algorithm
+    if ((pumpSpeed > PUMP_MAX_OUTPUT) && (err > 0)) {
+        _integral += 0;
+    } else if ((pumpSpeed < PUMP_MIN_OUTPUT) && (err < 0)) {
+        _integral += 0;
     } else {
         _integral += err * _updatePeriod;
     }
@@ -101,21 +102,21 @@ void Controller::setControllerSettings(ctrlSettings_t ctrlSettings)
         ESP_LOGI(tag, "Setting both pumps to flush");
         setRefluxSpeed(FLUSH_SPEED);
         setProductSpeed(FLUSH_SPEED);
-        setRefluxPumpMode(pumpCtrl_fixed);
-        setProductPumpMode(pumpCtrl_fixed);
+        setRefluxPumpMode(PumpMode::FIXED);
+        setProductPumpMode(PumpMode::FIXED);
     } else {
         ESP_LOGI(tag, "Setting both pumps to active");
-        setRefluxPumpMode(pumpCtrl_active);
-        setProductPumpMode(pumpCtrl_active);
+        setRefluxPumpMode(PumpMode::ACTIVE);
+        setProductPumpMode(PumpMode::ACTIVE);
     }
 
     if (ctrlSettings.prodCondensor) {
         ESP_LOGI(tag, "Setting prod pump to flush");
         setProductSpeed(FLUSH_SPEED);
-        setProductPumpMode(pumpCtrl_fixed);
+        setProductPumpMode(PumpMode::FIXED);
     } else {
         ESP_LOGI(tag, "Setting prod pump to active");
-        setProductPumpMode(pumpCtrl_active);
+        setProductPumpMode(PumpMode::ACTIVE);
         setProductSpeed(PUMP_MIN_OUTPUT);
     }
 

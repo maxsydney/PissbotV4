@@ -18,9 +18,9 @@ Pump::Pump(gpio_num_t pin, ledc_channel_t PWMChannel, ledc_timer_t timerChannel)
 {
     esp_err_t err = _initPump();
     if (err == ESP_OK) {
-        _isConfigured = true;
+        _configured = true;
     } else {
-        _isConfigured = false;
+        _configured = false;
     }
 }
 
@@ -73,10 +73,15 @@ void Pump::commandPump()
 
 void Pump::setSpeed(int16_t speed)
 {
-    if (speed < 0) {
-        speed = 0;
+    // Saturate output command
+    if (speed < PUMP_MIN_OUTPUT) {
+        speed = PUMP_MIN_OUTPUT;
+    } else if (speed > PUMP_MAX_OUTPUT) {
+        speed = PUMP_MAX_OUTPUT;
     }
-    if (_mode == pumpCtrl_active) {
+    
+    // Only command pump if in active control mode
+    if (_pumpMode == PumpMode::ACTIVE) {
         _pumpSpeed = speed;
     } 
 }
