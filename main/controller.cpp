@@ -98,7 +98,7 @@ void Controller::setControllerSettings(ctrlSettings_t ctrlSettings)
 {
     _ctrlSettings = ctrlSettings;
     
-    if (ctrlSettings.flush) {
+    if (ctrlSettings.flush == true) {
         ESP_LOGI(tag, "Setting both pumps to flush");
         setRefluxSpeed(FLUSH_SPEED);
         setProductSpeed(FLUSH_SPEED);
@@ -110,11 +110,11 @@ void Controller::setControllerSettings(ctrlSettings_t ctrlSettings)
         setProductPumpMode(PumpMode::ACTIVE);
     }
 
-    if (ctrlSettings.prodCondensor) {
+    if (ctrlSettings.prodCondensor == true) {
         ESP_LOGI(tag, "Setting prod pump to flush");
         setProductSpeed(FLUSH_SPEED);
         setProductPumpMode(PumpMode::FIXED);
-    } else {
+    } else if (_ctrlSettings.flush == false) {
         ESP_LOGI(tag, "Setting prod pump to active");
         setProductPumpMode(PumpMode::ACTIVE);
         setProductSpeed(PUMP_MIN_OUTPUT);
