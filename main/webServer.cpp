@@ -173,18 +173,28 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
     if (strncmp(type, "INFO", 4) == 0) { 
         // Hand new data packet to controller    
         if (strncmp(subType, "ctrlParams", 10) == 0) {
-            ctrlParams_t* ctrlParams = readCtrlParams(root);
-            write_nvs(ctrlParams);
-            xQueueSend(ctrlParamsQueue, ctrlParams, 50);
-            free(ctrlParams);
+            ctrlParams_t ctrlParams = {};
+            if (readCtrlParams(root, &ctrlParams) == ESP_OK) {
+                write_nvs(&ctrlParams);
+                xQueueSend(ctrlParamsQueue, &ctrlParams, 50);
+            } else {
+                ESP_LOGW(tag, "Unable to read controller params. Controller not updated");
+            }
         } else if (strncmp(subType, "ctrlSettings", 10) == 0) {
-            ctrlSettings_t* ctrlSettings = readCtrlSettings(root);
-            xQueueSend(ctrlSettingsQueue, ctrlSettings, 50);
-            free(ctrlSettings);
+            ctrlSettings_t ctrlSettings = {};
+            if (readCtrlSettings(root, &ctrlSettings) == ESP_OK) {
+                xQueueSend(ctrlSettingsQueue, &ctrlSettings, 50);
+            } else {
+                ESP_LOGW(tag, "Unable to read controller settings. Controller not updated");
+            }
         } else if (strncmp(subType, "ASSIGN", 6) == 0) {
             ESP_LOGI(tag, "Assigning temperature sensor");
-            DS18B20_t sensor = readTempSensorParams(root);
-            insertSavedRomCodes(sensor);
+            DS18B20_t sensor = {};
+            if (readTempSensorParams(root, &sensor) == ESP_OK) {
+                insertSavedRomCodes(sensor);
+            } else {
+                ESP_LOGW(tag, "Unable to assign temperature sensor");
+            }
         }
     } else if (strncmp(type, "CMD", 3) == 0) {
         ESP_LOGI(tag, "Received CMD message\n");

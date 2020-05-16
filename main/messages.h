@@ -9,7 +9,7 @@
 *   --------------------------------------------------------------------
 *   Decodes incoming messages with type INFO and subtype ctrlParams. 
 */
-ctrlParams_t* readCtrlParams(cJSON* JSON_root);
+esp_err_t readCtrlParams(cJSON* JSON_root, ctrlParams_t* ctrlParams);
 
 /*
 *   --------------------------------------------------------------------  
@@ -17,8 +17,8 @@ ctrlParams_t* readCtrlParams(cJSON* JSON_root);
 *   --------------------------------------------------------------------
 *   Decodes incoming messages with type INFO and subtype ctrlSettings. 
 */
-ctrlSettings_t* readCtrlSettings(cJSON* JSON_root);
+esp_err_t readCtrlSettings(cJSON* JSON_root, ctrlSettings_t* ctrlSettings);
 
-DS18B20_t readTempSensorParams(cJSON* root);
+esp_err_t readTempSensorParams(cJSON* JSON_root, DS18B20_t* sens);
 
 

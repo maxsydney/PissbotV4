@@ -1,8 +1,8 @@
 #include "unity.h"
 #include <stdio.h>
-#include "/Users/maxsydney/esp/PissbotV4/main/controller.h"
-#include "/Users/maxsydney/esp/PissbotV4/main/pump.h"
-#include "/Users/maxsydney/esp/PissbotV4/main/pinDefs.h"
+#include "main/controller.h"
+#include "main/pump.h"
+#include "main/pinDefs.h"
 #include "/Users/maxsydney/esp/esp-idf/components/soc/include/hal/ledc_types.h"
 
 

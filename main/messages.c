@@ -12,43 +12,144 @@
 #include "ds18b20.h"
 #include "ota.h"
 
-ctrlParams_t* readCtrlParams(cJSON* JSON_root)
+static const char* tag = "Messages";
+
+esp_err_t readCtrlParams(cJSON* JSON_root, ctrlParams_t* ctrlParams)
 {
-    cJSON* data = cJSON_GetObjectItem(JSON_root, "data");
-    ctrlParams_t* ctrlParams = malloc(sizeof(ctrlParams_t));
-    ctrlParams->setpoint = cJSON_GetObjectItem(data, "setpoint")->valuedouble;
-    ctrlParams->P_gain = cJSON_GetObjectItem(data, "P_gain")->valuedouble;
-    ctrlParams->I_gain = cJSON_GetObjectItem(data, "I_gain")->valuedouble;
-    ctrlParams->D_gain = cJSON_GetObjectItem(data, "D_gain")->valuedouble;
+    cJSON* data = NULL;
+    
+    data = cJSON_GetObjectItem(JSON_root, "data");
 
-    return ctrlParams;    
-}
+    if (cJSON_IsObject(data)) {
+        cJSON* setPoint = cJSON_GetObjectItem(data, "setpoint");
+        if (cJSON_IsNumber(setPoint)) {
+            ctrlParams->setpoint = setPoint->valuedouble;
+        } else {
+            ESP_LOGW(tag, "Unable to read setpoint");
+            return ESP_FAIL;
+        }
 
-ctrlSettings_t* readCtrlSettings(cJSON* JSON_root)
-{
-    cJSON* data = cJSON_GetObjectItem(JSON_root, "data");
-    ctrlSettings_t* ctrlSettings = malloc(sizeof(ctrlSettings_t));
-    ctrlSettings->fanState = cJSON_GetObjectItem(data, "fanState")->valueint;
-    ctrlSettings->flush = cJSON_GetObjectItem(data, "flush")->valueint;
-    ctrlSettings->elementLow = cJSON_GetObjectItem(data, "elementLow")->valueint;
-    ctrlSettings->elementHigh = cJSON_GetObjectItem(data, "elementHigh")->valueint;
-    ctrlSettings->prodCondensor = cJSON_GetObjectItem(data, "prodCondensor")->valueint;
+        cJSON* P_gain = cJSON_GetObjectItem(data, "P_gain");
+        if (cJSON_IsNumber(P_gain)) {
+            ctrlParams->P_gain = P_gain->valuedouble;
+        } else {
+            ESP_LOGW(tag, "Unable to read P gain");
+            return ESP_FAIL;
+        }
 
-    return ctrlSettings;
-}
+        cJSON* I_gain = cJSON_GetObjectItem(data, "I_gain");
+        if (cJSON_IsNumber(I_gain)) {
+            ctrlParams->I_gain = I_gain->valuedouble;
+        } else {
+            ESP_LOGW(tag, "Unable to read I gain");
+            return ESP_FAIL;
+        }
 
-DS18B20_t readTempSensorParams(cJSON* JSON_root)
-{
-    DS18B20_t sens = {0};
-    cJSON* data = cJSON_GetObjectItem(JSON_root, "data");
-    cJSON* addr = cJSON_GetObjectItem(data, "addr");
-    cJSON* byte;
-    int i = 0;
-    cJSON_ArrayForEach(byte, addr) {
-        sens.addr.bytes[i++] = (uint8_t) byte->valueint;
+        cJSON* D_gain = cJSON_GetObjectItem(data, "D_gain");
+        if (cJSON_IsNumber(D_gain)) {
+            ctrlParams->D_gain = D_gain->valuedouble;
+        } else {
+            ESP_LOGW(tag, "Unable to read D gain");
+            return ESP_FAIL;
+        }
+    } else {
+        return ESP_FAIL;
     }
 
-    sens.task = cJSON_GetObjectItem(data, "task")->valueint;
+    return ESP_OK;    
+}
 
-    return sens;
+esp_err_t readCtrlSettings(cJSON* JSON_root, ctrlSettings_t* ctrlSettings)
+{
+    cJSON* data = NULL;
+
+    data = cJSON_GetObjectItem(JSON_root, "data");
+
+    if (cJSON_IsObject(data)) {
+        cJSON* fanState = cJSON_GetObjectItem(data, "fanState");
+        if (cJSON_IsNumber(fanState)) {
+            ctrlSettings->fanState = fanState->valueint;
+        } else {
+            ESP_LOGW(tag, "Unable to read fan state");
+            return ESP_FAIL;
+        }
+
+        cJSON* flush = cJSON_GetObjectItem(data, "flush");
+        if (cJSON_IsNumber(flush)) {
+            ctrlSettings->flush = flush->valueint;
+        } else {
+            ESP_LOGW(tag, "Unable to read flush state");
+            return ESP_FAIL;
+        }
+
+        cJSON* elementLow = cJSON_GetObjectItem(data, "elementLow");
+        if (cJSON_IsNumber(elementLow)) {
+            ctrlSettings->elementLow = elementLow->valueint;
+        } else {
+            ESP_LOGW(tag, "Unable to read 2.4kW element state");
+            return ESP_FAIL;
+        }
+
+        cJSON* elementHigh = cJSON_GetObjectItem(data, "elementHigh");
+        if (cJSON_IsNumber(elementHigh)) {
+            ctrlSettings->elementHigh = elementHigh->valueint;
+        } else {
+            ESP_LOGW(tag, "Unable to read 3.0kW element state");
+            return ESP_FAIL;
+        }
+
+        cJSON* prodCondensor = cJSON_GetObjectItem(data, "prodCondensor");
+        if (cJSON_IsNumber(prodCondensor)) {
+            ctrlSettings->prodCondensor = prodCondensor->valueint;
+        } else {
+            ESP_LOGW(tag, "Unable to read prodCondensor pump state");
+            return ESP_FAIL;
+        }
+    } else {
+        ESP_LOGW(tag, "Could not read JSON object");
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t readTempSensorParams(cJSON* JSON_root, DS18B20_t* sens)
+{
+
+    cJSON* data = NULL;
+    cJSON* addr = NULL;
+    
+    data = cJSON_GetObjectItem(JSON_root, "data");
+
+    if (cJSON_IsObject(data)) {
+        addr = cJSON_GetObjectItem(data, "addr");
+        if (cJSON_IsArray(addr)) {
+            cJSON* byte = NULL;
+            int i = 0;
+            cJSON_ArrayForEach(byte, addr) {
+                if (cJSON_IsNumber(byte)) {
+                    sens->addr.bytes[i++] = (uint8_t) byte->valueint;
+                } else {
+                    ESP_LOGW(tag, "DS18B20 address corrupt");
+                    return ESP_FAIL;
+                }
+            }
+        } else {
+            ESP_LOGW(tag, "Could not read sensor address");
+            return ESP_FAIL;
+        }
+    } else {
+        ESP_LOGW(tag, "Could not read JSON object");
+        return ESP_FAIL;
+    }
+
+    cJSON* task = cJSON_GetObjectItem(data, "task");
+    if (cJSON_IsNumber(task)) {
+        sens->task = cJSON_GetObjectItem(data, "task")->valueint;
+    } else {
+        ESP_LOGW(tag, "Could not determine sensor task");
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
 }
