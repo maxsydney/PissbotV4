@@ -21,8 +21,8 @@ TEST_CASE("Constructor", "[Controller]")
 
     TEST_ASSERT_TRUE(Ctrl.getRefluxPumpMode() == PumpMode::ACTIVE);
     TEST_ASSERT_TRUE(Ctrl.getProductPumpMode() == PumpMode::ACTIVE);
-    TEST_ASSERT_EQUAL_INT16(Ctrl.getRefluxPumpSpeed(), PUMP_MIN_OUTPUT);
-    TEST_ASSERT_EQUAL_INT16(Ctrl.getProductPumpSpeed(), PUMP_MIN_OUTPUT);
+    TEST_ASSERT_EQUAL_UINT16(Ctrl.getRefluxPumpSpeed(), PUMP_MIN_OUTPUT);
+    TEST_ASSERT_EQUAL_UINT16(Ctrl.getProductPumpSpeed(), PUMP_MIN_OUTPUT);
 }
 
 TEST_CASE("Proportional Control Response", "[Controller]")
