@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <esp_log.h>
@@ -16,6 +20,10 @@ static const char* tag = "Messages";
 
 esp_err_t readCtrlParams(cJSON* JSON_root, ctrlParams_t* ctrlParams)
 {
+    if (JSON_root == NULL) {
+        ESP_LOGW(tag, "JSON root was null!");
+        return ESP_FAIL;
+    }
     cJSON* data = NULL;
     
     data = cJSON_GetObjectItem(JSON_root, "data");
@@ -61,8 +69,12 @@ esp_err_t readCtrlParams(cJSON* JSON_root, ctrlParams_t* ctrlParams)
 
 esp_err_t readCtrlSettings(cJSON* JSON_root, ctrlSettings_t* ctrlSettings)
 {
-    cJSON* data = NULL;
+    if (JSON_root == NULL) {
+        ESP_LOGW(tag, "JSON root was null!");
+        return ESP_FAIL;
+    }
 
+    cJSON* data = NULL;
     data = cJSON_GetObjectItem(JSON_root, "data");
 
     if (cJSON_IsObject(data)) {
@@ -115,6 +127,10 @@ esp_err_t readCtrlSettings(cJSON* JSON_root, ctrlSettings_t* ctrlSettings)
 
 esp_err_t readTempSensorParams(cJSON* JSON_root, DS18B20_t* sens)
 {
+    if (JSON_root == NULL) {
+        ESP_LOGW(tag, "JSON root was null!");
+        return ESP_FAIL;
+    }
 
     cJSON* data = NULL;
     cJSON* addr = NULL;
@@ -145,7 +161,7 @@ esp_err_t readTempSensorParams(cJSON* JSON_root, DS18B20_t* sens)
 
     cJSON* task = cJSON_GetObjectItem(data, "task");
     if (cJSON_IsNumber(task)) {
-        sens->task = cJSON_GetObjectItem(data, "task")->valueint;
+        sens->task = static_cast<tempSensor>(cJSON_GetObjectItem(data, "task")->valueint);
     } else {
         ESP_LOGW(tag, "Could not determine sensor task");
         return ESP_FAIL;
@@ -153,3 +169,7 @@ esp_err_t readTempSensorParams(cJSON* JSON_root, DS18B20_t* sens)
 
     return ESP_OK;
 }
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,4 +1,9 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "controlLoop.h"
 #include "sensors.h"
 #include "cJSON.h"
@@ -21,4 +26,6 @@ esp_err_t readCtrlSettings(cJSON* JSON_root, ctrlSettings_t* ctrlSettings);
 
 esp_err_t readTempSensorParams(cJSON* JSON_root, DS18B20_t* sens);
 
-
+#ifdef __cplusplus
+}
+#endif

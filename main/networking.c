@@ -27,8 +27,8 @@
 
 #define PORT_NUMBER 8001
 #define BUFLEN 200
-#define SSID "vodafoneB1100A_2GEXT"
-#define PASSWORD "@leadership room 11"
+#define SSID "ASUS_50_5G"
+#define PASSWORD "43378128"
 #define ECHO_TEST_TXD  (GPIO_NUM_14)
 #define ECHO_TEST_RXD  (GPIO_NUM_13)
 #define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
@@ -47,9 +47,8 @@ void wifi_connect(void)
     tcpip_adapter_ip_info_t ipInfo;
     wifi_config_t staConfig = {
         .sta = {
-            // .ssid="vodafoneB1100A_2GEXT",
-            .ssid="vodafoneB1100A",
-            .password="@leadership room 11",
+            .ssid="ASUS_50_5G",
+            .password="43378128",
             .bssid_set=false
         }
     };

@@ -67,7 +67,7 @@ void websocket_task(void *pvParameters)
     cJSON *root;
     float temps[n_tempSensors] = {0};
     float flowRate;
-    char buff[512];
+    char buff[513];
     ctrlParams_t ctrlParams;
     int64_t uptime_uS;
 
