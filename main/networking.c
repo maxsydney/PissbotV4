@@ -27,7 +27,7 @@
 
 #define PORT_NUMBER 8001
 #define BUFLEN 200
-#define SSID "ASUS_50_5G"
+#define SSID "ASUS_50_2G"
 #define PASSWORD "43378128"
 #define ECHO_TEST_TXD  (GPIO_NUM_14)
 #define ECHO_TEST_RXD  (GPIO_NUM_13)
@@ -47,8 +47,8 @@ void wifi_connect(void)
     tcpip_adapter_ip_info_t ipInfo;
     wifi_config_t staConfig = {
         .sta = {
-            .ssid="ASUS_50_5G",
-            .password="43378128",
+            .ssid=SSID,
+            .password=PASSWORD,
             .bssid_set=false
         }
     };
