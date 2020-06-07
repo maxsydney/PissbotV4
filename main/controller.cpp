@@ -62,15 +62,17 @@ void Controller::updatePumpSpeed(double temp)
 
     // Basic anti integral windup strategy
     // FIXME: Implement more sophisticated anti integral windup algorithm
-    if ((pumpSpeed > PUMP_MAX_OUTPUT) && (err > 0)) {
+    if ((pumpSpeed >= PUMP_MAX_OUTPUT) && (err > 0)) {
         _integral += 0;
-    } else if ((pumpSpeed < PUMP_MIN_OUTPUT) && (err < 0)) {
+    } else if ((pumpSpeed <= PUMP_MIN_OUTPUT) && (err < 0)) {
         _integral += 0;
     } else {
         _integral += err * _updatePeriod;
     }
 
     double output = _ctrlParams.P_gain * err + _ctrlParams.D_gain * d_error + _ctrlParams.I_gain * _integral;
+
+    ESP_LOGE(tag, "P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", _ctrlParams.P_gain * err, _ctrlParams.I_gain * _integral, _ctrlParams.D_gain * d_error, output);
 
     _handleProductPump(temp);
     _refluxPump.setSpeed(output);
