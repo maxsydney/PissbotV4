@@ -11,8 +11,9 @@ TEST_CASE("Constructor", "[Controller]")
     const uint8_t freq = 5;
     const ctrlParams_t ctrlParams = {50.0, 10.0, 1.0, 1.0};
     const ctrlSettings_t ctrlSettings = {};
-    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, 
-                                                    PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
     TEST_ASSERT_EQUAL_DOUBLE(Ctrl.getSetpoint(), 50.0);
     TEST_ASSERT_EQUAL_DOUBLE(Ctrl.getPGain(), 10.0);
@@ -21,8 +22,8 @@ TEST_CASE("Constructor", "[Controller]")
 
     TEST_ASSERT_TRUE(Ctrl.getRefluxPumpMode() == PumpMode::ACTIVE);
     TEST_ASSERT_TRUE(Ctrl.getProductPumpMode() == PumpMode::ACTIVE);
-    TEST_ASSERT_EQUAL_UINT16(Ctrl.getRefluxPumpSpeed(), PUMP_MIN_OUTPUT);
-    TEST_ASSERT_EQUAL_UINT16(Ctrl.getProductPumpSpeed(), PUMP_MIN_OUTPUT);
+    TEST_ASSERT_EQUAL_UINT16(Ctrl.getRefluxPumpSpeed(), Pump::PUMP_MIN_OUTPUT);
+    TEST_ASSERT_EQUAL_UINT16(Ctrl.getProductPumpSpeed(), Pump::PUMP_MIN_OUTPUT);
 }
 
 TEST_CASE("Proportional Control Response", "[Controller]")
@@ -31,8 +32,9 @@ TEST_CASE("Proportional Control Response", "[Controller]")
     const uint8_t freq = 5;
     const ctrlParams_t ctrlParams = {0.0, 1.0, 0.0, 0.0};
     const ctrlSettings_t ctrlSettings = {};
-    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, 
-                                                    PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
     Ctrl.updatePumpSpeed(25.0);
     TEST_ASSERT_EQUAL_INT16(25, Ctrl.getRefluxPumpSpeed());
@@ -50,8 +52,9 @@ TEST_CASE("Integral Control Response", "[Controller]")
     const uint8_t freq = 1;
     const ctrlParams_t ctrlParams = {0.0, 0.0, 1.0, 0.0};
     const ctrlSettings_t ctrlSettings = {};
-    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, 
-                                                    PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
     Ctrl.updatePumpSpeed(25.0);
     TEST_ASSERT_EQUAL_INT16(25, Ctrl.getRefluxPumpSpeed());
@@ -69,8 +72,9 @@ TEST_CASE("Derivative Control Response", "[Controller]")
     const uint8_t freq = 1;
     const ctrlParams_t ctrlParams = {0.0, 0.0, 0.0, 1.0};
     const ctrlSettings_t ctrlSettings = {};
-    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, 
-                                                    PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
     Ctrl.updatePumpSpeed(50.0);
     TEST_ASSERT_EQUAL_INT16(50, Ctrl.getRefluxPumpSpeed());
@@ -88,8 +92,9 @@ TEST_CASE("PID control Response", "[Controller]")
     const uint8_t freq = 1;
     const ctrlParams_t ctrlParams = {0.0, 1.0, 1.0, 1.0};
     const ctrlSettings_t ctrlSettings = {};
-    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, 
-                                                    PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
     // Proportional is 25, integral is 25, derivative is 25
     Ctrl.updatePumpSpeed(25.0);
@@ -138,16 +143,17 @@ TEST_CASE("Output Saturation", "[Controller]")
     const uint8_t freq = 1;
     const ctrlParams_t ctrlParams = {0.0, 1.0, 0.0, 0.0};
     const ctrlSettings_t ctrlSettings = {};
-    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, 
-                                                    PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
     // Check minimum speed
     Ctrl.updatePumpSpeed(0);
-    TEST_ASSERT_EQUAL_INT16(PUMP_MIN_OUTPUT, Ctrl.getRefluxPumpSpeed());
+    TEST_ASSERT_EQUAL_INT16(Pump::PUMP_MIN_OUTPUT, Ctrl.getRefluxPumpSpeed());
     
     // Check maximum speed
     Ctrl.updatePumpSpeed(10000);
-    TEST_ASSERT_EQUAL_INT16(PUMP_MAX_OUTPUT, Ctrl.getRefluxPumpSpeed());
+    TEST_ASSERT_EQUAL_INT16(Pump::PUMP_MAX_OUTPUT, Ctrl.getRefluxPumpSpeed());
 
     // Check normal speed
     Ctrl.updatePumpSpeed(75.0);
@@ -159,14 +165,15 @@ TEST_CASE("Auto Product Condensor", "[Controller]")
     const uint8_t freq = 1;
     const ctrlParams_t ctrlParams = {0.0, 1.0, 0.0, 0.0};
     const ctrlSettings_t ctrlSettings = {};
-    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, 
-                                                    PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
-    TEST_ASSERT_EQUAL_INT16(PUMP_MIN_OUTPUT, Ctrl.getProductPumpSpeed());
+    TEST_ASSERT_EQUAL_INT16(Pump::PUMP_MIN_OUTPUT, Ctrl.getProductPumpSpeed());
 
     // Set temp above 60 degrees
     Ctrl.updatePumpSpeed(75);
-    TEST_ASSERT_EQUAL_INT16(FLUSH_SPEED, Ctrl.getProductPumpSpeed());
+    TEST_ASSERT_EQUAL_INT16(Pump::FLUSH_SPEED, Ctrl.getProductPumpSpeed());
 }
 
 TEST_CASE("Set Controller Settings", "[Controller]")
@@ -175,8 +182,9 @@ TEST_CASE("Set Controller Settings", "[Controller]")
     const ctrlParams_t ctrlParams = {1.0, 1.0, 1.0, 1.0};
     ctrlSettings_t ctrlSettingsIn = {};
     ctrlSettings_t ctrlSettingsOut = {};
-    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettingsIn, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, 
-                                                    PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    Controller Ctrl = Controller(freq, ctrlParams, ctrlSettingsIn, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
     // Check all settings as defaults
     ctrlSettingsOut = Ctrl.getControllerSettings();
@@ -199,8 +207,8 @@ TEST_CASE("Set Controller Settings", "[Controller]")
     Ctrl.setControllerSettings(ctrlSettingsIn);
     ctrlSettingsOut = Ctrl.getControllerSettings();
     TEST_ASSERT_EQUAL_INT(1, ctrlSettingsOut.flush);
-    TEST_ASSERT_EQUAL_INT16(FLUSH_SPEED, Ctrl.getRefluxPumpSpeed());
-    TEST_ASSERT_EQUAL_INT16(FLUSH_SPEED, Ctrl.getProductPumpSpeed());
+    TEST_ASSERT_EQUAL_INT16(Pump::FLUSH_SPEED, Ctrl.getRefluxPumpSpeed());
+    TEST_ASSERT_EQUAL_INT16(Pump::FLUSH_SPEED, Ctrl.getProductPumpSpeed());
     TEST_ASSERT_TRUE(Ctrl.getRefluxPumpMode() == PumpMode::FIXED);
     TEST_ASSERT_TRUE(Ctrl.getProductPumpMode() == PumpMode::FIXED);
 
@@ -221,7 +229,7 @@ TEST_CASE("Set Controller Settings", "[Controller]")
     Ctrl.setControllerSettings(ctrlSettingsIn);
     ctrlSettingsOut = Ctrl.getControllerSettings();
     TEST_ASSERT_EQUAL_INT(1, ctrlSettingsOut.prodCondensor);
-    TEST_ASSERT_EQUAL_INT16(FLUSH_SPEED, Ctrl.getProductPumpSpeed());
+    TEST_ASSERT_EQUAL_INT16(Pump::FLUSH_SPEED, Ctrl.getProductPumpSpeed());
     TEST_ASSERT_TRUE(Ctrl.getProductPumpMode() == PumpMode::FIXED);
 }
 

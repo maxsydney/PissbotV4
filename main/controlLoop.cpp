@@ -52,7 +52,9 @@ void control_loop(void* params)
     ctrlParams_t ctrlParams = getSettingsFromNVM();
     controllerParams = ctrlParams;
     ctrlSettings_t ctrlSettings = {};
-    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, ctrlParams, ctrlSettings, REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0, PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, ctrlParams, ctrlSettings, refluxPumpCfg, prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
     portTickType xLastWakeTime = xTaskGetTickCount();
     ESP_LOGI(tag, "Control loop active");
     

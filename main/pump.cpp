@@ -13,10 +13,11 @@ extern "C" {
 
 static char tag[] = "Pump";
 
-Pump::Pump(gpio_num_t pin, ledc_channel_t PWMChannel, ledc_timer_t timerChannel):
-    _PWMChannel(PWMChannel), _pin(pin), _timerChannel(timerChannel)
+Pump::Pump(const PumpCfg& cfg):
+    _cfg(cfg)
 {
     esp_err_t err = _initPump();
+
     if (err == ESP_OK) {
         _configured = true;
     } else {
@@ -31,32 +32,32 @@ esp_err_t Pump::_initPump() const
     PWM_timer.duty_resolution = LEDC_TIMER_9_BIT;
     PWM_timer.freq_hz = 5000;
     PWM_timer.speed_mode = LEDC_HIGH_SPEED_MODE;
-    PWM_timer.timer_num = _timerChannel;
+    PWM_timer.timer_num = _cfg.timerChannel;
     PWM_timer.clk_cfg = LEDC_AUTO_CLK;
 
     // Configure pump channels
     ledc_channel_config_t channelConfig;
-    channelConfig.channel    = _PWMChannel;
+    channelConfig.channel    = _cfg.PWMChannel;
     channelConfig.duty       = 0;
-    channelConfig.gpio_num   = (int) _pin;
+    channelConfig.gpio_num   = (int) _cfg.pin;
     channelConfig.speed_mode = LEDC_HIGH_SPEED_MODE;
-    channelConfig.timer_sel  = _timerChannel;
+    channelConfig.timer_sel  = _cfg.timerChannel;
     channelConfig.hpoint = 0xff;
 
     esp_err_t err = ledc_timer_config(&PWM_timer);
     if (err == ESP_ERR_INVALID_ARG) {
-        ESP_LOGE(tag, "Invalid parameter passed to timer configuration. Unable to configure pump on channel %d", _PWMChannel);
+        ESP_LOGE(tag, "Invalid parameter passed to timer configuration. Unable to configure pump on channel %d", _cfg.PWMChannel);
         return err;
     } else if (err == ESP_FAIL) {
-        ESP_LOGE(tag, "Can not find a proper pre-divider number base on the given frequency and the current duty_resolution. Pump configured on channel %d", _PWMChannel);
+        ESP_LOGE(tag, "Can not find a proper pre-divider number base on the given frequency and the current duty_resolution. Pump configured on channel %d", _cfg.PWMChannel);
         return err;
     }
 
     err = ledc_channel_config(&channelConfig);
     if (err == ESP_OK) {
-        ESP_LOGI(tag, "Pump configured on channel %d", _PWMChannel);
+        ESP_LOGI(tag, "Pump configured on channel %d", _cfg.PWMChannel);
     } else {
-        ESP_LOGW(tag, "Invalid argument supplied to channel config. Unable to configure pump on channel %d", _PWMChannel);
+        ESP_LOGW(tag, "Invalid argument supplied to channel config. Unable to configure pump on channel %d", _cfg.PWMChannel);
     }
     
     return err;
@@ -64,8 +65,8 @@ esp_err_t Pump::_initPump() const
 
 void Pump::commandPump()
 {
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, _PWMChannel, _pumpSpeed);
-	ledc_update_duty(LEDC_HIGH_SPEED_MODE, _PWMChannel);
+    ledc_set_duty(LEDC_HIGH_SPEED_MODE, _cfg.PWMChannel, _pumpSpeed);
+	ledc_update_duty(LEDC_HIGH_SPEED_MODE, _cfg.PWMChannel);
 }
 
 void Pump::setSpeed(int16_t speed)
@@ -81,6 +82,12 @@ void Pump::setSpeed(int16_t speed)
     if (_pumpMode == PumpMode::ACTIVE) {
         _pumpSpeed = speed;
     } 
+}
+
+PumpCfg::PumpCfg(gpio_num_t pin, ledc_channel_t PWMChannel, ledc_timer_t timerChannel)
+    : pin(pin), PWMChannel(PWMChannel), timerChannel(timerChannel)
+{
+    _configured = true;
 }
 
 #ifdef __cplusplus
