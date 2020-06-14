@@ -26,6 +26,14 @@ void websocket_task(void *pvParameters);
 */
 void webServer_init(void);
 
+/*
+*   --------------------------------------------------------------------  
+*   wsLog
+*   --------------------------------------------------------------------
+*   If websocket connection is open, log messages to browser
+*/
+esp_err_t wsLog(const char* logMsg);
+
 #ifdef __cplusplus
 }
 #endif

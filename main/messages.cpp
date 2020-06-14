@@ -12,6 +12,7 @@ extern "C" {
 #include "ds18b20.h"
 #include "networking.h"
 #include "controlLoop.h"
+#include "webServer.h"
 #include "cJSON.h"
 #include "ds18b20.h"
 #include "ota.h"
@@ -176,6 +177,29 @@ esp_err_t readTempSensorParams(cJSON* JSON_root, DS18B20_t* sens)
     }
 
     return ESP_OK;
+}
+
+int _log_vprintf(const char *fmt, va_list args) 
+{
+    static bool static_fatal_error = false;
+    char logBuff[512];
+    int iresult;
+
+    if (static_fatal_error == false) {
+        iresult = vsnprintf(logBuff, 511, fmt, args);
+        if (iresult < 0) {
+            printf("%s() ABORT. failed vfprintf() -> disable future vfprintf(_log_remote_fp) \n", __FUNCTION__);
+            // MARK FATAL
+            static_fatal_error = true;
+            return iresult;
+        }
+
+        // Log to websocket (if available)
+        wsLog(logBuff);
+    }
+
+    // #3 ALWAYS Write to stdout!
+    return vprintf(fmt, args);
 }
 
 #ifdef __cplusplus

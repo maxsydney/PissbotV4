@@ -55,6 +55,7 @@ static HttpdFreertosInstance httpdFreertosInstance;
 static SemaphoreHandle_t xSemaphore = NULL;
 xTaskHandle socketSendHandle = NULL;
 xTaskHandle assignSensorHandle = NULL;
+static Websock* wsGlobal;
 
 static bool checkWebsocketActive(volatile Websock* ws);
 static void sensorAssignTask(void *pvParameters);
@@ -125,10 +126,12 @@ static bool checkWebsocketActive(volatile Websock* ws)
     if (ws->conn == 0x0 || !wifiConnected) {
         ESP_LOGW(tag, "Websocket inactive. Closing connection");
         active = false;
+        wsGlobal = NULL;
     } else if (ws->conn->isConnectionClosed) {
         // This check is not redundant, if conn = 0x00 then this check causes panic handler to be invoked
         ESP_LOGW(tag, "Websocket inactive. Closing connection");
         active = false;
+        wsGlobal = NULL;
     }
     return active;
 }
@@ -229,6 +232,7 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
 static void myWebsocketConnect(Websock *ws) 
 {
 	ws->recvCb=myWebsocketRecv;
+    wsGlobal = ws;
     ESP_LOGI(tag, "Socket connected!!\n");
     sendStates(ws);
     xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 0);
@@ -267,6 +271,36 @@ static void sendStates(Websock* ws)
     }
 }
 
+esp_err_t wsLog(const char* logMsg)
+{
+    char JSONbuff[512];
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "type", "log");
+    cJSON_AddStringToObject(root, "log", "shorter message than before");
+    char* JSONptr = cJSON_Print(root);
+    strncpy(JSONbuff, JSONptr, 511);
+    cJSON_Delete(root);
+    free(JSONptr);
+
+    if (wsGlobal != NULL) {
+        if (xSemaphore != NULL) {
+            if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
+                cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, wsGlobal, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
+                xSemaphoreGive(xSemaphore);
+                return ESP_OK;
+            } else {
+                printf("Unable to access websocket shared resource to send sensors\n");
+                return ESP_FAIL;
+            }
+        }
+
+        printf("Unable to log to websocket. Websocket semaphore was null\n");
+        return ESP_FAIL;
+    }
+
+    return ESP_FAIL;
+}
+
 static void sensorAssignTask(void *pvParameters)
 {
     Websock* ws = (Websock*) pvParameters;
@@ -302,7 +336,6 @@ static void sensorAssignTask(void *pvParameters)
                 ESP_LOGI(tag, "Unable to access websocket shared resource to send sensors");
             }
         }
-        
 
         vTaskDelay(3000 / portTICK_PERIOD_MS);
     }

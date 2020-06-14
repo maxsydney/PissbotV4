@@ -5,6 +5,7 @@ extern "C" {
 #include <esp_log.h>
 #include "controller.h"
 #include "pump.h"
+#include "webServer.h"
 #include "gpio.h"
 #include <cmath>
 #include <string.h>
@@ -96,7 +97,9 @@ void Controller::updatePumpSpeed(double temp)
         output = Pump::PUMP_MIN_OUTPUT;
     }
 
-    // ESP_LOGE(tag, "Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", temp, err, proportional, _integral, _derivative, output);
+    char msgBuf[256];
+    sprintf(msgBuf, "Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", temp, err, proportional, _integral, _derivative, output);
+    wsLog(msgBuf);
 
     _prevError = err;
     _prevTemp = temp;
