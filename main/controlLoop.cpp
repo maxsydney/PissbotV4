@@ -105,7 +105,7 @@ ctrlParams_t getSettingsFromNVM(void)
     nvs_handle nvs;
     ctrlParams_t ctrlParams;
     memset(&ctrlParams, 0, sizeof(ctrlParams_t));
-    int32_t setpoint, P_gain, I_gain, D_gain;
+    int32_t setpoint, P_gain, I_gain, D_gain, LPFCutoff;
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
     if (err != ESP_OK) {
         ESP_LOGI(tag, "Error (%s) opening NVS handle!", esp_err_to_name(err));
@@ -156,6 +156,18 @@ ctrlParams_t getSettingsFromNVM(void)
             break;
         case ESP_ERR_NVS_NOT_FOUND:
             nvs_set_i32(nvs, "D_gain", (int32_t)(ctrlParams.D_gain * 1000));
+            break;
+        default:
+            ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
+    }
+
+    err = nvs_get_i32(nvs, "LPFCutoff", &LPFCutoff);
+    switch (err) {
+        case ESP_OK:
+            ctrlParams.LPFCutoff = (float) LPFCutoff / 1000;
+            break;
+        case ESP_ERR_NVS_NOT_FOUND:
+            nvs_set_i32(nvs, "LPFCutoff", (int32_t)(ctrlParams.LPFCutoff * 1000));
             break;
         default:
             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));

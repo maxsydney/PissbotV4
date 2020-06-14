@@ -125,6 +125,7 @@ void write_nvs(ctrlParams_t* data)
     nvs_set_i32(nvs, "P_gain", (int32_t)(data->P_gain * 1000));
     nvs_set_i32(nvs, "I_gain", (int32_t)(data->I_gain * 1000));
     nvs_set_i32(nvs, "D_gain", (int32_t)(data->D_gain * 1000));
+    nvs_set_i32(nvs, "LPFCutoff", (int32_t)(data->LPFCutoff * 1000));
     ESP_ERROR_CHECK(nvs_commit(nvs));
     nvs_close(nvs);
 }

@@ -49,17 +49,20 @@ class Controller
         void _handleProductPump(double temp);
         void _initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg);
     
-        uint8_t _updateFreq;
-        float _updatePeriod;
-        ctrlParams_t _ctrlParams;
-        ctrlSettings_t _ctrlSettings;
-        Pump _refluxPump;
-        Pump _prodPump;
-        gpio_num_t _fanPin;
-        gpio_num_t _elem24Pin;
-        gpio_num_t _elem3Pin;
-        double _prevError;
-        double _integral;
+        uint8_t _updateFreq = 0;
+        float _updatePeriod = 0.0;
+        ctrlParams_t _ctrlParams = {};
+        ctrlSettings_t _ctrlSettings = {};
+        Pump _refluxPump = {};
+        Pump _prodPump = {};
+        gpio_num_t _fanPin = GPIO_NUM_0;
+        gpio_num_t _elem24Pin = GPIO_NUM_0;
+        gpio_num_t _elem3Pin = GPIO_NUM_0;
+        
+        double _prevError = 0.0;
+        double _integral = 0.0;
+        double _derivative = 0.0;
+        double _prevTemp = 0.0;
 };
 
 #ifdef __cplusplus

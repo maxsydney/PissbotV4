@@ -89,6 +89,7 @@ void websocket_task(void *pvParameters)
         cJSON_AddNumberToObject(root, "P_gain", ctrlParams.P_gain);
         cJSON_AddNumberToObject(root, "I_gain", ctrlParams.I_gain);
         cJSON_AddNumberToObject(root, "D_gain", ctrlParams.D_gain);
+        cJSON_AddNumberToObject(root, "LPFCutoff", ctrlParams.LPFCutoff);
         cJSON_AddNumberToObject(root, "uptime", uptime_uS);
         cJSON_AddNumberToObject(root, "flowrate", flowRate);
         cJSON_AddNumberToObject(root, "boilerConc", getBoilerConcentration(getTemperature(temps, T_reflux)));
@@ -113,7 +114,6 @@ void websocket_task(void *pvParameters)
             }
             
         }
-
         vTaskDelay(250 / portTICK_PERIOD_MS);
     }
 }

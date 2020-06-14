@@ -6,6 +6,7 @@ extern "C" {
 #include "controller.h"
 #include "pump.h"
 #include "gpio.h"
+#include <cmath>
 #include <string.h>
 
 static char tag[] = "Controller";
@@ -52,25 +53,53 @@ void Controller::_initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPum
 
 void Controller::updatePumpSpeed(double temp)
 {
-    uint16_t pumpSpeed = _refluxPump.getSpeed();
     double err = temp - _ctrlParams.setpoint;
-    double d_error = (err - _prevError) / _updatePeriod;
-    _prevError = err;
 
-    // Basic anti integral windup strategy
-    // FIXME: Implement more sophisticated anti integral windup algorithm
-    if ((pumpSpeed >= Pump::PUMP_MAX_OUTPUT) && (err > 0)) {
-        _integral += 0;
-    } else if ((pumpSpeed <= Pump::PUMP_MIN_OUTPUT) && (err < 0)) {
-        _integral += 0;
+    // Proportional term
+    double proportional = _ctrlParams.P_gain * err;
+
+    // Integral term (discretized via bilinear transform)
+    _integral += 0.5 * _ctrlParams.I_gain * _updatePeriod * (err + _prevError);
+
+    // Dynamic integral clamping
+    double intLimMin = 0.0;
+    double intLimMax = 0.0;
+
+    if (proportional < Pump::PUMP_MAX_OUTPUT) {
+        intLimMax = Pump::PUMP_MAX_OUTPUT - proportional;
     } else {
-        _integral += err * _updatePeriod;
+        intLimMax = 0.0;
     }
 
-    double output = _ctrlParams.P_gain * err + _ctrlParams.D_gain * d_error + _ctrlParams.I_gain * _integral;
+    if (proportional > Pump::PUMP_MIN_OUTPUT) {
+        intLimMin = Pump::PUMP_MIN_OUTPUT - proportional;
+    } else {
+        intLimMin = 0.0;
+    }
 
-    ESP_LOGE(tag, "P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", _ctrlParams.P_gain * err, _ctrlParams.I_gain * _integral, _ctrlParams.D_gain * d_error, output);
+    if (_integral > intLimMax) {
+        _integral = intLimMax;
+    } else if (_integral < intLimMin) {
+        _integral = intLimMin;
+    }
 
+    // Derivative term (discretized via backwards temperature differentiation)
+    // TODO: Filtering on D term? Quite tricky due to low temperature Fs
+    _derivative = _ctrlParams.D_gain * (temp - _prevTemp) / _updatePeriod;
+
+    // Compute limited output
+    double output = proportional + _integral + _derivative;
+
+    if (output > Pump::PUMP_MAX_OUTPUT) {
+        output = Pump::PUMP_MAX_OUTPUT;
+    } else if (output < Pump::PUMP_MIN_OUTPUT) {
+        output = Pump::PUMP_MIN_OUTPUT;
+    }
+
+    // ESP_LOGE(tag, "Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", temp, err, proportional, _integral, _derivative, output);
+
+    _prevError = err;
+    _prevTemp = temp;
     _handleProductPump(temp);
     _refluxPump.setSpeed(output);
     _refluxPump.commandPump();
