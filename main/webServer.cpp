@@ -43,7 +43,8 @@ extern "C" {
 #define GPIO_HIGH   1
 #define GPIO_LOW    0
 #define LISTEN_PORT     80u
-#define MAX_CONNECTIONS 32u
+// #define MAX_CONNECTIONS 32u
+#define MAX_CONNECTIONS 2
 #define STATIC_IP		"192.168.1.202"
 #define SUBNET_MASK		"255.255.255.0"
 #define GATE_WAY		"192.168.1.1"
@@ -68,7 +69,6 @@ void websocket_task(void *pvParameters)
     cJSON *root;
     float temps[n_tempSensors] = {0};
     float flowRate;
-    char buff[513];
     ctrlParams_t ctrlParams;
     int64_t uptime_uS;
 
@@ -96,18 +96,17 @@ void websocket_task(void *pvParameters)
         cJSON_AddNumberToObject(root, "boilerConc", getBoilerConcentration(getTemperature(temps, T_reflux)));
         cJSON_AddNumberToObject(root, "vapourConc", getVapourConcentration(getTemperature(temps, T_head)));
         char* JSONptr = cJSON_Print(root);
-        strncpy(buff, JSONptr, 512);
         cJSON_Delete(root);
-        free(JSONptr);      // Must free string pointer to avoid memory leak
 
         if ((!checkWebsocketActive(ws))) {
             ESP_LOGW(tag, "Deleting send task");
+            free(JSONptr);      // Must free string pointer to avoid memory leak
             vTaskDelete(NULL);
         } else {
             if (xSemaphore != NULL) {
                 if(xSemaphoreTake(xSemaphore, (TickType_t) 10 ) == pdTRUE) {
                     cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
-                                     ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
+                                     ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
                     xSemaphoreGive( xSemaphore );
                 } else {
                     ESP_LOGI(tag, "Unable to access websocket shared resource to send data");
@@ -116,6 +115,7 @@ void websocket_task(void *pvParameters)
             
         }
         vTaskDelay(250 / portTICK_PERIOD_MS);
+        free(JSONptr);      // Must free string pointer to avoid memory leak
     }
 }
 
@@ -123,11 +123,16 @@ static bool checkWebsocketActive(volatile Websock* ws)
 {
     bool active = true;
 
-    if (ws->conn == 0x0 || !wifiConnected) {
+    if ((ws->conn == NULL) || (!wifiConnected)) {
         ESP_LOGW(tag, "Websocket inactive. Closing connection");
         active = false;
         wsGlobal = NULL;
-    } else if (ws->conn->isConnectionClosed) {
+    } else {
+        HttpdConnData* conn = ws->conn;
+        printf("Conn: %p - Closed: %d\n", conn, conn->isConnectionClosed);
+    }
+    
+    if (ws->conn->isConnectionClosed) {
         // This check is not redundant, if conn = 0x00 then this check causes panic handler to be invoked
         ESP_LOGW(tag, "Websocket inactive. Closing connection");
         active = false;
@@ -235,7 +240,7 @@ static void myWebsocketConnect(Websock *ws)
     wsGlobal = ws;
     ESP_LOGI(tag, "Socket connected!!\n");
     sendStates(ws);
-    xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 3, &socketSendHandle, 0);
+    xTaskCreatePinnedToCore(&websocket_task, "webServer", 16384, ws, 3, &socketSendHandle, 0);
 }
 
 static void sendStates(Websock* ws) 
@@ -273,31 +278,30 @@ static void sendStates(Websock* ws)
 
 esp_err_t wsLog(const char* logMsg)
 {
-    char JSONbuff[512];
     cJSON* root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "type", "log");
-    cJSON_AddStringToObject(root, "log", "shorter message than before");
+    cJSON_AddStringToObject(root, "log", logMsg);
     char* JSONptr = cJSON_Print(root);
-    strncpy(JSONbuff, JSONptr, 511);
     cJSON_Delete(root);
-    free(JSONptr);
 
     if (wsGlobal != NULL) {
         if (xSemaphore != NULL) {
             if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
-                cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, wsGlobal, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
-                xSemaphoreGive(xSemaphore);
-                return ESP_OK;
+                if (wsGlobal != NULL) {
+                    cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, wsGlobal, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
+                    xSemaphoreGive(xSemaphore);
+                    free(JSONptr);
+                    return ESP_OK;
+                }
             } else {
-                printf("Unable to access websocket shared resource to send sensors\n");
-                return ESP_FAIL;
+                printf("Unable to access websocket shared resource to send logs\n");
             }
         }
-
-        printf("Unable to log to websocket. Websocket semaphore was null\n");
-        return ESP_FAIL;
     }
 
+    printf("Unable to log to websocket. Websocket semaphore was null\n");
+
+    free(JSONptr);
     return ESP_FAIL;
 }
 

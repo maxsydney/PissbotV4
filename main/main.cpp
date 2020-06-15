@@ -46,12 +46,12 @@ void app_main()
     esp_log_set_vprintf(&_log_vprintf);
     
     // Schedule tasks
-    xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 8192, NULL, 7, NULL, 1);
+    xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 16384, NULL, 7, NULL, 1);
     // xTaskCreatePinnedToCore(&flowmeter_task, "Flowrate", 2048, NULL, 7, NULL, 1);
     xTaskCreatePinnedToCore(&control_loop, "Controller", 16384, NULL, 9, NULL, 0);
     // xTaskCreatePinnedToCore(&menu_task, "LCD task", 2048, NULL, 3, NULL, 0);
-    xTaskCreatePinnedToCore(&inputButtonTask, "Input button task", 8192, NULL, 5, NULL, 1);
-    xTaskCreatePinnedToCore(&heartBeatTask, "Heartbeat task", 8192, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(&inputButtonTask, "Input button task", 16384, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(&heartBeatTask, "Heartbeat task", 16384, NULL, 1, NULL, 1);
 }
 
 #ifdef __cplusplus

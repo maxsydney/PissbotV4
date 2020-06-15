@@ -97,9 +97,9 @@ void Controller::updatePumpSpeed(double temp)
         output = Pump::PUMP_MIN_OUTPUT;
     }
 
-    char msgBuf[256];
-    sprintf(msgBuf, "Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", temp, err, proportional, _integral, _derivative, output);
-    wsLog(msgBuf);
+    // char msgBuf[256];
+    // sprintf(msgBuf, "Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", temp, err, proportional, _integral, _derivative, output);
+    // wsLog(msgBuf);
 
     _prevError = err;
     _prevTemp = temp;
