@@ -72,7 +72,7 @@ void Controller::updatePumpSpeed(double temp)
 
     double output = _ctrlParams.P_gain * err + _ctrlParams.D_gain * d_error + _ctrlParams.I_gain * _integral;
 
-    ESP_LOGE(tag, "P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", _ctrlParams.P_gain * err, _ctrlParams.I_gain * _integral, _ctrlParams.D_gain * d_error, output);
+    // ESP_LOGE(tag, "P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", _ctrlParams.P_gain * err, _ctrlParams.I_gain * _integral, _ctrlParams.D_gain * d_error, output);
 
     _handleProductPump(temp);
     _refluxPump.setSpeed(output);
