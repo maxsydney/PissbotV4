@@ -11,10 +11,9 @@ extern "C" {
 class Controller
 {
     public:
-        Controller(uint8_t freq, ctrlParams_t ctrlParams, ctrlSettings_t ctrlSettings, gpio_num_t P1_pin, 
-            ledc_channel_t P1_channel, ledc_timer_t timerChannel1, gpio_num_t P2_pin, ledc_channel_t P2_channel, 
-            ledc_timer_t timerChannel2, gpio_num_t fanPin, gpio_num_t elem24Pin, gpio_num_t elem3Pin);
-        Controller();
+        Controller() = default;
+        Controller(uint8_t freq, ctrlParams_t params, ctrlSettings_t settings, const PumpCfg& refluxPumpCfg, 
+                   const PumpCfg& prodPumpCfg, gpio_num_t fanPin, gpio_num_t elem24Pin, gpio_num_t elem3Pin);
 
         void updatePumpSpeed(double temp);
         void updateComponents();
@@ -48,20 +47,22 @@ class Controller
     private:
         void _initComponents(void) const;
         void _handleProductPump(double temp);
-        void _initPumps(gpio_num_t P1_pin, ledc_channel_t P1_channel, ledc_timer_t timerChannel1, 
-                        gpio_num_t P2_pin, ledc_channel_t P2_channel, ledc_timer_t timerChannel2);
+        void _initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg);
     
-        uint8_t _updateFreq;
-        float _updatePeriod;
-        ctrlParams_t _ctrlParams;
-        ctrlSettings_t _ctrlSettings;
-        Pump _refluxPump;
-        Pump _prodPump;
-        gpio_num_t _fanPin;
-        gpio_num_t _elem24Pin;
-        gpio_num_t _elem3Pin;
-        double _prevError;
-        double _integral;
+        uint8_t _updateFreq = 0;
+        float _updatePeriod = 0.0;
+        ctrlParams_t _ctrlParams = {};
+        ctrlSettings_t _ctrlSettings = {};
+        Pump _refluxPump = {};
+        Pump _prodPump = {};
+        gpio_num_t _fanPin = GPIO_NUM_0;
+        gpio_num_t _elem24Pin = GPIO_NUM_0;
+        gpio_num_t _elem3Pin = GPIO_NUM_0;
+        
+        double _prevError = 0.0;
+        double _integral = 0.0;
+        double _derivative = 0.0;
+        double _prevTemp = 0.0;
 };
 
 #ifdef __cplusplus

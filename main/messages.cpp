@@ -60,6 +60,14 @@ esp_err_t readCtrlParams(cJSON* JSON_root, ctrlParams_t* ctrlParams)
             ESP_LOGW(tag, "Unable to read D gain");
             return ESP_FAIL;
         }
+
+        cJSON* LPFCutoff = cJSON_GetObjectItem(data, "LPFCutoff");
+        if (cJSON_IsNumber(LPFCutoff)) {
+            ctrlParams->LPFCutoff = LPFCutoff->valuedouble;
+        } else {
+            ESP_LOGW(tag, "Unable to read LPFCutoff");
+            return ESP_FAIL;
+        }
     } else {
         return ESP_FAIL;
     }

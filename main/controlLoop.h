@@ -22,6 +22,7 @@ typedef struct {
     float P_gain;
     float I_gain;
     float D_gain;
+    float LPFCutoff;
 } ctrlParams_t;
 
 typedef struct {
