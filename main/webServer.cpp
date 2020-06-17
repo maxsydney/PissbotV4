@@ -3,64 +3,37 @@ extern "C" {
 #endif
 
 #include "freertos/FreeRTOS.h"
-#include "esp_wifi.h"
-#include "esp_system.h"
-#include "esp_event.h"
-#include "esp_event.h"
-#include "nvs_flash.h"
-#include "driver/gpio.h"
-#include "esp_err.h"
-#include "esp_netif.h"
 #include "esp_log.h"
-#include <libesphttpd/esp.h>
-#include "libesphttpd/httpd.h"
-#include "libesphttpd/cgiwifi.h"
-#include "libesphttpd/cgiflash.h"
-#include "libesphttpd/auth.h"
-#include "libesphttpd/captdns.h"
 #include "libesphttpd/httpd-espfs.h"
 #include "espfs.h"
 #include "espfs_image.h"
-#include "libesphttpd/cgiwebsocket.h"
 #include "libesphttpd/httpd-freertos.h"
 #include "libesphttpd/route.h"
-#include "cJSON.h"
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include "esp_spiffs.h"
-#include "controlLoop.h"
 #include "messages.h"
 #include "networking.h"
 #include "main.h"
 #include "ota.h"
 #include "webServer.h"
 #include "sensors.h"
+#include "connectionManager.h"
 
-#define LED_PIN GPIO_NUM_2
-#define GPIO_HIGH   1
-#define GPIO_LOW    0
 #define LISTEN_PORT     80u
-// #define MAX_CONNECTIONS 32u
-#define MAX_CONNECTIONS 2
 #define STATIC_IP		"192.168.1.202"
 #define SUBNET_MASK		"255.255.255.0"
 #define GATE_WAY		"192.168.1.1"
 #define DNS_SERVER		"8.8.8.8"
 
-static char connectionMemory[sizeof(RtosConnType) * MAX_CONNECTIONS];
+static char connectionMemory[sizeof(RtosConnType) * ConnectionManager::MAX_CONNECTIONS];
 static const char *tag = "Webserver";
 static HttpdFreertosInstance httpdFreertosInstance;
-static SemaphoreHandle_t xSemaphore = NULL;
-xTaskHandle socketSendHandle = NULL;
+static SemaphoreHandle_t wsSemaphore = NULL;
 xTaskHandle assignSensorHandle = NULL;
 static Websock* wsGlobal;
 
-static bool checkWebsocketActive(volatile Websock* ws);
 static void sensorAssignTask(void *pvParameters);
 static void cleanJSONString(char* inputBuffer, char* destBuffer);
+static void closeConnection(Websock *ws);
+static void openConnection(Websock *ws);
 static void sendStates(Websock* ws);
 
 void websocket_task(void *pvParameters) 
@@ -98,47 +71,31 @@ void websocket_task(void *pvParameters)
         char* JSONptr = cJSON_Print(root);
         cJSON_Delete(root);
 
-        if ((!checkWebsocketActive(ws))) {
-            ESP_LOGW(tag, "Deleting send task");
-            free(JSONptr);      // Must free string pointer to avoid memory leak
-            vTaskDelete(NULL);
-        } else {
-            if (xSemaphore != NULL) {
-                if(xSemaphoreTake(xSemaphore, (TickType_t) 10 ) == pdTRUE) {
-                    cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
-                                     ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
-                    xSemaphoreGive( xSemaphore );
+        if (wsSemaphore != NULL) {
+            if(xSemaphoreTake(wsSemaphore, (TickType_t) 10 ) == pdTRUE) {
+                if (ConnectionManager::checkConnection(ws) == ESP_OK) {
+                    if (cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE) == WEBSOCK_CLOSED) {
+                        // Should never get here, but just in case
+                        free(JSONptr);
+                        xSemaphoreGive(wsSemaphore);
+                        vTaskDelete(NULL);
+                    } else {
+                        // Sent successfully
+                        xSemaphoreGive(wsSemaphore);
+                    }
                 } else {
-                    ESP_LOGI(tag, "Unable to access websocket shared resource to send data");
+                    // Connection has been closed. Quit task
+                    free(JSONptr);
+                    xSemaphoreGive(wsSemaphore);
+                    vTaskDelete(NULL);
                 }
+            } else {
+                ESP_LOGI(tag, "Unable to access websocket shared resource to send data");
             }
-            
         }
         vTaskDelay(250 / portTICK_PERIOD_MS);
         free(JSONptr);      // Must free string pointer to avoid memory leak
     }
-}
-
-static bool checkWebsocketActive(volatile Websock* ws)
-{
-    bool active = true;
-
-    if ((ws->conn == NULL) || (!wifiConnected)) {
-        ESP_LOGW(tag, "Websocket inactive. Closing connection");
-        active = false;
-        wsGlobal = NULL;
-    } else {
-        HttpdConnData* conn = ws->conn;
-        printf("Conn: %p - Closed: %d\n", conn, conn->isConnectionClosed);
-    }
-    
-    if (ws->conn->isConnectionClosed) {
-        // This check is not redundant, if conn = 0x00 then this check causes panic handler to be invoked
-        ESP_LOGW(tag, "Websocket inactive. Closing connection");
-        active = false;
-        wsGlobal = NULL;
-    }
-    return active;
 }
 
 static void cleanJSONString(char* inputBuffer, char* destBuffer)
@@ -234,13 +191,20 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
     }
 }
 
-static void myWebsocketConnect(Websock *ws) 
+static void closeConnection(Websock *ws)
+{
+    ConnectionManager::removeConnection(ws);
+    ConnectionManager::printConnections();
+}
+
+static void openConnection(Websock *ws) 
 {
 	ws->recvCb=myWebsocketRecv;
-    wsGlobal = ws;
-    ESP_LOGI(tag, "Socket connected!!\n");
+    ws->closeCb=closeConnection;
+    ConnectionManager::addConnection(ws);
+    ConnectionManager::printConnections();
     sendStates(ws);
-    xTaskCreatePinnedToCore(&websocket_task, "webServer", 16384, ws, 3, &socketSendHandle, 0);
+    xTaskCreatePinnedToCore(&websocket_task, "webServer", 8192, ws, 2, NULL, 0);
 }
 
 static void sendStates(Websock* ws) 
@@ -248,7 +212,6 @@ static void sendStates(Websock* ws)
     // Send initial states to client to configure settings
     cJSON *root;
 	root = cJSON_CreateObject();
-    char buff[128];
 
     ctrlSettings_t ctrlSettings = getControllerSettings();
 
@@ -259,21 +222,21 @@ static void sendStates(Websock* ws)
     cJSON_AddNumberToObject(root, "elementHigh", ctrlSettings.elementHigh);
     cJSON_AddNumberToObject(root, "prodCondensor", ctrlSettings.prodCondensor);
 
-    printf("JSON state message\n");
-    printf("%s\n", cJSON_Print(root));
-    printf("JSON length: %d\n", strlen(cJSON_Print(root)));
     char* JSONptr = cJSON_Print(root);
-    strcpy(buff, JSONptr);
     cJSON_Delete(root);
-    free(JSONptr);
-    if (xSemaphore != NULL) {
-        if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
-            cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
-            xSemaphoreGive(xSemaphore);
-        } else {
-            ESP_LOGI(tag, "Unable to access websocket shared resource to send states");
-        }
+
+    if (wsSemaphore != NULL) {
+        if(xSemaphoreTake(wsSemaphore, (TickType_t) 10) == pdTRUE) {
+            if (ConnectionManager::checkConnection(ws) == ESP_OK) {
+                cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
+                xSemaphoreGive(wsSemaphore);
+            } else {
+                ESP_LOGI(tag, "Unable to access websocket shared resource to send states");
+            } 
+        }    
     }
+
+    free(JSONptr);
 }
 
 esp_err_t wsLog(const char* logMsg)
@@ -308,8 +271,7 @@ esp_err_t wsLog(const char* logMsg)
 static void sensorAssignTask(void *pvParameters)
 {
     Websock* ws = (Websock*) pvParameters;
-    char buff[256];
-    int n_found;
+    int n_found = 0;
 
     while (true) {
         cJSON* root = cJSON_CreateObject();
@@ -329,25 +291,35 @@ static void sensorAssignTask(void *pvParameters)
         }
        
         char* JSONptr = cJSON_Print(root);
-        strcpy(buff, JSONptr);
         cJSON_Delete(root);
-        free(JSONptr);
-        if (xSemaphore != NULL) {
-            if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
-                cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
-                xSemaphoreGive(xSemaphore);
+
+        if (wsSemaphore != NULL) {
+            if(xSemaphoreTake(wsSemaphore, (TickType_t) 10) == pdTRUE) {
+                if (ConnectionManager::checkConnection(ws) == ESP_OK) {
+                    cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
+                    xSemaphoreGive(wsSemaphore);
+                } else {
+                    // Connection has been closed. Quit task
+                    free(JSONptr);
+                    vTaskDelete(NULL);
+                }
             } else {
                 ESP_LOGI(tag, "Unable to access websocket shared resource to send sensors");
             }
         }
+<<<<<<< HEAD
 
+=======
+        
+        free(JSONptr);
+>>>>>>> master
         vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }
 
 HttpdBuiltInUrl builtInUrls[]={
 	ROUTE_REDIRECT("/", "index.html"),
-    ROUTE_WS("/ws", myWebsocketConnect),
+    ROUTE_WS("/ws", openConnection),
     ROUTE_FILESYSTEM(),
 	ROUTE_END()
 };
@@ -359,14 +331,14 @@ void webServer_init(void)
 		.memAddr = espfs_image_bin,
 	};
     EspFs* fs = espFsInit(&conf);
-    xSemaphore = xSemaphoreCreateMutex();
+    wsSemaphore = xSemaphoreCreateMutex();
     httpdRegisterEspfs(fs);
     esp_netif_init();
 	httpdFreertosInit(&httpdFreertosInstance,
 	                  builtInUrls,
 	                  LISTEN_PORT,
 	                  connectionMemory,
-	                  MAX_CONNECTIONS,
+	                  ConnectionManager::MAX_CONNECTIONS,
 	                  HTTPD_FLAG_NONE);
 	httpdFreertosStart(&httpdFreertosInstance);
     ESP_LOGI(tag, "Webserver waiting for connections");

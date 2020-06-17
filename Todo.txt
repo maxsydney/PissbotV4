@@ -1,7 +1,7 @@
 - Fix ongoing controller performance issues                                     - Controller tuned
 - Migrate to fully ESP32 based webserver                                        - Done
-    - Fix crashing issue on browser reload/exit                                 - Mostly fixed. Still crashes on odd occaison
-    - Implement handling of multiple connections                                      
+    - Fix crashing issue on browser reload/exit                                 - Done
+    - Implement handling of multiple connections                                - Done
 - D-term filtering                                                              - Unsure if beneficial
 - Acceleration limits on pump                                                   - Unsure if beneficial
 - I-term engage only once still is up to temperature                            

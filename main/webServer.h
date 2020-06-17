@@ -4,6 +4,8 @@
 extern "C" {
 #endif
 
+#include "libesphttpd/cgiwebsocket.h"
+
 typedef struct {
     char ip[16];
     uint8_t len;
