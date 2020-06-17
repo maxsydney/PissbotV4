@@ -307,12 +307,8 @@ static void sensorAssignTask(void *pvParameters)
                 ESP_LOGI(tag, "Unable to access websocket shared resource to send sensors");
             }
         }
-<<<<<<< HEAD
-
-=======
         
         free(JSONptr);
->>>>>>> master
         vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }
