@@ -33,5 +33,5 @@
 - Temp sensor assignment routine                                                - Done
 - Change temp sensor resolution to 11bit                                        - Done
 - Print meaningful logs                                                         - Done
-- Add browser based OTA terminal
+- Add browser based OTA terminal (network logging)                              - Done
 - Add process phase tracking

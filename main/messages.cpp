@@ -183,22 +183,12 @@ int _log_vprintf(const char *fmt, va_list args)
 {
     static bool static_fatal_error = false;
     char logBuff[512];
-    int iresult;
+    vsnprintf(logBuff, 511, fmt, args);
 
-    if (static_fatal_error == false) {
-        iresult = vsnprintf(logBuff, 511, fmt, args);
-        if (iresult < 0) {
-            printf("%s() ABORT. failed vfprintf() -> disable future vfprintf(_log_remote_fp) \n", __FUNCTION__);
-            // MARK FATAL
-            static_fatal_error = true;
-            return iresult;
-        }
+    // Log to all websocket clients
+    wsLog(logBuff);
 
-        // Log to websocket (if available)
-        wsLog(logBuff);
-    }
-
-    // #3 ALWAYS Write to stdout!
+    // Write to stdout
     return vprintf(fmt, args);
 }
 

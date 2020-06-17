@@ -71,3 +71,19 @@ void ConnectionManager::printConnections(void)
         }
     }
 }
+
+esp_err_t ConnectionManager::getConnectionPtr(size_t i, Websock** conn)
+{
+    if (i >= _nConnections) {
+        *conn = NULL;
+        return ESP_FAIL;
+    }
+
+    if (_activeWebsockets[i] != NULL) {
+        *conn = _activeWebsockets[i] ;
+        return ESP_OK;
+    } else {
+        *conn = NULL;
+        return ESP_FAIL;
+    }
+}

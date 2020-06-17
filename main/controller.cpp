@@ -72,6 +72,7 @@ void Controller::updatePumpSpeed(double temp)
         intLimMax = 0.0;
     }
 
+    // Anti integral windup
     if (proportional > Pump::PUMP_MIN_OUTPUT) {
         intLimMin = Pump::PUMP_MIN_OUTPUT - proportional;
     } else {
@@ -85,7 +86,7 @@ void Controller::updatePumpSpeed(double temp)
     }
 
     // Derivative term (discretized via backwards temperature differentiation)
-    // TODO: Filtering on D term? Quite tricky due to low temperature Fs
+    // TODO: Filtering on D term? Quite tricky due to low temp sensor sample rate
     _derivative = _ctrlParams.D_gain * (temp - _prevTemp) / _updatePeriod;
 
     // Compute limited output
@@ -97,9 +98,8 @@ void Controller::updatePumpSpeed(double temp)
         output = Pump::PUMP_MIN_OUTPUT;
     }
 
-    // char msgBuf[256];
-    // sprintf(msgBuf, "Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", temp, err, proportional, _integral, _derivative, output);
-    // wsLog(msgBuf);
+    // Debugging only, spams the network
+    // ESP_LOGI(tag, "Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", temp, err, proportional, _integral, _derivative, output);
 
     _prevError = err;
     _prevTemp = temp;

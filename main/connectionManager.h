@@ -12,6 +12,7 @@ class ConnectionManager
         static esp_err_t checkConnection(Websock* ws);
         static void printConnections(void);
         static int getNumConnections(void) { return _nConnections; }
+        static esp_err_t getConnectionPtr(size_t i, Websock** conn);
 
         static constexpr int MAX_CONNECTIONS = 12;
 

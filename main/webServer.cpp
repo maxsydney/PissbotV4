@@ -28,13 +28,10 @@ static const char *tag = "Webserver";
 static HttpdFreertosInstance httpdFreertosInstance;
 static SemaphoreHandle_t wsSemaphore = NULL;
 xTaskHandle assignSensorHandle = NULL;
-static Websock* wsGlobal;
-
 static void sensorAssignTask(void *pvParameters);
 static void cleanJSONString(char* inputBuffer, char* destBuffer);
-static void closeConnection(Websock *ws);
-static void openConnection(Websock *ws);
 static void sendStates(Websock* ws);
+static void cleanJSONString(char* inputBuffer, char* destBuffer);
 
 void websocket_task(void *pvParameters) 
 {
@@ -127,14 +124,6 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
         ESP_LOGW(tag, "Unable to parse JSON string");
     }
 
-    if (type != NULL) {
-        ESP_LOGI(tag, "Type is: %s", type);
-    }
-
-    if (subType != NULL) {
-        ESP_LOGI(tag, "Subtype is: %s", subType);
-    }
-
     if (strncmp(type, "INFO", 4) == 0) { 
         // Hand new data packet to controller    
         if (strncmp(subType, "ctrlParams", 10) == 0) {
@@ -162,7 +151,6 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
             }
         }
     } else if (strncmp(type, "CMD", 3) == 0) {
-        ESP_LOGI(tag, "Received CMD message\n");
         if (strncmp(subType, "OTA", 3) == 0) {
             ESP_LOGI(tag, "Received OTA request");
             ota_t ota;
@@ -174,7 +162,7 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
         } else if (strncmp(subType, "ASSIGN", 6) == 0) {
             int start = cJSON_GetObjectItem(root, "start")->valueint;
             if (start) {
-                ESP_LOGI(tag, "Received command to assign sensors");
+                ESP_LOGI(tag, "Deleting sensor assign task");
                 xTaskCreatePinnedToCore(&sensorAssignTask, "SensorAssign", 4096, (void*) ws, 5, &assignSensorHandle, 1);
             } else {
                 ESP_LOGI(tag, "Deleting sensor assign task");
@@ -241,31 +229,43 @@ static void sendStates(Websock* ws)
 
 esp_err_t wsLog(const char* logMsg)
 {
+    // If nobody is connected, return
+    if (ConnectionManager::getNumConnections() == 0) {
+        return ESP_OK;
+    }
+
     cJSON* root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "type", "log");
     cJSON_AddStringToObject(root, "log", logMsg);
     char* JSONptr = cJSON_Print(root);
     cJSON_Delete(root);
 
-    if (wsGlobal != NULL) {
-        if (xSemaphore != NULL) {
-            if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
-                if (wsGlobal != NULL) {
-                    cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, wsGlobal, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
-                    xSemaphoreGive(xSemaphore);
-                    free(JSONptr);
-                    return ESP_OK;
+    // Iterate over available connections and send logs to all connected clients
+    for (size_t i = 0; i < ConnectionManager::MAX_CONNECTIONS; i++) {
+        Websock* ws = NULL;
+        if (ConnectionManager::getConnectionPtr(i, &ws) == ESP_OK) {
+            if (wsSemaphore != NULL) {
+                if(xSemaphoreTake(wsSemaphore, (TickType_t) 10) == pdTRUE) {
+                    if (ConnectionManager::checkConnection(ws) == ESP_OK) {
+                        // If we ever try to call this with a closed websocket connection, cgiWebsocketSend will log and cause
+                        // an infinite loop
+                        cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
+                    }
+                    xSemaphoreGive(wsSemaphore);
+                } else {
+                    printf("Unable to access websocket shared resource to send logs\n");
                 }
             } else {
-                printf("Unable to access websocket shared resource to send logs\n");
+                printf("Unable to log to websocket. Websocket semaphore was null\n");
+                free(JSONptr);
+                return ESP_FAIL;
             }
         }
+
     }
 
-    printf("Unable to log to websocket. Websocket semaphore was null\n");
-
     free(JSONptr);
-    return ESP_FAIL;
+    return ESP_OK;
 }
 
 static void sensorAssignTask(void *pvParameters)
