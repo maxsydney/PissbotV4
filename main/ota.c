@@ -143,6 +143,9 @@ void ota_update_task(void *pvParameter)
                     err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
                     if (err != ESP_OK) {
                         ESP_LOGE(TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
+                        if ((update_partition->size) % SPI_FLASH_SEC_SIZE != 0) {
+                            ESP_LOGE(TAG, " Partition size (%zu) is not divisible by flash block size (4096). Modify partition table", update_partition->size);
+                        }
                         http_cleanup(client);
                         task_fatal_error();
                     }
