@@ -27,7 +27,7 @@ extern "C" {
 #define SAMPLE_PERIOD        (400)   // milliseconds
 
 static const char* tag = "Sensors";
-static SemaphoreHandle_t xSemaphore = NULL;
+static SemaphoreHandle_t tempSensSemaphore = NULL;
 static volatile double timeVal;
 
 static OneWireBus_ROMCode device_rom_codes[MAX_DEVICES] = {0};
@@ -109,7 +109,7 @@ esp_err_t writeDeviceRomCodes(OneWireBus_ROMCode code[MAX_DEVICES])
 esp_err_t sensor_init(uint8_t ds_pin, DS18B20_RESOLUTION res)
 {
     // Create a 1-Wire bus, using the RMT timeslot driver
-    xSemaphore = xSemaphoreCreateMutex();
+    tempSensSemaphore = xSemaphoreCreateMutex();
     owb = owb_rmt_initialize(&rmt_driver_info, ds_pin, RMT_CHANNEL_1, RMT_CHANNEL_0);
     owb_use_crc(owb, true);  // enable CRC check for ROM code
 
@@ -151,8 +151,8 @@ int scanTempSensorNetwork(OneWireBus_ROMCode rom_codes[MAX_DEVICES])
     bool found = false;
     int n_devices = 0;
 
-    if (xSemaphore != NULL) {
-        if(xSemaphoreTake(xSemaphore, (TickType_t) 500) == pdTRUE) {
+    if (tempSensSemaphore != NULL) {
+        if(xSemaphoreTake(tempSensSemaphore, (TickType_t) 50) == pdTRUE) {
             owb_search_first(owb, &search_state, &found);
             while (found) {
                 char rom_code_s[17];
@@ -162,7 +162,7 @@ int scanTempSensorNetwork(OneWireBus_ROMCode rom_codes[MAX_DEVICES])
                 ++n_devices;
                 owb_search_next(owb, &search_state, &found);
             }
-            xSemaphoreGive(xSemaphore);
+            xSemaphoreGive(tempSensSemaphore);
         } else {
             ESP_LOGI(tag, "Unable to access onewire network shared resource");
         }
@@ -247,8 +247,8 @@ void IRAM_ATTR flowmeter_ISR(void* arg)
 esp_err_t readTemps(float sensorTemps[])
 {
     // Read temperatures more efficiently by starting conversions on all devices at the same time
-    if (xSemaphore != NULL) {
-        if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
+    if (tempSensSemaphore != NULL) {
+        if(xSemaphoreTake(tempSensSemaphore, (TickType_t) 10) == pdTRUE) {
             if (num_devices > 0) {
                 ds18b20_convert_all(owb);
 
@@ -258,12 +258,12 @@ esp_err_t readTemps(float sensorTemps[])
 
                 for (int i = 0; i < num_devices; ++i) {
                     if (ds18b20_read_temp(devices[i], &sensorTemps[i]) != DS18B20_OK) {
-                        xSemaphoreGive(xSemaphore);
+                        xSemaphoreGive(tempSensSemaphore);
                         return ESP_FAIL;
                     }
                 }
             }
-            xSemaphoreGive(xSemaphore);
+            xSemaphoreGive(tempSensSemaphore);
         } else {
             ESP_LOGW(tag, "Unable to access shared resource onewire bus to read temps");
             return ESP_FAIL;
