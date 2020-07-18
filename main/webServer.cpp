@@ -250,6 +250,8 @@ esp_err_t wsLog(const char* logMsg)
                         // If we ever try to call this with a closed websocket connection, cgiWebsocketSend will log and cause
                         // an infinite loop
                         cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
+                    } else {
+                        printf("Websocket connection (%p) was stale. Unable to log to network\n", ws);
                     }
                     xSemaphoreGive(wsSemaphore);
                 } else {
