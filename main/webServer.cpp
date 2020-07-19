@@ -69,10 +69,11 @@ void websocket_task(void *pvParameters)
         cJSON_Delete(root);
 
         if (wsSemaphore != NULL) {
-            if(xSemaphoreTake(wsSemaphore, (TickType_t) 10 ) == pdTRUE) {
+            if(xSemaphoreTake(wsSemaphore, 10 / portTICK_PERIOD_MS) == pdTRUE) {
                 if (ConnectionManager::checkConnection(ws) == ESP_OK) {
                     if (cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE) == WEBSOCK_CLOSED) {
                         // Should never get here, but just in case
+                        ESP_LOGI(tag, "Connection %p was stale. Deleting send task (2)", ws);
                         free(JSONptr);
                         xSemaphoreGive(wsSemaphore);
                         vTaskDelete(NULL);
@@ -82,6 +83,7 @@ void websocket_task(void *pvParameters)
                     }
                 } else {
                     // Connection has been closed. Quit task
+                    ESP_LOGI(tag, "Connection %p was stale. Deleting send task (1)", ws);
                     free(JSONptr);
                     xSemaphoreGive(wsSemaphore);
                     vTaskDelete(NULL);
@@ -162,7 +164,7 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
         } else if (strncmp(subType, "ASSIGN", 6) == 0) {
             int start = cJSON_GetObjectItem(root, "start")->valueint;
             if (start) {
-                ESP_LOGI(tag, "Deleting sensor assign task");
+                ESP_LOGI(tag, "Running sensor assign task");
                 xTaskCreatePinnedToCore(&sensorAssignTask, "SensorAssign", 4096, (void*) ws, 5, &assignSensorHandle, 1);
             } else {
                 ESP_LOGI(tag, "Deleting sensor assign task");
@@ -214,7 +216,7 @@ static void sendStates(Websock* ws)
     cJSON_Delete(root);
 
     if (wsSemaphore != NULL) {
-        if(xSemaphoreTake(wsSemaphore, (TickType_t) 10) == pdTRUE) {
+        if(xSemaphoreTake(wsSemaphore, 10 / portTICK_PERIOD_MS) == pdTRUE) {
             if (ConnectionManager::checkConnection(ws) == ESP_OK) {
                 cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
                 xSemaphoreGive(wsSemaphore);
@@ -245,7 +247,7 @@ esp_err_t wsLog(const char* logMsg)
         Websock* ws = NULL;
         if (ConnectionManager::getConnectionPtr(i, &ws) == ESP_OK) {
             if (wsSemaphore != NULL) {
-                if(xSemaphoreTake(wsSemaphore, (TickType_t) 10) == pdTRUE) {
+                if(xSemaphoreTake(wsSemaphore, 10 / portTICK_PERIOD_MS) == pdTRUE) {
                     if (ConnectionManager::checkConnection(ws) == ESP_OK) {
                         // If we ever try to call this with a closed websocket connection, cgiWebsocketSend will log and cause
                         // an infinite loop
@@ -296,7 +298,7 @@ static void sensorAssignTask(void *pvParameters)
         cJSON_Delete(root);
 
         if (wsSemaphore != NULL) {
-            if(xSemaphoreTake(wsSemaphore, (TickType_t) 10) == pdTRUE) {
+            if(xSemaphoreTake(wsSemaphore, 10 / portTICK_PERIOD_MS) == pdTRUE) {
                 if (ConnectionManager::checkConnection(ws) == ESP_OK) {
                     cgiWebsocketSend(&httpdFreertosInstance.httpdInstance, ws, JSONptr, strlen(JSONptr), WEBSOCK_FLAG_NONE);
                     xSemaphoreGive(wsSemaphore);

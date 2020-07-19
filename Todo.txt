@@ -35,3 +35,4 @@
 - Print meaningful logs                                                         - Done
 - Add browser based OTA terminal (network logging)                              - Done
 - Add process phase tracking
+- Negotiate bus usage between scanning sensors and reading temps

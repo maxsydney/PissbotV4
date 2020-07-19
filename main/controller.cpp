@@ -87,7 +87,8 @@ void Controller::updatePumpSpeed(double temp)
 
     // Derivative term (discretized via backwards temperature differentiation)
     // TODO: Filtering on D term? Quite tricky due to low temp sensor sample rate
-    _derivative = _ctrlParams.D_gain * (temp - _prevTemp) / _updatePeriod;
+    const double alpha = 0.15;      // TODO: Improve hacky dterm filter
+    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlParams.D_gain * (temp - _prevTemp) / _updatePeriod);
 
     // Compute limited output
     double output = proportional + _integral + _derivative;
@@ -99,7 +100,7 @@ void Controller::updatePumpSpeed(double temp)
     }
 
     // Debugging only, spams the network
-    // ESP_LOGI(tag, "Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f", temp, err, proportional, _integral, _derivative, output);
+    // printf("Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f\n", temp, err, proportional, _integral, _derivative, output);
 
     _prevError = err;
     _prevTemp = temp;

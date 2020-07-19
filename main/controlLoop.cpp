@@ -72,12 +72,6 @@ void control_loop(void* params)
             flash_pin(LED_PIN, 100);
             Ctrl.setControllerSettings(ctrlSettings);
             controllerSettings = ctrlSettings;
-            ESP_LOGI(tag, "Fanstate: %d", ctrlSettings.fanState);
-            ESP_LOGI(tag, "Flush: %d", ctrlSettings.flush);
-            ESP_LOGI(tag, "Element low: %d", ctrlSettings.elementLow);
-            ESP_LOGI(tag, "Element high: %d", ctrlSettings.elementHigh);
-            ESP_LOGI(tag, "Prod condensor: %d", ctrlSettings.prodCondensor);
-            ESP_LOGI(tag, "Controller settings updated");
         }
         
         updateTemperatures(temperatures);

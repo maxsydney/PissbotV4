@@ -42,7 +42,7 @@ class Pump
 
         static constexpr uint16_t PUMP_MIN_OUTPUT = 25;
         static constexpr uint16_t PUMP_MAX_OUTPUT = 512;
-        static constexpr uint16_t FLUSH_SPEED = 512;
+        static constexpr uint16_t FLUSH_SPEED = 256;
 
     private:
         esp_err_t _initPump() const;

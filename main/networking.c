@@ -106,6 +106,8 @@ esp_err_t WiFi_event_handler(void *ctx, system_event_t *event)
         wifiConnected = false;
         esp_err_t eet = esp_wifi_connect();
         ESP_LOGI(tag, "reconnected Ok or error: %d, authmode: %d", eet, event->event_info.connected.authmode);
+    } else {
+        ESP_LOGE(tag, "WiFi event occurred: %d", event->event_id);
     }
 
     return ESP_OK;

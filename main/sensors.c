@@ -152,7 +152,7 @@ int scanTempSensorNetwork(OneWireBus_ROMCode rom_codes[MAX_DEVICES])
     int n_devices = 0;
 
     if (tempSensSemaphore != NULL) {
-        if(xSemaphoreTake(tempSensSemaphore, (TickType_t) 50) == pdTRUE) {
+        if(xSemaphoreTake(tempSensSemaphore, 100 / portTICK_PERIOD_MS) == pdTRUE) {
             owb_search_first(owb, &search_state, &found);
             while (found) {
                 char rom_code_s[17];
@@ -248,7 +248,7 @@ esp_err_t readTemps(float sensorTemps[])
 {
     // Read temperatures more efficiently by starting conversions on all devices at the same time
     if (tempSensSemaphore != NULL) {
-        if(xSemaphoreTake(tempSensSemaphore, (TickType_t) 10) == pdTRUE) {
+        if(xSemaphoreTake(tempSensSemaphore, 10 / portTICK_PERIOD_MS) == pdTRUE) {
             if (num_devices > 0) {
                 ds18b20_convert_all(owb);
 
