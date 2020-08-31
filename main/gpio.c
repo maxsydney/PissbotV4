@@ -13,6 +13,8 @@
 
 static const char* tag = "GPIO";
 
+// TODO: This should happen in class setup
+
 void gpio_init(void)
 {
     esp_err_t err;
@@ -66,17 +68,6 @@ void gpio_init(void)
     }
 
     gpio_isr_handler_add(REFLUX_FLOW, flowmeter_ISR, NULL);
-
-    // Set up fan control pin
-    gpio_pad_select_gpio(FAN_SWITCH);
-    gpio_set_direction(FAN_SWITCH, GPIO_MODE_OUTPUT);
-    gpio_set_level(FAN_SWITCH, 0);    
-
-    // Set up 2.4kW element control pin
-    // PIN_FUNC_SELECT( IO_MUX_GPIO13_REG, PIN_FUNC_GPIO);
-    gpio_pad_select_gpio(ELEMENT_2);
-    gpio_set_direction(ELEMENT_2, GPIO_MODE_OUTPUT);
-    gpio_set_level(ELEMENT_2, 0);    
 }
 
 void flash_pin(gpio_num_t pin, uint16_t delay)

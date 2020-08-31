@@ -13,7 +13,7 @@ class Controller
     public:
         Controller() = default;
         Controller(uint8_t freq, ctrlParams_t params, ctrlSettings_t settings, const PumpCfg& refluxPumpCfg, 
-                   const PumpCfg& prodPumpCfg, gpio_num_t fanPin, gpio_num_t elem24Pin, gpio_num_t elem3Pin);
+                   const PumpCfg& prodPumpCfg, gpio_num_t fanPin, gpio_num_t element1Pin, gpio_num_t element2Pin);
 
         void updatePumpSpeed(double temp);
         void updateComponents();
@@ -56,8 +56,8 @@ class Controller
         Pump _refluxPump = {};
         Pump _prodPump = {};
         gpio_num_t _fanPin = GPIO_NUM_0;
-        gpio_num_t _elem24Pin = GPIO_NUM_0;
-        gpio_num_t _elem3Pin = GPIO_NUM_0;
+        gpio_num_t _element1 = GPIO_NUM_0;
+        gpio_num_t _element2 = GPIO_NUM_0;
         
         double _prevError = 0.0;
         double _integral = 0.0;

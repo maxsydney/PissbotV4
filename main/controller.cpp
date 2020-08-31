@@ -13,9 +13,9 @@ extern "C" {
 static char tag[] = "Controller";
 
 Controller::Controller(uint8_t freq, ctrlParams_t params, ctrlSettings_t settings, const PumpCfg& refluxPumpCfg, 
-                       const PumpCfg& prodPumpCfg, gpio_num_t fanPin, gpio_num_t elem24Pin, gpio_num_t elem3Pin):
+                       const PumpCfg& prodPumpCfg, gpio_num_t fanPin, gpio_num_t element1Pin, gpio_num_t element2Pin):
             _updateFreq(freq), _ctrlParams(params), _ctrlSettings(settings), 
-            _fanPin(fanPin), _elem24Pin(elem24Pin), _elem3Pin(elem3Pin)
+            _fanPin(fanPin), _element1(element1Pin), _element2(element2Pin)
 {
     _updatePeriod = 1.0 / _updateFreq;
     _initPumps(refluxPumpCfg, prodPumpCfg);
@@ -30,16 +30,16 @@ void Controller::_initComponents() const
     gpio_pad_select_gpio(_fanPin);
     gpio_set_direction(_fanPin, GPIO_MODE_OUTPUT);
     gpio_set_level(_fanPin, 0);    
-
+    
     // Initialize 2.4kW element control pin
-    gpio_pad_select_gpio(_elem24Pin);
-    gpio_set_direction(_elem24Pin, GPIO_MODE_OUTPUT);
-    gpio_set_level(_elem24Pin, 0);    
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[_element1], PIN_FUNC_GPIO);        // Element 1 pin is set to JTAG by default. Reassign to GPIO
+    gpio_set_direction(_element1, GPIO_MODE_OUTPUT);
+    gpio_set_level(_element1, 0);  
 
     // Initialize 3kW element control pin
-    gpio_pad_select_gpio(_elem3Pin);
-    gpio_set_direction(_elem3Pin, GPIO_MODE_OUTPUT);
-    gpio_set_level(_elem3Pin, 0);  
+    gpio_pad_select_gpio(_element2);
+    gpio_set_direction(_element2, GPIO_MODE_OUTPUT);
+    gpio_set_level(_element2, 0); 
 }
 
 void Controller::_initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg)
@@ -122,8 +122,8 @@ void Controller::_handleProductPump(double temp)
 void Controller::updateComponents()
 {
     setPin(_fanPin, _ctrlSettings.fanState);
-    setPin(_elem24Pin, _ctrlSettings.elementLow);
-    setPin(_elem3Pin, _ctrlSettings.elementLow);
+    setPin(_element1, _ctrlSettings.elementLow);
+    setPin(_element2, _ctrlSettings.elementHigh);
 }
 
 void Controller::setControllerSettings(ctrlSettings_t ctrlSettings)

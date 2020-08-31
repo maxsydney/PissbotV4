@@ -54,7 +54,7 @@ void control_loop(void* params)
     ctrlSettings_t ctrlSettings = {};
     PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
     PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, ctrlParams, ctrlSettings, refluxPumpCfg, prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, ctrlParams, ctrlSettings, refluxPumpCfg, prodPumpCfg, FAN_SWITCH, ELEMENT_1, ELEMENT_2);
     portTickType xLastWakeTime = xTaskGetTickCount();
     ESP_LOGI(tag, "Control loop active");
     
