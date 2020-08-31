@@ -21,7 +21,7 @@
 - Increase stability of pushbutton input                                        - Done
 - Fix OTA crashing on reboot bug                                                - Done, disabled SPI mem check on startup
 - Transmit settings to webserver                                                - Done
-- Change to PI controller 
+- Change to PI controller                                                       - Not required
 - Include Feedforward control 
 - Configurable minimum pump speeds
 - Fix max pump speed issue                                                      - Done
@@ -35,4 +35,10 @@
 - Print meaningful logs                                                         - Done
 - Add browser based OTA terminal (network logging)                              - Done
 - Add process phase tracking
-- Negotiate bus usage between scanning sensors and reading temps
+- Negotiate bus usage between scanning sensors and reading temps                - Done
+- Scan for new sensors without restarting
+- Unit tests for thermo concentration calculations
+- Remove sensor without corrupting bus
+- Both relays working
+- Duty cycle for relays
+- JSON T_reflux double up
