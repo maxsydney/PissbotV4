@@ -11,6 +11,11 @@ extern "C" {
 
 #define MAX_DEVICES 8
 
+// Quick and dirty calibration.
+// TODO: Add object for each sensor and remember specific calibration data
+#define SENSITIVITY 0.98716683
+#define OFFSET 0.29615005
+
 typedef struct {
     OneWireBus_ROMCode addr;
     tempSensor task;

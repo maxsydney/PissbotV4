@@ -206,7 +206,6 @@ void temp_sensor_task(void *pvParameters)
                 ESP_LOGI(tag, "Flow rate queue full");
             }
         }
-
         
         vTaskDelayUntil(&xLastWakeTime, SAMPLE_PERIOD / portTICK_PERIOD_MS);
     }
@@ -260,6 +259,9 @@ esp_err_t readTemps(float sensorTemps[])
                     if (ds18b20_read_temp(devices[i], &sensorTemps[i]) != DS18B20_OK) {
                         xSemaphoreGive(tempSensSemaphore);
                         return ESP_FAIL;
+                    } else {
+                        // Read was successful, apply calibration
+                        sensorTemps[i] = sensorTemps[i] * SENSITIVITY + OFFSET;
                     }
                 }
             }
