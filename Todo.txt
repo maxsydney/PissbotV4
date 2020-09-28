@@ -42,3 +42,7 @@
 - Both relays working
 - Duty cycle for relays
 - JSON T_reflux double up
+- NVS memory leak?
+- Manual control for both pumps
+- Object for DS18B20 sensor
+- Singleton main manager object?
