@@ -28,7 +28,14 @@
         "rope": "cpp",
         "httpd-freertos.h": "c",
         "condition_variable": "c",
-        "tuple": "c"
+        "tuple": "c",
+        "deque": "cpp",
+        "list": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "initializer_list": "cpp",
+        "ranges": "cpp",
+        "hash_map": "cpp"
     },
     "python.linting.pylintEnabled": false
 }

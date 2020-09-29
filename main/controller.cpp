@@ -9,37 +9,39 @@ extern "C" {
 #include "gpio.h"
 #include <cmath>
 #include <string.h>
+#include "distillerManager.h"
 
+// TODO: Replace this with class name
 static char tag[] = "Controller";
 
-Controller::Controller(uint8_t freq, ctrlParams_t params, ctrlSettings_t settings, const PumpCfg& refluxPumpCfg, 
-                       const PumpCfg& prodPumpCfg, gpio_num_t fanPin, gpio_num_t element1Pin, gpio_num_t element2Pin):
-            _updateFreq(freq), _ctrlParams(params), _ctrlSettings(settings), 
-            _fanPin(fanPin), _element1(element1Pin), _element2(element2Pin)
+Controller::Controller(const ControllerConfig& cfg)
 {
-    _updatePeriod = 1.0 / _updateFreq;
-    _initPumps(refluxPumpCfg, prodPumpCfg);
+    if (Controller::checkInputs(cfg) != PBRet::SUCCESS) {
+        _configured = false;
+        return;
+    }
+    
+    _cfg = cfg;
+    _initPumps(cfg.refluxPumpCfg, cfg.prodPumpCfg);
     _initComponents();
-    _prevError = 0;
-    _integral = 0;
 }
 
 void Controller::_initComponents() const
 {
     // Initialize fan pin
-    gpio_pad_select_gpio(_fanPin);
-    gpio_set_direction(_fanPin, GPIO_MODE_OUTPUT);
-    gpio_set_level(_fanPin, 0);    
+    gpio_pad_select_gpio(_cfg.fanPin);
+    gpio_set_direction(_cfg.fanPin, GPIO_MODE_OUTPUT);
+    gpio_set_level(_cfg.fanPin, 0);    
     
     // Initialize 2.4kW element control pin
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[_element1], PIN_FUNC_GPIO);        // Element 1 pin is set to JTAG by default. Reassign to GPIO
-    gpio_set_direction(_element1, GPIO_MODE_OUTPUT);
-    gpio_set_level(_element1, 0);  
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[_cfg.element1Pin], PIN_FUNC_GPIO);        // Element 1 pin is set to JTAG by default. Reassign to GPIO
+    gpio_set_direction(_cfg.element1Pin, GPIO_MODE_OUTPUT);
+    gpio_set_level(_cfg.element1Pin, 0);  
 
     // Initialize 3kW element control pin
-    gpio_pad_select_gpio(_element2);
-    gpio_set_direction(_element2, GPIO_MODE_OUTPUT);
-    gpio_set_level(_element2, 0); 
+    gpio_pad_select_gpio(_cfg.element2Pin);
+    gpio_set_direction(_cfg.element2Pin, GPIO_MODE_OUTPUT);
+    gpio_set_level(_cfg.element2Pin, 0); 
 }
 
 void Controller::_initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg)
@@ -54,13 +56,14 @@ void Controller::_initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPum
 
 void Controller::updatePumpSpeed(double temp)
 {
+    const double dt = 1.0 / _cfg.updateFreqHz;
     double err = temp - _ctrlParams.setpoint;
 
     // Proportional term
     double proportional = _ctrlParams.P_gain * err;
 
     // Integral term (discretized via bilinear transform)
-    _integral += 0.5 * _ctrlParams.I_gain * _updatePeriod * (err + _prevError);
+    _integral += 0.5 * _ctrlParams.I_gain * dt * (err + _prevError);
 
     // Dynamic integral clamping
     double intLimMin = 0.0;
@@ -88,7 +91,7 @@ void Controller::updatePumpSpeed(double temp)
     // Derivative term (discretized via backwards temperature differentiation)
     // TODO: Filtering on D term? Quite tricky due to low temp sensor sample rate
     const double alpha = 0.15;      // TODO: Improve hacky dterm filter
-    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlParams.D_gain * (temp - _prevTemp) / _updatePeriod);
+    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlParams.D_gain * (temp - _prevTemp) / dt);
 
     // Compute limited output
     double output = proportional + _integral + _derivative;
@@ -121,9 +124,9 @@ void Controller::_handleProductPump(double temp)
 
 void Controller::updateComponents()
 {
-    setPin(_fanPin, _ctrlSettings.fanState);
-    setPin(_element1, _ctrlSettings.elementLow);
-    setPin(_element2, _ctrlSettings.elementHigh);
+    setPin(_cfg.fanPin, _ctrlSettings.fanState);
+    setPin(_cfg.element1Pin, _ctrlSettings.elementLow);
+    setPin(_cfg.element2Pin, _ctrlSettings.elementHigh);
 }
 
 void Controller::setControllerSettings(ctrlSettings_t ctrlSettings)
@@ -157,6 +160,34 @@ void Controller::setControllerSettings(ctrlSettings_t ctrlSettings)
              ctrlSettings.elementLow, ctrlSettings.elementHigh, ctrlSettings.flush, ctrlSettings.prodCondensor); 
 
     updateComponents();
+}
+
+PBRet Controller::checkInputs(const ControllerConfig& cfg)
+{
+    if (cfg.updateFreqHz <= 0) {
+        ESP_LOGE(tag, "Update frequency %d is invalid. Controller was not configured", cfg.updateFreqHz);
+        return PBRet::FAILURE;
+    }
+
+    // TODO: Call Pump checkInputs here
+
+    // TODO: Check if these pins are valid output pins
+    if (cfg.fanPin <= 0) {
+        ESP_LOGE(tag, "Fan GPIO %d is invalid. Controller was not configured", cfg.fanPin);
+        return PBRet::FAILURE;
+    }
+
+    if (cfg.element1Pin <= 0) {
+        ESP_LOGE(tag, "Element 1 GPIO %d is invalid. Controller was not configured", cfg.element1Pin);
+        return PBRet::FAILURE;
+    }
+    
+    if (cfg.element2Pin <= 0) {
+        ESP_LOGE(tag, "Element 1 GPIO %d is invalid. Controller was not configured", cfg.element2Pin);
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
 }
 
 #ifdef __cplusplus

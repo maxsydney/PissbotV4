@@ -49,21 +49,27 @@ esp_err_t controller_init(uint8_t frequency)
 void control_loop(void* params)
 {
     float temperatures[n_tempSensors] = {0};
-    ctrlParams_t ctrlParams = getSettingsFromNVM();
-    controllerParams = ctrlParams;
-    ctrlSettings_t ctrlSettings = {};
-    PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-    PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-    Controller Ctrl = Controller(CONTROL_LOOP_FREQUENCY, ctrlParams, ctrlSettings, refluxPumpCfg, prodPumpCfg, FAN_SWITCH, ELEMENT_1, ELEMENT_2);
+    controllerParams = getSettingsFromNVM();
+    ctrlSettings_t ctrlSettings;
+
+    ControllerConfig cfg {};
+    cfg.updateFreqHz = CONTROL_LOOP_FREQUENCY;
+    cfg.ctrlTuningParams = controllerParams;
+    cfg.refluxPumpCfg = PumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    cfg.prodPumpCfg = PumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    cfg.fanPin = FAN_SWITCH;
+    cfg.element1Pin = ELEMENT_1;
+    cfg.element2Pin = ELEMENT_2;
+
+    Controller Ctrl = Controller(cfg);
     portTickType xLastWakeTime = xTaskGetTickCount();
     ESP_LOGI(tag, "Control loop active");
     
     while (true) {
         if (uxQueueMessagesWaiting(ctrlParamsQueue)) {
-            xQueueReceive(ctrlParamsQueue, &ctrlParams, 50 / portTICK_PERIOD_MS);
+            xQueueReceive(ctrlParamsQueue, &controllerParams, 50 / portTICK_PERIOD_MS);
             flash_pin(LED_PIN, 100);
-            controllerParams = ctrlParams;
-            Ctrl.setControllerParams(ctrlParams);
+            Ctrl.setControllerParams(controllerParams);
             ESP_LOGI(tag, "Controller parameters updated");
         }
 

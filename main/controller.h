@@ -1,22 +1,36 @@
-#pragma once
+#ifndef MAIN_CONTROLLER_H 
+#define MAIN_CONTROLLER_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include "PBCommon.h"
 #include "controlLoop.h"
 #include "pump.h"
 #include "messages.h"
+
+struct ControllerConfig
+{
+    uint8_t updateFreqHz = 0;
+    ctrlParams_t ctrlTuningParams {};
+    PumpCfg refluxPumpCfg = {};
+    PumpCfg prodPumpCfg = {};
+    gpio_num_t fanPin = GPIO_NUM_NC;
+    gpio_num_t element1Pin = GPIO_NUM_NC;
+    gpio_num_t element2Pin = GPIO_NUM_NC;
+};
 
 class Controller
 {
     public:
         Controller() = default;
-        Controller(uint8_t freq, ctrlParams_t params, ctrlSettings_t settings, const PumpCfg& refluxPumpCfg, 
-                   const PumpCfg& prodPumpCfg, gpio_num_t fanPin, gpio_num_t element1Pin, gpio_num_t element2Pin);
+        explicit Controller(const ControllerConfig& cfg);
 
         void updatePumpSpeed(double temp);
         void updateComponents();
+
+        static PBRet checkInputs(const ControllerConfig& cfg);
 
         // Setters
         void setRefluxSpeed(uint16_t speed) {_refluxPump.setSpeed(speed);}
@@ -48,16 +62,13 @@ class Controller
         void _initComponents(void) const;
         void _handleProductPump(double temp);
         void _initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg);
-    
-        uint8_t _updateFreq = 0;
-        float _updatePeriod = 0.0;
-        ctrlParams_t _ctrlParams = {};
-        ctrlSettings_t _ctrlSettings = {};
-        Pump _refluxPump = {};
-        Pump _prodPump = {};
-        gpio_num_t _fanPin = GPIO_NUM_0;
-        gpio_num_t _element1 = GPIO_NUM_0;
-        gpio_num_t _element2 = GPIO_NUM_0;
+
+        ControllerConfig _cfg {};
+        ctrlParams_t _ctrlParams {};
+        ctrlSettings_t _ctrlSettings {};
+        Pump _refluxPump {};
+        Pump _prodPump {};
+        bool _configured = false;
         
         double _prevError = 0.0;
         double _integral = 0.0;
@@ -68,3 +79,5 @@ class Controller
 #ifdef __cplusplus
 }
 #endif
+
+#endif // MAIN_CONTROLLER_H

@@ -7,6 +7,7 @@ extern "C" {
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <stdio.h>
 
 class Task
 {
@@ -22,6 +23,12 @@ class Task
         virtual void taskMain(void) = 0;
 
         void start(void) {
+            if (_name == nullptr) {
+                printf("Task name was null\n");
+                return;
+            }
+
+            printf("Creating task: %s\n", _name);
             xTaskCreatePinnedToCore(&runTask, _name, _stackDepth, this, _priority, &_taskHandle, _coreID);
         }
 
@@ -30,8 +37,14 @@ class Task
     private:
         static void runTask(void* taskPtr)
         {
-            Task* task = (Task*) taskPtr;
-            task->taskMain();
+            if (taskPtr != nullptr) {
+                Task* task = (Task*) taskPtr;
+                task->taskMain();
+            } else {
+                printf("Task object was null\n");
+                vTaskDelete(NULL);
+            }
+            
 
             // Once task has returned, kill the task properly
         }

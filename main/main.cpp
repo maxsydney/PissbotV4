@@ -45,9 +45,17 @@ void app_main()
 
     ESP_LOGI(tag, "Redirecting log messages to websocket connection");
     esp_log_set_vprintf(&_log_vprintf);
-
-    DistillerManager manager(5, 8192, 1, 1234);
-    manager.begin();
+    
+    DistillerConfig cfg {};
+    cfg.ctrlConfig.updateFreqHz = CONTROL_LOOP_FREQUENCY;
+    cfg.ctrlConfig.refluxPumpCfg = PumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    cfg.ctrlConfig.prodPumpCfg = PumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    cfg.ctrlConfig.fanPin = FAN_SWITCH;
+    cfg.ctrlConfig.element1Pin = ELEMENT_1;
+    cfg.ctrlConfig.element2Pin = ELEMENT_2;
+    
+    DistillerManager* manager = DistillerManager::getInstance(5, 8192, 1, cfg);
+    manager->begin();
     
     // Schedule tasks
     xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 16384, NULL, 7, NULL, 1);
