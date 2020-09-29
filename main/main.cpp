@@ -24,6 +24,7 @@ extern "C" {
 #include "webServer.h"
 #include "input.h"
 #include "menu.h"
+#include "DistillerManager.h"
 
 static const char* tag = "Main";
 
@@ -44,6 +45,9 @@ void app_main()
 
     ESP_LOGI(tag, "Redirecting log messages to websocket connection");
     esp_log_set_vprintf(&_log_vprintf);
+
+    DistillerManager manager(5, 8192, 1, 1234);
+    manager.begin();
     
     // Schedule tasks
     xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 16384, NULL, 7, NULL, 1);
