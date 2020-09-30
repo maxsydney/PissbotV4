@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "DistillerManager.h"
+#include "messageServer.h"
 
 DistillerManager* DistillerManager::_managerPtr = nullptr;
 
@@ -31,6 +32,10 @@ DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth,
 void DistillerManager::taskMain(void)
 {
     printf("Starting up the main task\n");
+    xQueueHandle handle = 0;
+    std::set<MessageType> subscriptions = { MessageType::General };
+    Subscriber sub(DistillerManager::name, handle, subscriptions);
+    MessageServer::registerTask(sub);
 
     while(1) {
         printf("Test is working\n");
