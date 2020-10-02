@@ -17,6 +17,7 @@
 #include "freertos/queue.h"
 #include <vector>
 #include <set>
+#include <memory>
 #include "PBCommon.h"
 
 enum class MessageType {
@@ -50,23 +51,32 @@ class MessageBase
 {
     // TODO: How to make sure this data will be deleted?
     public:
-        MessageBase(MessageType msgType);
+        MessageBase(void) = default;
+        MessageBase(MessageType msgType)
+            : _type(msgType), _valid(true) {}
+        ~MessageBase(void) {
+            ESP_LOGI("MessageBase", "Deleting message");
+        }
 
         MessageType getType(void) const { return _type; }
-
+        bool isValid(void) const { return _valid; }
+        const std::string& getName(void) const { return _name; }
+ 
         // Add payload in derived classes
     
-    private:
+    protected:
+        std::string _name = "MessageBase";
         MessageType _type = MessageType::Unknown;
+        bool _valid = false;
 };
 
 class MessageServer
 {
-    static constexpr char* tag = "Message Server";
+    static constexpr char* Name = "Message Server";
 
     public:
         static PBRet registerTask(const Subscriber& subscriber);
-        static PBRet broadcastMessage(const MessageBase& message);
+        static PBRet broadcastMessage(const MessageBase* message);
 
     private:
         static std::vector<Subscriber> _subscribers;

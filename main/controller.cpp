@@ -1,6 +1,6 @@
-#ifdef __cplusplus
-extern "C" {
-#endif
+// #ifdef __cplusplus
+// extern "C" {
+// #endif
 
 #include <esp_log.h>
 #include "controller.h"
@@ -20,7 +20,7 @@ Controller::Controller(const ControllerConfig& cfg)
         _configured = false;
         return;
     }
-    
+
     _cfg = cfg;
     _initPumps(cfg.refluxPumpCfg, cfg.prodPumpCfg);
     _initComponents();
@@ -190,6 +190,6 @@ PBRet Controller::checkInputs(const ControllerConfig& cfg)
     return PBRet::SUCCESS;
 }
 
-#ifdef __cplusplus
-}
-#endif
+// #ifdef __cplusplus
+// }
+// #endif
