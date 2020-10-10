@@ -19,8 +19,6 @@ class Task
         // Constructors
         Task(const char* taskName, UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID)
             : _name(taskName), _priority(priority), _stackDepth(stackDepth), _coreID(coreID) {}
-        Task(const char* taskName, UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, std::queue<std::shared_ptr<MessageBase>>& GPQueue)
-            : _name(taskName), _priority(priority), _stackDepth(stackDepth), _coreID(coreID), _GPQueue(GPQueue) {}
         virtual ~Task(void) = default;
 
         void begin(void) { start(); }

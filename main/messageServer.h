@@ -26,8 +26,9 @@ enum class MessageType {
     General,
     TemperatureData,
     FlowrateData,
-    TuningParameters,
-    ControlCommand
+    ControlTuning,
+    ControlCommand,
+    ControlSettings
 };
 
 // Base class for all messages to be passed over network
@@ -38,9 +39,6 @@ class MessageBase
         MessageBase(void) = default;
         MessageBase(MessageType msgType, const std::string& name)
             : _type(msgType), _name(name), _valid(true) {}
-        ~MessageBase(void) {
-            ESP_LOGW("MessageBase", "Deleting MessageBase");
-        }
 
         MessageType getType(void) const { return _type; }
         bool isValid(void) const { return _valid; }
@@ -71,7 +69,7 @@ class Subscriber
 
 class MessageServer
 {
-    static constexpr char* Name = "Message Server";
+    static constexpr const char* Name = "Message Server";
 
     public:
         static PBRet registerTask(const Subscriber& subscriber);

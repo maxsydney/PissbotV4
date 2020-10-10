@@ -1,7 +1,3 @@
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <driver/ledc.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -89,7 +85,3 @@ PumpCfg::PumpCfg(gpio_num_t pin, ledc_channel_t PWMChannel, ledc_timer_t timerCh
 {
     _configured = true;
 }
-
-#ifdef __cplusplus
-}
-#endif

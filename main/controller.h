@@ -1,18 +1,15 @@
 #ifndef MAIN_CONTROLLER_H 
 #define MAIN_CONTROLLER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "PBCommon.h"
-#include "controlLoop.h"
+#include "CppTask.h"
+#include "MessageDefs.h"
 #include "pump.h"
 #include "messages.h"
 
 struct ControllerConfig
 {
-    uint8_t updateFreqHz = 0;
+    double dt = 0.0;
     ctrlParams_t ctrlTuningParams {};
     PumpCfg refluxPumpCfg = {};
     PumpCfg prodPumpCfg = {};
@@ -21,47 +18,40 @@ struct ControllerConfig
     gpio_num_t element2Pin = GPIO_NUM_NC;
 };
 
-class Controller
+class Controller: public Task
 {
-    public:
-        Controller() = default;
-        explicit Controller(const ControllerConfig& cfg);
+    static constexpr const char* Name = "Controller";
 
-        void updatePumpSpeed(double temp);
+    public:
+        // Constructors
+        Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const ControllerConfig& cfg);
+
         void updateComponents();
 
         static PBRet checkInputs(const ControllerConfig& cfg);
 
-        // Setters
-        void setRefluxSpeed(uint16_t speed) {_refluxPump.setSpeed(speed);}
-        void setProductSpeed(uint16_t speed) {_prodPump.setSpeed(speed);}
-        void setSetPoint(double sp) {_ctrlParams.setpoint = sp;}
-        void setPGain(float P) {_ctrlParams.P_gain = P;}
-        void setIGain(float I) {_ctrlParams.I_gain = I;}
-        void setDGain(float D) {_ctrlParams.D_gain = D;}
-        void setControllerParams(ctrlParams_t ctrlParams) {_ctrlParams = ctrlParams;}
-        void setControllerSettings(ctrlSettings_t ctrlSettings);
-        void setRefluxPumpMode(PumpMode mode) {_refluxPump.setMode(mode);}
-        void setProductPumpMode(PumpMode mode) {_prodPump.setMode(mode);}
-
-        // Getters
-        double getSetpoint(void) const {return _ctrlParams.setpoint;}
-        double getPGain(void) const {return _ctrlParams.P_gain;}
-        double getIGain(void) const {return _ctrlParams.I_gain;}
-        double getDGain(void) const {return _ctrlParams.D_gain;}
-        const Pump& getRefluxPump(void) const { return _refluxPump; }
-        const Pump& getProductPump(void) const { return _prodPump; }
-        const ctrlParams_t& getControllerParams(void) const {return _ctrlParams;}
-        const ctrlSettings_t& getControllerSettings(void) const {return _ctrlSettings;}
-        const PumpMode& getRefluxPumpMode(void) const {return _refluxPump.getMode();}
-        const PumpMode& getProductPumpMode(void) const {return _prodPump.getMode();}
-        uint16_t getRefluxPumpSpeed(void) const {return _refluxPump.getSpeed();}
-        uint16_t getProductPumpSpeed(void) const {return _prodPump.getSpeed();}
+        bool isConfigured(void) const { return _configured; }
 
     private:
-        void _initComponents(void) const;
-        void _handleProductPump(double temp);
-        void _initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg);
+        PBRet _doControl(double temp);
+        PBRet _initIO(const ControllerConfig& cfg) const;
+        PBRet _handleProductPump(double temp);
+        PBRet _initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg);
+        PBRet _updateSettings(ctrlSettings_t ctrlSettings);
+
+        // Setup methods
+        PBRet _initFromParams(const ControllerConfig& cfg);
+        PBRet _setupCBTable(void) override;
+
+        // FreeRTOS hook method
+        void taskMain(void) override;
+
+        // Queue callbacks
+        PBRet _generalMessageCB(std::shared_ptr<MessageBase> msg);
+        PBRet _temperatureDataCB(std::shared_ptr<MessageBase> msg);
+        PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
+        PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
+        PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
 
         ControllerConfig _cfg {};
         ctrlParams_t _ctrlParams {};
@@ -75,9 +65,5 @@ class Controller
         double _derivative = 0.0;
         double _prevTemp = 0.0;
 };
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // MAIN_CONTROLLER_H

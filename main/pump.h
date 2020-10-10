@@ -1,9 +1,5 @@
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <driver/ledc.h>
 
 enum class PumpMode {
@@ -52,7 +48,3 @@ class Pump
         PumpMode _pumpMode = PumpMode::ACTIVE;
         PumpCfg _cfg;
 };
-
-#ifdef __cplusplus
-}
-#endif

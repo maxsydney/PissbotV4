@@ -16,9 +16,12 @@ class DistillerConfig
 // using the DistillerManager::getInstance() method. The DistillerManager is
 // responsible for initializing the system, and managing high level communication
 // between tasks
+//
+// TODO: With robust inter-task communication, tasks shouldn't need to get a pointer
+//       the DistillerManager. Consider making a regular class instead of a singleton
 class DistillerManager : public Task
 {
-    static constexpr char* Name = "Distiller Manager";
+    static constexpr const char* Name = "Distiller Manager";
 
     public:
         // Delete copy and assignment constructors
@@ -29,6 +32,8 @@ class DistillerManager : public Task
         static DistillerManager* getInstance(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const DistillerConfig& cfg);
         static DistillerManager* getInstance(void);
 
+        static PBRet checkInputs(const DistillerConfig& cfg);
+
         // Getters
         bool isConfigured(void) const { return _configured; }
 
@@ -38,6 +43,8 @@ class DistillerManager : public Task
     private:
         // Private constructor
         DistillerManager(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const DistillerConfig& cfg);
+
+        PBRet _initFromParams(const DistillerConfig& cfg);
 
         // Setup methods
         PBRet _setupCBTable(void) override;

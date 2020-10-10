@@ -30,11 +30,13 @@ DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth,
     // Setup callback table
     _setupCBTable();
 
-    // Check params
-
     // Init from params
-
-    ESP_LOGI(DistillerManager::Name, "Distiller Manager initialized successfully");
+    if (_initFromParams(cfg) == PBRet::SUCCESS) {
+        ESP_LOGI(DistillerManager::Name, "DistillerManager configured!");
+        _configured = true;
+    } else {
+        ESP_LOGW(DistillerManager::Name, "Unable to configure DistillerManager");
+    }
 }
 
 void DistillerManager::taskMain(void)
@@ -43,12 +45,16 @@ void DistillerManager::taskMain(void)
     Subscriber sub(DistillerManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
 
-    // // Send a test message to the queue
+    // Send a test message to the queue
     std::shared_ptr<GeneralMessage> msg = std::make_shared<GeneralMessage> ("This is a test");
     MessageServer::broadcastMessage(msg);
 
-    while(1) {
+    while(true) {
         _processQueue();
+
+        // Simulate some sensor data for controller
+        std::shared_ptr<TemperatureData> TData = std::make_shared<TemperatureData> (20.0, 30.0, 18.0, 56.0, 23.0, esp_timer_get_time());
+        MessageServer::broadcastMessage(TData);
 
         vTaskDelay(100 / portTICK_RATE_MS);
     }
@@ -57,8 +63,7 @@ void DistillerManager::taskMain(void)
 PBRet DistillerManager::_generalMessagCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    ESP_LOGI(DistillerManager::Name, "Entered GeneralMessage cb in DistillerManager");
-    ESP_LOGI(DistillerManager::Name, "Message was: %s", genMsg->getMessage().c_str());  
+    ESP_LOGI(DistillerManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
 
     return PBRet::SUCCESS;
 }
@@ -68,6 +73,33 @@ PBRet DistillerManager::_setupCBTable(void)
     _cbTable = std::map<MessageType, queueCallback> {
         {MessageType::General, std::bind(&DistillerManager::_generalMessagCB, this, std::placeholders::_1)}
     };
+
+    return PBRet::SUCCESS;
+}
+
+PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
+{
+    if (DistillerManager::checkInputs(cfg) != PBRet::SUCCESS) {;
+        ESP_LOGW(DistillerManager::Name, "Unable to configure DistillerManager");
+        return PBRet::FAILURE;
+    }
+
+    // Initialize Controller
+    _controller = new Controller(7, 8192, 1, cfg.ctrlConfig);
+    if (_controller->isConfigured()) {
+        _controller->begin();
+    } else {
+        ESP_LOGW(DistillerManager::Name, "Unable to start controller");
+    }
+
+    // Initialize SensorManager
+
+    return PBRet::SUCCESS;
+}
+
+PBRet DistillerManager::checkInputs(const DistillerConfig& cfg)
+{
+    // TODO: Implement this
 
     return PBRet::SUCCESS;
 }

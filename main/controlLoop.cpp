@@ -1,246 +1,246 @@
-#ifdef __cplusplus
-extern "C" {
-#endif
+// #ifdef __cplusplus
+// extern "C" {
+// #endif
 
-#include <stdio.h>
-#include <esp_log.h>
-#include <esp_event.h>
-#include <esp_timer.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "controlLoop.h"
-#include "pump.h"
-#include "gpio.h"
-#include "controller.h"
-#include "sensors.h"
-#include "networking.h"
-#include "main.h"
-#include "driver/gpio.h"
-#include "messages.h"
-#include "pinDefs.h"
-#include "thermo.h"
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+// #include <stdio.h>
+// #include <esp_log.h>
+// #include <esp_event.h>
+// #include <esp_timer.h>
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/queue.h"
+// #include "controlLoop.h"
+// #include "pump.h"
+// #include "gpio.h"
+// #include "controller.h"
+// #include "sensors.h"
+// #include "networking.h"
+// #include "main.h"
+// #include "driver/gpio.h"
+// #include "messages.h"
+// #include "pinDefs.h"
+// #include "thermo.h"
+// #include <stdlib.h>
+// #include <string.h>
+// #include <math.h>
 
-// Controller constants
-#define SENSOR_MIN_OUTPUT 1600
-#define SENSOR_MAX_OUTPUT 8190
-#define FAN_THRESH 30
+// // Controller constants
+// #define SENSOR_MIN_OUTPUT 1600
+// #define SENSOR_MAX_OUTPUT 8190
+// #define FAN_THRESH 30
 
-static char tag[] = "Control Loop";
-static ctrlParams_t controllerParams = {};
-static ctrlSettings_t controllerSettings = {};
-xQueueHandle ctrlParamsQueue;
-xQueueHandle ctrlSettingsQueue;
-uint16_t ctrl_loop_period_ms;
+// static char tag[] = "Control Loop";
+// static ctrlParams_t controllerParams = {};
+// static ctrlSettings_t controllerSettings = {};
+// xQueueHandle ctrlParamsQueue;
+// xQueueHandle ctrlSettingsQueue;
+// uint16_t ctrl_loop_period_ms;
 
-esp_err_t controller_init(uint8_t frequency)
-{
-    ctrlParamsQueue = xQueueCreate(10, sizeof(ctrlParams_t));
-    ctrlSettingsQueue = xQueueCreate(10, sizeof(ctrlSettings_t));
-    ctrl_loop_period_ms = 1.0 / frequency * 1000;
+// esp_err_t controller_init(uint8_t frequency)
+// {
+//     ctrlParamsQueue = xQueueCreate(10, sizeof(ctrlParams_t));
+//     ctrlSettingsQueue = xQueueCreate(10, sizeof(ctrlSettings_t));
+//     ctrl_loop_period_ms = 1.0 / frequency * 1000;
 
-    ESP_LOGI(tag, "Controller initialized");
+//     ESP_LOGI(tag, "Controller initialized");
 
-    return ESP_OK;
-}
+//     return ESP_OK;
+// }
 
-void control_loop(void* params)
-{
-    float temperatures[n_tempSensors] = {0};
-    controllerParams = getSettingsFromNVM();
-    ctrlSettings_t ctrlSettings;
+// void control_loop(void* params)
+// {
+//     float temperatures[n_tempSensors] = {0};
+//     controllerParams = getSettingsFromNVM();
+//     ctrlSettings_t ctrlSettings;
 
-    ControllerConfig cfg {};
-    cfg.updateFreqHz = CONTROL_LOOP_FREQUENCY;
-    cfg.ctrlTuningParams = controllerParams;
-    cfg.refluxPumpCfg = PumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-    cfg.prodPumpCfg = PumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-    cfg.fanPin = FAN_SWITCH;
-    cfg.element1Pin = ELEMENT_1;
-    cfg.element2Pin = ELEMENT_2;
+//     ControllerConfig cfg {};
+//     cfg.updateFreqHz = CONTROL_LOOP_FREQUENCY;
+//     cfg.ctrlTuningParams = controllerParams;
+//     cfg.refluxPumpCfg = PumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+//     cfg.prodPumpCfg = PumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+//     cfg.fanPin = FAN_SWITCH;
+//     cfg.element1Pin = ELEMENT_1;
+//     cfg.element2Pin = ELEMENT_2;
 
-    Controller Ctrl = Controller(cfg);
-    portTickType xLastWakeTime = xTaskGetTickCount();
-    ESP_LOGI(tag, "Control loop active");
+//     Controller Ctrl = Controller(cfg);
+//     portTickType xLastWakeTime = xTaskGetTickCount();
+//     ESP_LOGI(tag, "Control loop active");
     
-    while (true) {
-        if (uxQueueMessagesWaiting(ctrlParamsQueue)) {
-            xQueueReceive(ctrlParamsQueue, &controllerParams, 50 / portTICK_PERIOD_MS);
-            flash_pin(LED_PIN, 100);
-            Ctrl.setControllerParams(controllerParams);
-            ESP_LOGI(tag, "Controller parameters updated");
-        }
+//     while (true) {
+//         if (uxQueueMessagesWaiting(ctrlParamsQueue)) {
+//             xQueueReceive(ctrlParamsQueue, &controllerParams, 50 / portTICK_PERIOD_MS);
+//             flash_pin(LED_PIN, 100);
+//             Ctrl.setControllerParams(controllerParams);
+//             ESP_LOGI(tag, "Controller parameters updated");
+//         }
 
-        if (uxQueueMessagesWaiting(ctrlSettingsQueue)) {
-            xQueueReceive(ctrlSettingsQueue, &ctrlSettings, 50 / portTICK_PERIOD_MS);
-            flash_pin(LED_PIN, 100);
-            Ctrl.setControllerSettings(ctrlSettings);
-            controllerSettings = ctrlSettings;
-        }
+//         if (uxQueueMessagesWaiting(ctrlSettingsQueue)) {
+//             xQueueReceive(ctrlSettingsQueue, &ctrlSettings, 50 / portTICK_PERIOD_MS);
+//             flash_pin(LED_PIN, 100);
+//             Ctrl.setControllerSettings(ctrlSettings);
+//             controllerSettings = ctrlSettings;
+//         }
         
-        updateTemperatures(temperatures);
-        Ctrl.updatePumpSpeed(getTemperature(temperatures, T_head));     // Eventually controller needs access to all temps
-        vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
-    }
-}
+//         updateTemperatures(temperatures);
+//         Ctrl.updatePumpSpeed(getTemperature(temperatures, T_head));     // Eventually controller needs access to all temps
+//         vTaskDelayUntil(&xLastWakeTime, 200 / portTICK_PERIOD_MS);
+//     }
+// }
 
-void nvs_initialize(void)
-{
-    // Initialize NVS
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
-        // NVS partition was truncated and needs to be erased
-        // Retry nvs_flash_init
-        ESP_LOGI(tag, "NVS init failed: ESP_ERR_NVS_NO_FREE_PAGES");
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
-}
+// void nvs_initialize(void)
+// {
+//     // Initialize NVS
+//     esp_err_t err = nvs_flash_init();
+//     if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
+//         // NVS partition was truncated and needs to be erased
+//         // Retry nvs_flash_init
+//         ESP_LOGI(tag, "NVS init failed: ESP_ERR_NVS_NO_FREE_PAGES");
+//         ESP_ERROR_CHECK(nvs_flash_erase());
+//         err = nvs_flash_init();
+//     }
+//     ESP_ERROR_CHECK(err);
+// }
 
-ctrlParams_t getSettingsFromNVM(void)
-{
-    nvs_handle nvs;
-    ctrlParams_t ctrlParams;
-    memset(&ctrlParams, 0, sizeof(ctrlParams_t));
-    int32_t setpoint, P_gain, I_gain, D_gain, LPFCutoff;
-    esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
-    if (err != ESP_OK) {
-        ESP_LOGI(tag, "Error (%s) opening NVS handle!", esp_err_to_name(err));
-    } else {
-        ESP_LOGI(tag, "NVS handle opened successfully");
-    }
+// ctrlParams_t getSettingsFromNVM(void)
+// {
+//     nvs_handle nvs;
+//     ctrlParams_t ctrlParams;
+//     memset(&ctrlParams, 0, sizeof(ctrlParams_t));
+//     int32_t setpoint, P_gain, I_gain, D_gain, LPFCutoff;
+//     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
+//     if (err != ESP_OK) {
+//         ESP_LOGI(tag, "Error (%s) opening NVS handle!", esp_err_to_name(err));
+//     } else {
+//         ESP_LOGI(tag, "NVS handle opened successfully");
+//     }
 
-    err = nvs_get_i32(nvs, "setpoint", &setpoint);
-    switch (err) {
-        case ESP_OK:
-            ctrlParams.setpoint = (float) setpoint / 1000;
-            break;
-        case ESP_ERR_NVS_NOT_FOUND:
-            nvs_set_i32(nvs, "setpoint", (int32_t)(ctrlParams.setpoint * 1000));
-            break;
-        default:
-            ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
-    }
+//     err = nvs_get_i32(nvs, "setpoint", &setpoint);
+//     switch (err) {
+//         case ESP_OK:
+//             ctrlParams.setpoint = (float) setpoint / 1000;
+//             break;
+//         case ESP_ERR_NVS_NOT_FOUND:
+//             nvs_set_i32(nvs, "setpoint", (int32_t)(ctrlParams.setpoint * 1000));
+//             break;
+//         default:
+//             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
+//     }
 
-    err = nvs_get_i32(nvs, "P_gain", &P_gain);
-    switch (err) {
-        case ESP_OK:
-            ctrlParams.P_gain = (float) P_gain / 1000;
-            break;
-        case ESP_ERR_NVS_NOT_FOUND:
-            nvs_set_i32(nvs, "P_gain", (int32_t)(ctrlParams.P_gain * 1000));
-            break;
-        default:
-            ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
-    }
+//     err = nvs_get_i32(nvs, "P_gain", &P_gain);
+//     switch (err) {
+//         case ESP_OK:
+//             ctrlParams.P_gain = (float) P_gain / 1000;
+//             break;
+//         case ESP_ERR_NVS_NOT_FOUND:
+//             nvs_set_i32(nvs, "P_gain", (int32_t)(ctrlParams.P_gain * 1000));
+//             break;
+//         default:
+//             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
+//     }
 
-    err = nvs_get_i32(nvs, "I_gain", &I_gain);
-    switch (err) {
-        case ESP_OK:
-            ctrlParams.I_gain = (float) I_gain / 1000;
-            break;
-        case ESP_ERR_NVS_NOT_FOUND:
-            nvs_set_i32(nvs, "I_gain", (int32_t)(ctrlParams.I_gain * 1000));
-            break;
-        default:
-            ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
-    }
+//     err = nvs_get_i32(nvs, "I_gain", &I_gain);
+//     switch (err) {
+//         case ESP_OK:
+//             ctrlParams.I_gain = (float) I_gain / 1000;
+//             break;
+//         case ESP_ERR_NVS_NOT_FOUND:
+//             nvs_set_i32(nvs, "I_gain", (int32_t)(ctrlParams.I_gain * 1000));
+//             break;
+//         default:
+//             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
+//     }
 
-    err = nvs_get_i32(nvs, "D_gain", &D_gain);
-    switch (err) {
-        case ESP_OK:
-            ctrlParams.D_gain = (float) D_gain / 1000;
-            break;
-        case ESP_ERR_NVS_NOT_FOUND:
-            nvs_set_i32(nvs, "D_gain", (int32_t)(ctrlParams.D_gain * 1000));
-            break;
-        default:
-            ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
-    }
+//     err = nvs_get_i32(nvs, "D_gain", &D_gain);
+//     switch (err) {
+//         case ESP_OK:
+//             ctrlParams.D_gain = (float) D_gain / 1000;
+//             break;
+//         case ESP_ERR_NVS_NOT_FOUND:
+//             nvs_set_i32(nvs, "D_gain", (int32_t)(ctrlParams.D_gain * 1000));
+//             break;
+//         default:
+//             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
+//     }
 
-    err = nvs_get_i32(nvs, "LPFCutoff", &LPFCutoff);
-    switch (err) {
-        case ESP_OK:
-            ctrlParams.LPFCutoff = (float) LPFCutoff / 1000;
-            break;
-        case ESP_ERR_NVS_NOT_FOUND:
-            nvs_set_i32(nvs, "LPFCutoff", (int32_t)(ctrlParams.LPFCutoff * 1000));
-            break;
-        default:
-            ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
-    }
+//     err = nvs_get_i32(nvs, "LPFCutoff", &LPFCutoff);
+//     switch (err) {
+//         case ESP_OK:
+//             ctrlParams.LPFCutoff = (float) LPFCutoff / 1000;
+//             break;
+//         case ESP_ERR_NVS_NOT_FOUND:
+//             nvs_set_i32(nvs, "LPFCutoff", (int32_t)(ctrlParams.LPFCutoff * 1000));
+//             break;
+//         default:
+//             ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
+//     }
 
-    err = nvs_commit(nvs);
-    if (err != ESP_OK) {
-        ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
-    }
-    nvs_close(nvs);
-    return ctrlParams;
-}
+//     err = nvs_commit(nvs);
+//     if (err != ESP_OK) {
+//         ESP_LOGW(tag, "Error (%s) reading!\n", esp_err_to_name(err));
+//     }
+//     nvs_close(nvs);
+//     return ctrlParams;
+// }
 
-esp_err_t updateTemperatures(float tempArray[])
-{
-    static float temperatures[n_tempSensors] = {0};
-    if (xQueueReceive(tempQueue, temperatures, 100 / portTICK_PERIOD_MS)) {
-        memcpy(tempArray, temperatures, n_tempSensors * sizeof(float));
-        return ESP_OK;
-    }
+// esp_err_t updateTemperatures(float tempArray[])
+// {
+//     static float temperatures[n_tempSensors] = {0};
+//     if (xQueueReceive(tempQueue, temperatures, 100 / portTICK_PERIOD_MS)) {
+//         memcpy(tempArray, temperatures, n_tempSensors * sizeof(float));
+//         return ESP_OK;
+//     }
 
-    memcpy(tempArray, temperatures, n_tempSensors * sizeof(float));     // If no new temps in queue, copy most recent reading
-    return ESP_ERR_NOT_FOUND;
-}
+//     memcpy(tempArray, temperatures, n_tempSensors * sizeof(float));     // If no new temps in queue, copy most recent reading
+//     return ESP_ERR_NOT_FOUND;
+// }
 
-float get_flowRate(void)
-{
-    static float flowRate = 0;
-    float new_flowRate;
-    if (xQueueReceive(flowRateQueue, &new_flowRate, 50 / portTICK_PERIOD_MS)) {
-        flowRate = new_flowRate;
-    }
+// float get_flowRate(void)
+// {
+//     static float flowRate = 0;
+//     float new_flowRate;
+//     if (xQueueReceive(flowRateQueue, &new_flowRate, 50 / portTICK_PERIOD_MS)) {
+//         flowRate = new_flowRate;
+//     }
 
-    return flowRate;
-}
+//     return flowRate;
+// }
 
-// Public access to control element states
-ctrlParams_t get_controller_params(void)
-{
-    return controllerParams;
-}
+// // Public access to control element states
+// ctrlParams_t get_controller_params(void)
+// {
+//     return controllerParams;
+// }
 
-ctrlSettings_t getControllerSettings(void)
-{
-    return controllerSettings;
-}
+// ctrlSettings_t getControllerSettings(void)
+// {
+//     return controllerSettings;
+// }
 
-float getBoilerConcentration(float boilerTemp)
-{
-    float conc = -1;
+// float getBoilerConcentration(float boilerTemp)
+// {
+//     float conc = -1;
 
-    // Simple criteria for detecting if liquid is boiling or not. Valid for mashes up to ~15% (Confirm with experimental data)
-    if (boilerTemp >= 90) {
-        conc = Thermo::computeLiquidEthConcentration(boilerTemp) * 100;
-    }
+//     // Simple criteria for detecting if liquid is boiling or not. Valid for mashes up to ~15% (Confirm with experimental data)
+//     if (boilerTemp >= 90) {
+//         conc = Thermo::computeLiquidEthConcentration(boilerTemp) * 100;
+//     }
 
-    return conc;
-}
+//     return conc;
+// }
 
-float getVapourConcentration(float vapourTemp)
-{
-    float conc = -1;
+// float getVapourConcentration(float vapourTemp)
+// {
+//     float conc = -1;
 
-    // Valid range for estimator model
-    if (vapourTemp >= 77) {
-        conc = Thermo::computeVapourEthConcentration(vapourTemp) * 100;
-    }
+//     // Valid range for estimator model
+//     if (vapourTemp >= 77) {
+//         conc = Thermo::computeVapourEthConcentration(vapourTemp) * 100;
+//     }
 
-    return conc;
-}
+//     return conc;
+// }
 
-#ifdef __cplusplus
-}
-#endif
+// #ifdef __cplusplus
+// }
+// #endif
 
 
