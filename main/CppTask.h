@@ -8,6 +8,9 @@
 #include "messageServer.h"
 #include "functional"
 
+using queueCallback = std::function<PBRet(const std::shared_ptr<MessageBase>&)>;
+using CBTable = std::map<MessageType, queueCallback>;
+
 class Task
 {
     static constexpr const char* Name = "Task";
@@ -39,7 +42,7 @@ class Task
         // Task callback table. When messages arrive in the general purpose
         // queue, this table maps the message type to a callback function
         // to process it
-        std::map<MessageType, std::function<PBRet(MessageBase*)>> _cbTable {};
+        CBTable _cbTable {};
 
         // Configuration data
         xTaskHandle _taskHandle {};

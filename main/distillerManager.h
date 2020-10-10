@@ -43,7 +43,7 @@ class DistillerManager : public Task
         PBRet _setupCBTable(void) override;
 
         // Queue callbacks
-        PBRet _generalMessagCB(GeneralMessage* msg);
+        PBRet _generalMessagCB(std::shared_ptr<MessageBase> msg);
 
         // Pointer to singleton object
         static DistillerManager* _managerPtr;

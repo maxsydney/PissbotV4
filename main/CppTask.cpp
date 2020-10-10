@@ -29,19 +29,15 @@ PBRet Task::_processQueue(void)
 {
     for (size_t i = 0; i < _GPQueue.size(); i++) {
         const std::shared_ptr<MessageBase> msg = _GPQueue.front();
+        _GPQueue.pop();
         MessageType type = msg->getType();
-        if (type == MessageType::General) {
-            std::shared_ptr<GeneralMessage> genMsg =  std::static_pointer_cast<GeneralMessage>(msg);
-            ESP_LOGI(Task::Name, "Received message: %s", genMsg->getMessage().c_str());
-            _GPQueue.pop();
+\
+        CBTable::iterator it = _cbTable.find(type);
+        if (it != _cbTable.end()) {
+            it->second(msg);
+        } else {
+            ESP_LOGW(Task::Name, "No callback defined for message type: %s", msg->getName().c_str());
         }
-            // std::map<MessageType, std::function<PBRet(MessageBase*)>>::iterator it;
-            // if ((it = _cbTable.find(type)) != _cbTable.end()) {
-            //     it->second(msg);
-            // } else {
-            //     ESP_LOGW(Task::Name, "No callback defined for message type: %s", msg->getName().c_str());
-            // }
-        // }
     }
     return PBRet::SUCCESS;
 }

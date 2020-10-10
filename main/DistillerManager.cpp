@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <functional>
 #include "DistillerManager.h"
 #include "messageServer.h"
 #include "MessageDefs.h"
@@ -54,20 +54,20 @@ void DistillerManager::taskMain(void)
     }
 }
 
-PBRet DistillerManager::_generalMessagCB(GeneralMessage* msg)
+PBRet DistillerManager::_generalMessagCB(std::shared_ptr<MessageBase> msg)
 {
+    std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
     ESP_LOGI(DistillerManager::Name, "Entered GeneralMessage cb in DistillerManager");
+    ESP_LOGI(DistillerManager::Name, "Message was: %s", genMsg->getMessage().c_str());  
 
     return PBRet::SUCCESS;
 }
 
 PBRet DistillerManager::_setupCBTable(void)
 {
-    // _cbTable.insert(std::pair<MessageType, std::function<PBRet(MessageBase*)>>(
-    //     MessageType::General, 
-    //     std::bind(&DistillerManager::_generalMessagCB, this, std::placeholders::_1)
-    //     ));
+    _cbTable = std::map<MessageType, queueCallback> {
+        {MessageType::General, std::bind(&DistillerManager::_generalMessagCB, this, std::placeholders::_1)}
+    };
 
-    // // TODO: Indicate success of table insertion
     return PBRet::SUCCESS;
 }
