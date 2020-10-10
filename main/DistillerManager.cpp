@@ -25,33 +25,16 @@ DistillerManager* DistillerManager::getInstance(void)
 }
 
 DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const DistillerConfig& cfg)
-    : Task(DistillerManager::Name, priority, stackDepth, coreID, NULL)
+    : Task(DistillerManager::Name, priority, stackDepth, coreID)
 {
-    printf("In constructor\n");
-
-    // Setup general purpose queue
-    _setupGPQueue(DistillerManager::QueueLen);
-
     // Setup callback table
     _setupCBTable();
 
     // Check params
 
     // Init from params
-}
 
-PBRet DistillerManager::_setupGPQueue(BaseType_t queueDepth)
-{
-    _GPQueue = xQueueCreate(queueDepth, sizeof(MessageBase*));
-
-    if (_GPQueue == NULL) {
-        ESP_LOGW(DistillerManager::Name, "Unable to create general purpose queue for DistillerManager");
-        // Set some flags to indicate system state
-        return PBRet::FAILURE;
-    }
-
-    ESP_LOGI(DistillerManager::Name, "General purpose queue for DistillerManager successfully created!");
-    return PBRet::SUCCESS;
+    ESP_LOGI(DistillerManager::Name, "Distiller Manager initialized successfully");
 }
 
 void DistillerManager::taskMain(void)
@@ -60,24 +43,13 @@ void DistillerManager::taskMain(void)
     Subscriber sub(DistillerManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
 
-    // Send a test message to the queue
-    GeneralMessage* msg = new GeneralMessage("This is a test");
+    // // Send a test message to the queue
+    std::shared_ptr<GeneralMessage> msg = std::make_shared<GeneralMessage> ("This is a test");
     MessageServer::broadcastMessage(msg);
 
-    // TODO: Change this task to wake when messages are in the queue
-    
     while(1) {
-        // Check if a message is in the queue
-
         _processQueue();
-        // UBaseType_t n_messages = uxQueueMessagesWaiting(_GPQueue);
-        // if (n_messages > 0) {
-        //     // Assume message is general, for now
-        //     GeneralMessage* msg;
-        //     if (xQueueReceive(_GPQueue, &msg, 10 / portTICK_RATE_MS) == pdTRUE) {
-        //         ESP_LOGI(DistillerManager::Name, "Got message: %s", msg->getMessage().c_str());
-        //     }
-        // }
+
         vTaskDelay(100 / portTICK_RATE_MS);
     }
 }
@@ -91,11 +63,11 @@ PBRet DistillerManager::_generalMessagCB(GeneralMessage* msg)
 
 PBRet DistillerManager::_setupCBTable(void)
 {
-    _cbTable.insert(std::pair<MessageType, std::function<PBRet(MessageBase*)>>(
-        MessageType::General, 
-        this->_generalMessagCB
-    ));
+    // _cbTable.insert(std::pair<MessageType, std::function<PBRet(MessageBase*)>>(
+    //     MessageType::General, 
+    //     std::bind(&DistillerManager::_generalMessagCB, this, std::placeholders::_1)
+    //     ));
 
-    // TODO: Indicate success of table insertion
+    // // TODO: Indicate success of table insertion
     return PBRet::SUCCESS;
 }

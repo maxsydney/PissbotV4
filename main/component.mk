@@ -9,3 +9,5 @@
 
 # If not unit test build, include main
 # $(call compile_only_if,$(CONFIG_IS_UNIT_TEST),controlLoop.o)
+
+CXXFLAGS += -std=c++14

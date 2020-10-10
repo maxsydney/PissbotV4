@@ -4,7 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <map>
-#include <stdio.h>
+#include <queue>
 #include "messageServer.h"
 #include "functional"
 
@@ -14,7 +14,9 @@ class Task
     
     public:
         // Constructors
-        Task(const char* taskName, UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, xQueueHandle GPQueue)
+        Task(const char* taskName, UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID)
+            : _name(taskName), _priority(priority), _stackDepth(stackDepth), _coreID(coreID) {}
+        Task(const char* taskName, UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, std::queue<std::shared_ptr<MessageBase>>& GPQueue)
             : _name(taskName), _priority(priority), _stackDepth(stackDepth), _coreID(coreID), _GPQueue(GPQueue) {}
         virtual ~Task(void) = default;
 
@@ -29,7 +31,6 @@ class Task
     protected:
     
         // Interface methods
-        virtual PBRet _setupGPQueue(BaseType_t queueDepth) = 0;
         virtual PBRet _setupCBTable(void) = 0;
 
         // Queue handling
@@ -46,7 +47,9 @@ class Task
         UBaseType_t _priority {};
         UBaseType_t _stackDepth {};
         BaseType_t _coreID {};
-        xQueueHandle _GPQueue = NULL;
+
+        // Use c++ queues instead of FreeRTOS queues
+        std::queue<std::shared_ptr<MessageBase>> _GPQueue {};
 
     private:
         static void runTask(void* taskPtr);

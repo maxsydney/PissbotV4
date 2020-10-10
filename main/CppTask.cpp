@@ -27,18 +27,21 @@ void Task::runTask(void* taskPtr)
 
 PBRet Task::_processQueue(void)
 {
-    for (int i = 0; i < uxQueueMessagesWaiting(_GPQueue); i++) {
-        MessageBase* msg = nullptr;
-        if (xQueueReceive(_GPQueue, &msg, 50 / portTICK_RATE_MS) == pdTRUE) {
-            MessageType type = msg->getType();
-            std::map<MessageType, std::function<PBRet(MessageBase*)>>::iterator it;
-            if ((it = _cbTable.find(type)) != _cbTable.end()) {
-                it->second(msg);
-            } else {
-                ESP_LOGW(Task::Name, "No callback defined for message type: %s", msg->getName().c_str());
-            }
+    for (size_t i = 0; i < _GPQueue.size(); i++) {
+        const std::shared_ptr<MessageBase> msg = _GPQueue.front();
+        MessageType type = msg->getType();
+        if (type == MessageType::General) {
+            std::shared_ptr<GeneralMessage> genMsg =  std::static_pointer_cast<GeneralMessage>(msg);
+            ESP_LOGI(Task::Name, "Received message: %s", genMsg->getMessage().c_str());
+            _GPQueue.pop();
         }
+            // std::map<MessageType, std::function<PBRet(MessageBase*)>>::iterator it;
+            // if ((it = _cbTable.find(type)) != _cbTable.end()) {
+            //     it->second(msg);
+            // } else {
+            //     ESP_LOGW(Task::Name, "No callback defined for message type: %s", msg->getName().c_str());
+            // }
+        // }
     }
-
     return PBRet::SUCCESS;
 }

@@ -14,12 +14,9 @@ PBRet MessageServer::registerTask(const Subscriber& subscriber)
     return PBRet::SUCCESS;
 }
 
-PBRet MessageServer::broadcastMessage(const MessageBase* message)
+PBRet MessageServer::broadcastMessage(const std::shared_ptr<MessageBase>& message)
 {
     // Broadcast message to the general purpose queue of any subscribing tasks
-    if (message == nullptr) {
-        ESP_LOGW(MessageServer::Name, "Message pointer was null");
-    }
 
     MessageType msgType = message->getType();
 
@@ -31,10 +28,7 @@ PBRet MessageServer::broadcastMessage(const MessageBase* message)
     for (const Subscriber& subscriber: _subscribers) {
         if (subscriber.isSubscribed(msgType)) {
             // TODO: Ensure this is deleted.
-            BaseType_t ret = xQueueSend(subscriber.getQueueHandle(), &message, 100 / portTICK_PERIOD_MS);
-            if (ret != pdTRUE) {
-                ESP_LOGW(MessageServer::Name, "Unable to add message to %s queue", subscriber.getName());
-            }
+            subscriber.getQueueHandle().push(message);
         }
     }
 

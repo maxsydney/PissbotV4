@@ -19,7 +19,6 @@ class DistillerConfig
 class DistillerManager : public Task
 {
     static constexpr char* Name = "Distiller Manager";
-    static constexpr BaseType_t QueueLen = 30;
 
     public:
         // Delete copy and assignment constructors
@@ -41,7 +40,6 @@ class DistillerManager : public Task
         DistillerManager(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const DistillerConfig& cfg);
 
         // Setup methods
-        PBRet _setupGPQueue(BaseType_t queueDepth) override;
         PBRet _setupCBTable(void) override;
 
         // Queue callbacks
