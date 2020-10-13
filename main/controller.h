@@ -3,9 +3,12 @@
 
 #include "PBCommon.h"
 #include "CppTask.h"
-#include "MessageDefs.h"
+#include "messageServer.h"
+#include "SensorManager.h"
 #include "pump.h"
 #include "messages.h"
+
+enum class ControllerState { OFF, ON };
 
 struct ControllerConfig
 {
@@ -16,6 +19,27 @@ struct ControllerConfig
     gpio_num_t fanPin = GPIO_NUM_NC;
     gpio_num_t element1Pin = GPIO_NUM_NC;
     gpio_num_t element2Pin = GPIO_NUM_NC;
+};
+
+class ControlCommand : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::ControlCommand;
+    static constexpr const char* Name = "Controller command";
+
+    public:
+        ControlCommand(void) = default;
+        ControlCommand(ControllerState fanState, ControllerState LPElementState, ControllerState HPElementState)
+            : MessageBase(ControlCommand::messageType, ControlCommand::Name),
+              _fanState(fanState), _LPElementState(LPElementState), _HPElementState(HPElementState) {}
+
+        ControllerState getFanState(void) const { return _fanState; }
+        ControllerState getLPElementState(void) const { return _LPElementState; }
+        ControllerState getHPElementState(void) const { return _HPElementState; }
+
+    private:
+        ControllerState _fanState = ControllerState::OFF;
+        ControllerState _LPElementState = ControllerState::OFF;
+        ControllerState _HPElementState = ControllerState::OFF;
 };
 
 class Controller: public Task
@@ -33,11 +57,14 @@ class Controller: public Task
         bool isConfigured(void) const { return _configured; }
 
     private:
-        PBRet _doControl(double temp);
+        // Initialization
         PBRet _initIO(const ControllerConfig& cfg) const;
-        PBRet _handleProductPump(double temp);
         PBRet _initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg);
-        PBRet _updateSettings(ctrlSettings_t ctrlSettings);
+
+        // Updates
+        PBRet _doControl(double temp);
+        PBRet _updateAuxOutputs(const ControlCommand& cmd);
+        PBRet _handleProductPump(double temp);
 
         // Setup methods
         PBRet _initFromParams(const ControllerConfig& cfg);
@@ -53,9 +80,12 @@ class Controller: public Task
         PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
         PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
 
+        // Controller data
         ControllerConfig _cfg {};
         ctrlParams_t _ctrlParams {};
-        ctrlSettings_t _ctrlSettings {};
+        ControlCommand _outputState {};
+        TemperatureData _currentTemp {};
+
         Pump _refluxPump {};
         Pump _prodPump {};
         bool _configured = false;

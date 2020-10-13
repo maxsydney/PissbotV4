@@ -4,6 +4,7 @@
 
 #include "controller.h"
 #include "controlLoop.h"
+#include "MessageDefs.h"        // Phase this out. Bad design
 #include "gpio.h"
 
 Controller::Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const ControllerConfig& cfg)
@@ -34,12 +35,27 @@ void Controller::taskMain(void)
     Subscriber sub(Controller::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
 
+    // Set update frequency
+    TickType_t timestep =  _cfg.dt * 1000 / portTICK_PERIOD_MS;      // TODO: Define method for converting time
     portTickType xLastWakeTime = xTaskGetTickCount();
+
     while (true) {
+        // Retrieve data from the queue
         _processQueue();
 
-        // vTaskDelayUntil(&xLastWakeTime, _cfg.dt / portTICK_PERIOD_MS);
-        vTaskDelay(130 / portTICK_RATE_MS);
+        // Check temperature data
+
+        // Check status of connected components
+
+        // Update control
+        if (_doControl(0) != PBRet::SUCCESS) {
+            ESP_LOGW(Controller::Name, "Controller update failed");
+            // Send warning message to distiller controller
+        }
+
+        // Command pumps
+
+        vTaskDelayUntil(&xLastWakeTime, timestep);
     }
 }
 
@@ -53,6 +69,7 @@ PBRet Controller::_generalMessageCB(std::shared_ptr<MessageBase> msg)
 PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<TemperatureData> TData = std::static_pointer_cast<TemperatureData>(msg);
+
     ESP_LOGI(Controller::Name, "Received temperature message:\nHead: %.3lf\nReflux condensor: %.3f\nProduct condensor: %.3lf\n"
                                "Radiator: %.3f\nBoiler: %.3lf\nUptime: %ld", TData->getHeadTemp(), TData->getRefluxCondensorTemp(),
                                 TData->getProdCondensorTemp(), TData->getRadiatorTemp(), TData->getBoilerTemp(), (long int) TData->getTimeStamp());
@@ -62,16 +79,26 @@ PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
 
 PBRet Controller::_controlCommandCB(std::shared_ptr<MessageBase> msg)
 {
+    std::shared_ptr<ControlCommand> cmd = std::static_pointer_cast<ControlCommand>(msg);
+    _outputState = ControlCommand(*cmd);
+
+    if (_updateAuxOutputs(_outputState) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary componenst did not update successfully");
+        return PBRet::FAILURE;
+    }
+
     return PBRet::SUCCESS;
 }
 
 PBRet Controller::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
 {
+    // TODO: Implement
     return PBRet::SUCCESS;
 }
 
 PBRet Controller::_controlTuningCB(std::shared_ptr<MessageBase> msg)
 {
+    // TODO: Implement
     return PBRet::SUCCESS;
 }
 
@@ -90,26 +117,35 @@ PBRet Controller::_setupCBTable(void)
 
 PBRet Controller::_initIO(const ControllerConfig& cfg) const
 {
+    esp_err_t err = ESP_OK;
+
     // Initialize fan pin
     gpio_pad_select_gpio(cfg.fanPin);
-    gpio_set_direction(cfg.fanPin, GPIO_MODE_OUTPUT);
-    gpio_set_level(cfg.fanPin, 0);    
+    err |= gpio_set_direction(cfg.fanPin, GPIO_MODE_OUTPUT);
+    err |= gpio_set_level(cfg.fanPin, 0);    
     
     // Initialize 2.4kW element control pin
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[cfg.element1Pin], PIN_FUNC_GPIO);        // Element 1 pin is set to JTAG by default. Reassign to GPIO
-    gpio_set_direction(cfg.element1Pin, GPIO_MODE_OUTPUT);
-    gpio_set_level(cfg.element1Pin, 0);  
+    err |= gpio_set_direction(cfg.element1Pin, GPIO_MODE_OUTPUT);
+    err |= gpio_set_level(cfg.element1Pin, 0);  
 
     // Initialize 3kW element control pin
     gpio_pad_select_gpio(cfg.element2Pin);
-    gpio_set_direction(cfg.element2Pin, GPIO_MODE_OUTPUT);
-    gpio_set_level(cfg.element2Pin, 0); 
+    err |= gpio_set_direction(cfg.element2Pin, GPIO_MODE_OUTPUT);
+    err |= gpio_set_level(cfg.element2Pin, 0); 
+
+    if (err != ESP_OK) {
+        ESP_LOGW(Controller::Name, "Failed to configure one or more IO");
+        return PBRet::FAILURE;
+    }
 
     return PBRet::SUCCESS;
 }
 
 PBRet Controller::_initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg)
 {
+    // Initialize both pumps to active control idle
+
     _refluxPump = Pump(refluxPumpCfg);
     _prodPump = Pump(prodPumpCfg);
     _refluxPump.setMode(PumpMode::ACTIVE);
@@ -117,12 +153,25 @@ PBRet Controller::_initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPu
     _refluxPump.setSpeed(Pump::PUMP_MIN_OUTPUT);
     _prodPump.setSpeed(Pump::PUMP_MIN_OUTPUT);
 
+    if (_refluxPump.isConfigured() == false) {
+        ESP_LOGW(Controller::Name, "Unable to configure reflux pump driver");
+        return PBRet::FAILURE;
+    }
+
+    if (_prodPump.isConfigured() == false) {
+        ESP_LOGW(Controller::Name, "Unable to configure product pump driver");
+        return PBRet::FAILURE;
+    }
+
     return PBRet::SUCCESS;
 }
 
-PBRet Controller::_doControl(double temp)
+PBRet Controller::_doControl(double headTemp)
 {
-    double err = temp - _ctrlParams.setpoint;
+    // Implements a basic PID controller with anti-integral windup
+    // and filtering on derivative
+
+    double err = headTemp - _ctrlParams.setpoint;
 
     // Proportional term
     double proportional = _ctrlParams.P_gain * err;
@@ -156,7 +205,7 @@ PBRet Controller::_doControl(double temp)
     // Derivative term (discretized via backwards temperature differentiation)
     // TODO: Filtering on D term? Quite tricky due to low temp sensor sample rate
     const double alpha = 0.15;      // TODO: Improve hacky dterm filter
-    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlParams.D_gain * (temp - _prevTemp) / _cfg.dt);
+    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlParams.D_gain * (headTemp - _prevTemp) / _cfg.dt);
 
     // Compute limited output
     double output = proportional + _integral + _derivative;
@@ -167,12 +216,9 @@ PBRet Controller::_doControl(double temp)
         output = Pump::PUMP_MIN_OUTPUT;
     }
 
-    // Debugging only, spams the network
-    // printf("Temp: %.3f - Err: %.3f - P term: %.3f - I term: %.3f - D term: %.3f - Total output: %.3f\n", temp, err, proportional, _integral, _derivative, output);
-
     _prevError = err;
-    _prevTemp = temp;
-    _handleProductPump(temp);
+    _prevTemp = headTemp;
+    _handleProductPump(headTemp);
     _refluxPump.setSpeed(output);
     _refluxPump.commandPump();
     _prodPump.commandPump();
@@ -180,6 +226,7 @@ PBRet Controller::_doControl(double temp)
     return PBRet::SUCCESS;
 }
 
+// TODO: Improve this implementation
 PBRet Controller::_handleProductPump(double temp)
 {
     if (temp > 60) {
@@ -191,43 +238,18 @@ PBRet Controller::_handleProductPump(double temp)
     return PBRet::SUCCESS;
 }
 
-void Controller::updateComponents()
+PBRet Controller::_updateAuxOutputs(const ControlCommand& cmd)
 {
-    setPin(_cfg.fanPin, _ctrlSettings.fanState);
-    setPin(_cfg.element1Pin, _ctrlSettings.elementLow);
-    setPin(_cfg.element2Pin, _ctrlSettings.elementHigh);
-}
+    esp_err_t err = ESP_OK;
 
-PBRet Controller::_updateSettings(ctrlSettings_t ctrlSettings)
-{
-    _ctrlSettings = ctrlSettings;
-    
-    if (ctrlSettings.flush == true) {
-        ESP_LOGI(Controller::Name, "Setting both pumps to flush");
-        _refluxPump.setSpeed(Pump::FLUSH_SPEED);
-        _prodPump.setSpeed(Pump::FLUSH_SPEED);
-        _refluxPump.setMode(PumpMode::FIXED);
-        _prodPump.setMode(PumpMode::FIXED);
-    } else {
-        ESP_LOGI(Controller::Name, "Setting both pumps to active");
-        _refluxPump.setMode(PumpMode::ACTIVE);
-        _prodPump.setMode(PumpMode::ACTIVE);
+    err |= gpio_set_level(_cfg.fanPin, uint32_t(cmd.getFanState()));
+    err |= gpio_set_level(_cfg.element1Pin, uint32_t(cmd.getLPElementState()));
+    err |= gpio_set_level(_cfg.element2Pin, uint32_t(cmd.getHPElementState()));
+
+    if (err != ESP_OK) {
+        ESP_LOGW(Controller::Name, "One or more of the auxilliary states were not updated");
+        return PBRet::FAILURE;
     }
-
-    if (ctrlSettings.prodCondensor == true) {
-        ESP_LOGI(Controller::Name, "Setting prod pump to flush");
-        _prodPump.setSpeed(Pump::FLUSH_SPEED);
-        _prodPump.setMode(PumpMode::FIXED);
-    } else if (_ctrlSettings.flush == false) {
-        ESP_LOGI(Controller::Name, "Setting prod pump to active");
-        _prodPump.setMode(PumpMode::ACTIVE);
-    }
-
-    ESP_LOGI(Controller::Name, "Settings updated");
-    ESP_LOGI(Controller::Name, "Fan: %d | 2.4kW Element: %d | 3kW Element: %d | Flush: %d | Product Condensor: %d", ctrlSettings.fanState,
-             ctrlSettings.elementLow, ctrlSettings.elementHigh, ctrlSettings.flush, ctrlSettings.prodCondensor); 
-
-    updateComponents();
 
     return PBRet::SUCCESS;
 }
