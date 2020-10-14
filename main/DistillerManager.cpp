@@ -53,7 +53,7 @@ void DistillerManager::taskMain(void)
         _processQueue();
 
         // Simulate some sensor data for controller
-        std::shared_ptr<TemperatureData> TData = std::make_shared<TemperatureData> (20.0, 30.0, 18.0, 56.0, 23.0, esp_timer_get_time());
+        std::shared_ptr<TemperatureData> TData = std::make_shared<TemperatureData> (20.0, 30.0, 18.0, 56.0, 23.0);
         MessageServer::broadcastMessage(TData);
 
         vTaskDelay(100 / portTICK_RATE_MS);
@@ -85,7 +85,7 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
     }
 
     // Initialize Controller
-    _controller = new Controller(7, 8192, 1, cfg.ctrlConfig);
+    _controller = std::make_unique<Controller> (7, 8192, 1, cfg.ctrlConfig);
     if (_controller->isConfigured()) {
         _controller->begin();
     } else {
@@ -93,6 +93,12 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
     }
 
     // Initialize SensorManager
+    _sensorManager = std::make_unique<SensorManager> (7, 8192, 1, cfg.sensorManagerConfig);
+    if (_sensorManager->isConfigured()) {
+        _sensorManager->begin();
+    } else {
+        ESP_LOGW(DistillerManager::Name, "Unable to start sensor manager");
+    }
 
     return PBRet::SUCCESS;
 }

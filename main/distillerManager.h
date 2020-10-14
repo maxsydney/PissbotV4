@@ -4,19 +4,21 @@
 #include "PBCommon.h"
 #include "CppTask.h"
 #include "controller.h"
+#include "SensorManager.h"
 #include "MessageDefs.h"
-
-class DistillerConfig
-{
-    public:
-        ControllerConfig ctrlConfig {};
-};
 
 // Main system manager class. This class is a singleton and can be accessed
 // using the DistillerManager::getInstance() method. The DistillerManager is
 // responsible for initializing the system, and managing high level communication
 // between tasks
-//
+
+class DistillerConfig
+{
+    public:
+        ControllerConfig ctrlConfig {};
+        SensorManagerConfig sensorManagerConfig {};
+};
+
 // TODO: With robust inter-task communication, tasks shouldn't need to get a pointer
 //       the DistillerManager. Consider making a regular class instead of a singleton
 class DistillerManager : public Task
@@ -58,7 +60,8 @@ class DistillerManager : public Task
         // Class data
         bool _configured = false;
         DistillerConfig _cfg {};
-        Controller* _controller {};
+        std::unique_ptr<Controller> _controller;
+        std::unique_ptr<SensorManager> _sensorManager;
 };
 
 #endif // MAIN_DISTILLERMANAGER_H
