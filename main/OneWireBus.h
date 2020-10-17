@@ -28,6 +28,7 @@ class PBOneWire
     private:
 
         PBRet _initOWB(gpio_num_t OWPin);
+        PBRet _mountFS(void) const;
 
         OneWireBus* _owb = nullptr;
         owb_rmt_driver_info _rmt_driver_info {};

@@ -1,7 +1,9 @@
-#name,    Type,    Subtype,    Offset,    Size
-nvs,      data, nvs,     0x9000,  0x2000
-otadata,  data, ota,     0xd000,  0x2000
-phy_init, data, phy,     0xf000,  0x1000
-factory,0,0,       0x10000, 0x1EA000
-ota_0,0,    ota_0,          , 0x1EA000
-ota_1,0,    ota_1,          , 0x1EA000
+# Name,   Type,  Subtype,  Offset,   Size
+nvs,      data,  nvs,      0x9000,   0x2000,
+otadata,  data,  ota,      0xd000,   0x2000,
+phy_init, data,  phy,      0xf000,   0x1000,
+factory,  app,   factory,  0x10000,  0x1EA000,
+PBData,   data,  spiffs,   ,         0x4000,
+config,   data,  spiffs,   ,         0x2000,
+ota_0,    app,   ota_0,    ,         0x1EA000,
+ota_1,    app,   ota_1,    ,         0x1EA000,
