@@ -14,6 +14,9 @@
 class PBOneWire
 {
     static constexpr const char* Name = "PBOneWire";
+    static constexpr const char* FSBasePath = "/spiffs";
+    static constexpr const char* FSPartitionLabel = "PBData";
+    static constexpr const char* deviceFile = "/spiffs/devices.json";
 
     public:
         // Constructors
@@ -28,7 +31,7 @@ class PBOneWire
     private:
 
         PBRet _initOWB(gpio_num_t OWPin);
-        PBRet _mountFS(void) const;
+        PBRet _loadKnownDevices(const char* basePath, const char* partitionLabel);
 
         OneWireBus* _owb = nullptr;
         owb_rmt_driver_info _rmt_driver_info {};

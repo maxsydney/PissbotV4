@@ -9,21 +9,10 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-#include "nvs_flash.h"
-#include "networking.h"
 #include "main.h"
-#include "gpio.h"
-#include "pump.h"
-#include "sensors.h"
-#include "messages.h"
 #include "sdkconfig.h"
-#include "controlLoop.h"
 #include "pinDefs.h"
-#include "HD44780.h"
-#include "LCD.h"
 #include "webServer.h"
-#include "input.h"
-#include "menu.h"
 #include "DistillerManager.h"
 
 static const char* tag = "Main";

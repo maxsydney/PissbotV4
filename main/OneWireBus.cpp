@@ -1,5 +1,6 @@
 #include "OneWireBus.h"
 #include "esp_spiffs.h"
+#include "Filesystem.h"
 
 // Temporary filsystem testing
 #include <stdio.h>
@@ -9,11 +10,6 @@
 
 PBOneWire::PBOneWire(gpio_num_t OWBPin)
 {
-    // Mount PBData filesystem
-    if (_mountFS() != PBRet::SUCCESS) {
-        ESP_LOGW(PBOneWire::Name, "File system was not mounted");
-    }
-
     // Check input parameters
     if (checkInputs(OWBPin) != PBRet::SUCCESS) {
         ESP_LOGE(PBOneWire::Name, "Failed to configure OneWire bus");
@@ -26,10 +22,15 @@ PBOneWire::PBOneWire(gpio_num_t OWBPin)
         _configured = false;
     }
 
+    // Find available devices on bus
     scanForDevices();
-
     if (_connectedDevices <= 0) {
         ESP_LOGW(PBOneWire::Name, "No devices were found on OneWire bus");
+    }
+
+    // Load saved devices
+    if (_loadKnownDevices(PBOneWire::FSBasePath, PBOneWire::FSPartitionLabel) != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "No saved devices were found");
     }
 
     ESP_LOGI(PBOneWire::Name, "Onewire bus configured on pin %d", OWBPin);
@@ -66,89 +67,27 @@ PBRet PBOneWire::_initOWB(gpio_num_t OWPin)
     return PBRet::SUCCESS;
 }
 
-PBRet PBOneWire::_mountFS(void) const
+PBRet PBOneWire::_loadKnownDevices(const char* basePath, const char* partitionLabel)
 {
-    // Mount a spiffs file system in the PBData partition for
-    // reading and storing known sensor data
+    // Nullptr check
+    if ((basePath == nullptr) || (partitionLabel == nullptr)) {
+        ESP_LOGW(PBOneWire::Name, "Cannot load known devices. One or more input pointers were null");
+        return PBRet::FAILURE;
+    }
 
-    ESP_LOGI(PBOneWire::Name, "Initializing SPIFFS");
-    
-    esp_vfs_spiffs_conf_t conf = {
-      .base_path = "/spiffs",
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = true
-    };
-    
-    // Use settings defined above to initialize and mount SPIFFS filesystem.
-    // Note: esp_vfs_spiffs_register is an all-in-one convenience function.
-    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+    // Mount filesystem
+    Filesystem F(PBOneWire::FSBasePath, PBOneWire::FSPartitionLabel, 5, true);
 
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE(PBOneWire::Name, "Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            ESP_LOGE(PBOneWire::Name, "Failed to find SPIFFS partition");
+    if (F.isOpen()) {
+        // Check if devices file exists
+        struct stat st;
+        if (stat(PBOneWire::deviceFile, &st) == 0) {
+            // TODO: Read saved devices file
         } else {
-            ESP_LOGE(PBOneWire::Name, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+            ESP_LOGW(PBOneWire::Name, "No devices file was found");
+            return PBRet::FAILURE;
         }
-        return PBRet::FAILURE;
     }
-    
-    size_t total = 0, used = 0;
-    ret = esp_spiffs_info(conf.partition_label, &total, &used);
-    if (ret != ESP_OK) {
-        ESP_LOGE(PBOneWire::Name, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
-    } else {
-        ESP_LOGI(PBOneWire::Name, "Partition size: total: %d, used: %d", total, used);
-    }
-
-    // Use POSIX and C standard library functions to work with files.
-    // First create a file.
-    ESP_LOGI(PBOneWire::Name, "Opening file");
-    FILE* f = fopen("/spiffs/hello.txt", "w");
-    if (f == NULL) {
-        ESP_LOGE(PBOneWire::Name, "Failed to open file for writing");
-        return PBRet::FAILURE;
-    }
-    fprintf(f, "Hello World!\n");
-    fclose(f);
-    ESP_LOGI(PBOneWire::Name, "File written");
-
-    // Check if destination file exists before renaming
-    struct stat st;
-    if (stat("/spiffs/foo.txt", &st) == 0) {
-        // Delete it if it exists
-        unlink("/spiffs/foo.txt");
-    }
-
-    // Rename original file
-    ESP_LOGI(PBOneWire::Name, "Renaming file");
-    if (rename("/spiffs/hello.txt", "/spiffs/foo.txt") != 0) {
-        ESP_LOGE(PBOneWire::Name, "Rename failed");
-        return PBRet::FAILURE;
-    }
-
-    // Open renamed file for reading
-    ESP_LOGI(PBOneWire::Name, "Reading file");
-    f = fopen("/spiffs/foo.txt", "r");
-    if (f == NULL) {
-        ESP_LOGE(PBOneWire::Name, "Failed to open file for reading");
-        return PBRet::FAILURE;
-    }
-    char line[64];
-    fgets(line, sizeof(line), f);
-    fclose(f);
-    // strip newline
-    char* pos = strchr(line, '\n');
-    if (pos) {
-        *pos = '\0';
-    }
-    ESP_LOGI(PBOneWire::Name, "Read from file: '%s'", line);
-
-    // All done, unmount partition and disable SPIFFS
-    esp_vfs_spiffs_unregister(conf.partition_label);
-    ESP_LOGI(PBOneWire::Name, "SPIFFS unmounted");
 
     return PBRet::SUCCESS;
 }
