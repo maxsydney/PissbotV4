@@ -33,6 +33,9 @@ PBOneWire::PBOneWire(gpio_num_t OWBPin)
         ESP_LOGW(PBOneWire::Name, "No saved devices were found");
     }
 
+    // Attempt to connect to sensor
+    connect();
+
     ESP_LOGI(PBOneWire::Name, "Onewire bus configured on pin %d", OWBPin);
     _configured = true;
 }
@@ -109,6 +112,21 @@ PBRet PBOneWire::scanForDevices(void)
         _availableRomCodes.push_back(search_state.rom_code);
         _connectedDevices++;
         owb_search_next(_owb, &search_state, &found);
+    }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet PBOneWire::connect(void)
+{
+    // Test function to connect sensor
+    if (_connectedDevices == 0) {
+        ESP_LOGW(PBOneWire::Name, "No available devices");
+        return PBRet::FAILURE;
+    }
+
+    for (const OneWireBus_ROMCode& romCode : _availableRomCodes) {
+        Ds18b20 p(romCode, DS18B20_RESOLUTION_11_BIT, _owb);
     }
 
     return PBRet::SUCCESS;

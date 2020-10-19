@@ -93,7 +93,7 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
     }
 
     // Initialize SensorManager
-    _sensorManager = std::make_unique<SensorManager> (7, 8192, 1, cfg.sensorManagerConfig);
+    _sensorManager = std::make_unique<SensorManager> (7, 8192, 0, cfg.sensorManagerConfig);
     if (_sensorManager->isConfigured()) {
         _sensorManager->begin();
     } else {

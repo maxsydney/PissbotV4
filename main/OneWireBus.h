@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "PBCommon.h"
+#include "PBds18b20.h"
 #include "owb.h"
 #include "owb_rmt.h"
 #include "ds18b20.h"
@@ -24,6 +25,7 @@ class PBOneWire
         explicit PBOneWire(gpio_num_t OWPin);
 
         PBRet scanForDevices(void);
+        PBRet connect(void);
 
         static PBRet checkInputs(gpio_num_t OWPin);
         bool isConfigured(void) const { return _configured; }
@@ -35,8 +37,9 @@ class PBOneWire
 
         OneWireBus* _owb = nullptr;
         owb_rmt_driver_info _rmt_driver_info {};
+
         size_t _connectedDevices = 0;
-        std::vector<OneWireBus_ROMCode> _availableRomCodes;
+        std::vector<OneWireBus_ROMCode> _availableRomCodes;     // TODO: Array of Ds18b20 objects
         std::vector<OneWireBus_ROMCode> _savedRomCodes;
 
         bool _configured = false;
