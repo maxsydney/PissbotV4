@@ -33,9 +33,6 @@ PBOneWire::PBOneWire(gpio_num_t OWBPin)
         ESP_LOGW(PBOneWire::Name, "No saved devices were found");
     }
 
-    // Attempt to connect to sensor
-    connect();
-
     ESP_LOGI(PBOneWire::Name, "Onewire bus configured on pin %d", OWBPin);
     _configured = true;
 }
