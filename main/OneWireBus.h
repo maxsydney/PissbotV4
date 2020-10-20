@@ -8,6 +8,7 @@
 #include "PBds18b20.h"
 #include "owb.h"
 #include "owb_rmt.h"
+#include "freertos/semphr.h"
 #include "ds18b20.h"
 
 class TemperatureData : public MessageBase
@@ -75,6 +76,7 @@ class PBOneWire
         PBRet _readTempSensors(const TemperatureData& Tdata);
         PBRet _oneWireConvert(void) const;
 
+        SemaphoreHandle_t _OWBMutex = NULL;
         OneWireBus* _owb = nullptr;
         owb_rmt_driver_info _rmt_driver_info {};
 

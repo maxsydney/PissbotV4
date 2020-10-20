@@ -52,10 +52,6 @@ void DistillerManager::taskMain(void)
     while(true) {
         _processQueue();
 
-        // Simulate some sensor data for controller
-        std::shared_ptr<TemperatureData> TData = std::make_shared<TemperatureData> (20.0, 30.0, 18.0, 56.0, 23.0);
-        MessageServer::broadcastMessage(TData);
-
         vTaskDelay(100 / portTICK_RATE_MS);
     }
 }

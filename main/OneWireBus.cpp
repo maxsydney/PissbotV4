@@ -22,6 +22,13 @@ PBOneWire::PBOneWire(gpio_num_t OWBPin)
         _configured = false;
     }
 
+    // Initialise bus semaphore
+    _OWBMutex = xSemaphoreCreateMutex();
+    if (_OWBMutex == NULL) {
+        ESP_LOGW(PBOneWire::Name, "Unable to create mutex");
+        _configured = false;
+    }
+
     // Find available devices on bus
     scanForDevices();
     if (_connectedDevices <= 0) {
@@ -31,6 +38,10 @@ PBOneWire::PBOneWire(gpio_num_t OWBPin)
     // Load saved devices
     if (_loadKnownDevices(PBOneWire::FSBasePath, PBOneWire::FSPartitionLabel) != PBRet::SUCCESS) {
         ESP_LOGW(PBOneWire::Name, "No saved devices were found");
+    }
+
+    if (initialiseTempSensors() != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
     }
 
     ESP_LOGI(PBOneWire::Name, "Onewire bus configured on pin %d", OWBPin);
@@ -99,16 +110,22 @@ PBRet PBOneWire::scanForDevices(void)
         return PBRet::FAILURE;
     }
 
-    OneWireBus_SearchState search_state {};
-    bool found = false;
-    _connectedDevices = 0;
-    _availableRomCodes.clear();
+    if (xSemaphoreTake(_OWBMutex, 250 / portTICK_PERIOD_MS) == pdTRUE) {
+        OneWireBus_SearchState search_state {};
+        bool found = false;
+        _connectedDevices = 0;
+        _availableRomCodes.clear();
 
-    owb_search_first(_owb, &search_state, &found);
-    while (found) {
-        _availableRomCodes.push_back(search_state.rom_code);
-        _connectedDevices++;
-        owb_search_next(_owb, &search_state, &found);
+        owb_search_first(_owb, &search_state, &found);
+        while (found) {
+            _availableRomCodes.push_back(search_state.rom_code);
+            _connectedDevices++;
+            owb_search_next(_owb, &search_state, &found);
+        }
+        xSemaphoreGive(_OWBMutex);
+    } else {
+        ESP_LOGW(PBOneWire::Name, "(scanForDevices) Unable to access PBOneWire shared resource");
+        return PBRet::FAILURE;
     }
 
     return PBRet::SUCCESS;
@@ -122,10 +139,18 @@ PBRet PBOneWire::connect(void)
         return PBRet::FAILURE;
     }
 
-    for (const OneWireBus_ROMCode& romCode : _availableRomCodes) {
-        Ds18b20 p(romCode, DS18B20_RESOLUTION_11_BIT, _owb);
+    // Give initial connection a fair chance to connect. We don't want
+    // this to fail
+    if (xSemaphoreTake(_OWBMutex, 250 / portTICK_PERIOD_MS) == pdTRUE) {
+        for (const OneWireBus_ROMCode& romCode : _availableRomCodes) {
+            Ds18b20 p(romCode, DS18B20_RESOLUTION_11_BIT, _owb);
+        }
+        xSemaphoreGive(_OWBMutex);
+    } else {
+        ESP_LOGW(PBOneWire::Name, "Unable to access PBOneWire shared resource");
+        return PBRet::FAILURE;
     }
-
+    
     return PBRet::SUCCESS;
 }
 
@@ -137,14 +162,23 @@ PBRet PBOneWire::initialiseTempSensors(void)
         return PBRet::FAILURE;
     }
 
-    if (_connectedDevices >= 1) {
-        // Create a temperature sensor object and assign to main temp sensor
-        OneWireBus_ROMCode romCode = _availableRomCodes.at(0);
-        _headTempSensor = Ds18b20(romCode, DS18B20_RESOLUTION_11_BIT, _owb);
+    // Give initial connection a fair chance to connect. We don't want
+    // this to fail
+    if (xSemaphoreTake(_OWBMutex, 250 / portTICK_PERIOD_MS) == pdTRUE) {
+        if (_connectedDevices >= 1) {
+            // Create a temperature sensor object and assign to main temp sensor
+            OneWireBus_ROMCode romCode = _availableRomCodes.at(0);
+            _headTempSensor = Ds18b20(romCode, DS18B20_RESOLUTION_11_BIT, _owb);
 
-        if (_headTempSensor.isConfigured() == false) {
-            return PBRet::FAILURE;
+            if (_headTempSensor.isConfigured() == false) {
+                xSemaphoreGive(_OWBMutex);
+                return PBRet::FAILURE;
+            }
         }
+        xSemaphoreGive(_OWBMutex);
+    } else {
+        ESP_LOGW(PBOneWire::Name, "Unable to access PBOneWire shared resource");
+        return PBRet::FAILURE;
     }
 
     // Connect other devices here
@@ -154,13 +188,17 @@ PBRet PBOneWire::initialiseTempSensors(void)
 
 PBRet PBOneWire::_oneWireConvert(void) const
 {
-    // Command all temperature sensors on the bus to convert temperatures
+    // Command all temperature sensors on the bus to convert temperatures.
+    // NOTE: This method is not protected by a semaphore. If you are calling
+    //       this method, it is your responsibility to make sure that the bus
+    //       is not locked out
+
     if (_connectedDevices == 0) {
         ESP_LOGW(PBOneWire::Name, "No available devices. Cannot convert temperatures");
         return PBRet::FAILURE;
     }
 
-    ds18b20_convert_all(_owb);
+    ds18b20_convert(&_headTempSensor.getInfo());
     ds18b20_wait_for_conversion(&_headTempSensor.getInfo());
 
     return PBRet::SUCCESS;
@@ -171,13 +209,26 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata)
     // Read all available temperature sensors
     float headTemp = 0.0;
 
-    if (_oneWireConvert() != PBRet::SUCCESS) {
-        ESP_LOGW(PBOneWire::Name, "Temperature sensor conversion failed");
+    if (_configured == false) {
+        ESP_LOGW(PBOneWire::Name, "Cannot read temperatures before PBOneWireBuse is configured");
         return PBRet::FAILURE;
     }
 
-    if (_headTempSensor.readTemp(headTemp) != PBRet::SUCCESS) {
-        // Error message printed in readTemp
+    if (xSemaphoreTake(_OWBMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
+        // if (_oneWireConvert() != PBRet::SUCCESS) {
+        //     ESP_LOGW(PBOneWire::Name, "Temperature sensor conversion failed");
+        //     xSemaphoreGive(_OWBMutex);
+        //     return PBRet::FAILURE;
+        // }
+
+        if (_headTempSensor.readTemp(headTemp) != PBRet::SUCCESS) {
+            // Error message printed in readTemp
+            xSemaphoreGive(_OWBMutex);
+            return PBRet::FAILURE;
+        }
+        xSemaphoreGive(_OWBMutex);
+    } else {
+        ESP_LOGW(PBOneWire::Name, "Unable to access PBOneWire shared resource");
         return PBRet::FAILURE;
     }
 
