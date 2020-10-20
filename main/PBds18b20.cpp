@@ -33,3 +33,18 @@ PBRet Ds18b20::checkInputs(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, c
 
     return PBRet::SUCCESS;
 }
+
+PBRet Ds18b20::readTemp(float& temp)
+{
+    if (_configured == false) {
+        ESP_LOGW(Ds18b20::Name, "Sensor is not configured. Temperature read failed");
+        return PBRet::FAILURE;
+    }
+
+    if (ds18b20_read_temp(&_info, &temp) != DS18B20_OK) {
+        ESP_LOGW(Ds18b20::Name, "Temperature read failed");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}

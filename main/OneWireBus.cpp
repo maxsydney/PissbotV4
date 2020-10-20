@@ -131,3 +131,63 @@ PBRet PBOneWire::connect(void)
 
     return PBRet::SUCCESS;
 }
+
+PBRet PBOneWire::initialiseTempSensors(void)
+{
+    // Connect to sensors and create PBds18b20 object
+    if (_connectedDevices == 0) {
+        ESP_LOGW(PBOneWire::Name, "No available devices");
+        return PBRet::FAILURE;
+    }
+
+    if (_connectedDevices >= 1) {
+        // Create a temperature sensor object and assign to main temp sensor
+        OneWireBus_ROMCode romCode = _availableRomCodes.at(0);
+        _headTempSensor = Ds18b20(romCode, DS18B20_RESOLUTION_11_BIT, _owb);
+
+        if (_headTempSensor.isConfigured() == false) {
+            return PBRet::FAILURE;
+        }
+    }
+
+    // Connect other devices here
+    
+    return PBRet::SUCCESS;
+}
+
+PBRet PBOneWire::_oneWireConvert(void) const
+{
+    // Command all temperature sensors on the bus to convert temperatures
+    if (_connectedDevices == 0) {
+        ESP_LOGW(PBOneWire::Name, "No available devices. Cannot convert temperatures");
+        return PBRet::FAILURE;
+    }
+
+    ds18b20_convert_all(_owb);
+    ds18b20_wait_for_conversion(&_headTempSensor.getInfo());
+
+    return PBRet::SUCCESS;
+}
+
+PBRet PBOneWire::readTempSensors(TemperatureData& Tdata)
+{
+    // Read all available temperature sensors
+    float headTemp = 0.0;
+
+    if (_oneWireConvert() != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "Temperature sensor conversion failed");
+        return PBRet::FAILURE;
+    }
+
+    if (_headTempSensor.readTemp(headTemp) != PBRet::SUCCESS) {
+        // Error message printed in readTemp
+        return PBRet::FAILURE;
+    }
+
+    // Read other sensors here
+
+    // Fill data structure
+    Tdata = TemperatureData(headTemp, 0.0, 0.0, 0.0, 0.0);
+
+    return PBRet::SUCCESS;
+}

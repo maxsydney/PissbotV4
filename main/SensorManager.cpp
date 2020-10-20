@@ -7,7 +7,7 @@ SensorManager::SensorManager(UBaseType_t priority, UBaseType_t stackDepth, BaseT
     // Setup callback table
     _setupCBTable();
 
-    // Initialize controller
+    // Initialize SensorManager
     if (_initFromParams(cfg) == PBRet::SUCCESS) {
         ESP_LOGI(SensorManager::Name, "SensorManager configured!");
         _configured = true;
@@ -34,10 +34,17 @@ void SensorManager::taskMain(void)
         _processQueue();
 
         // Read temperature sensors
+        TemperatureData Tdata {};
+        if (_OWBus.readTempSensors(Tdata) != PBRet::SUCCESS) {
+            ESP_LOGW(SensorManager::Name, "Unable to read temperature sensors");
+            
+            // Record fault
+        }
 
         // Read flowmeters
 
         // Broadcast data
+        _broadcastTemps(Tdata);
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -76,6 +83,14 @@ PBRet SensorManager::_initFromParams(const SensorManagerConfig& cfg)
     // Initialize flowrate sensors
 
     return err == ESP_OK ? PBRet::SUCCESS : PBRet::FAILURE;
+}
+
+PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
+{
+    // Send a temperature data message to the queue
+    std::shared_ptr<TemperatureData> msg = std::make_shared<TemperatureData> (Tdata);
+
+    return MessageServer::broadcastMessage(msg);;
 }
 
 PBRet SensorManager::checkInputs(const SensorManagerConfig& cfg)

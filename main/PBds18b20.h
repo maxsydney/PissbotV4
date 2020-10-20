@@ -12,7 +12,13 @@ class Ds18b20
         Ds18b20(void) = default;
         Ds18b20(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, const OneWireBus* bus);
 
+        // Update
+        PBRet readTemp(float& temp);
+
         static PBRet checkInputs(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, const OneWireBus* bus);
+        const DS18B20_Info& getInfo(void) const { return _info; }
+
+        bool isConfigured(void) const { return _configured; }
 
     private:
 
