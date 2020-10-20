@@ -215,11 +215,11 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata)
     }
 
     if (xSemaphoreTake(_OWBMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
-        // if (_oneWireConvert() != PBRet::SUCCESS) {
-        //     ESP_LOGW(PBOneWire::Name, "Temperature sensor conversion failed");
-        //     xSemaphoreGive(_OWBMutex);
-        //     return PBRet::FAILURE;
-        // }
+        if (_oneWireConvert() != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Temperature sensor conversion failed");
+            xSemaphoreGive(_OWBMutex);
+            return PBRet::FAILURE;
+        }
 
         if (_headTempSensor.readTemp(headTemp) != PBRet::SUCCESS) {
             // Error message printed in readTemp
