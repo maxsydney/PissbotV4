@@ -2,7 +2,8 @@
 #define PB_DS18B20_H
 
 #include "PBCommon.h"
-#include "ds18b20.h" 
+#include "ds18b20.h"
+#include "cJSON.h"
 
 class Ds18b20
 {
@@ -14,6 +15,9 @@ class Ds18b20
 
         // Update
         PBRet readTemp(float& temp);
+
+        // Utility
+        PBRet serialize(cJSON* root) const;
 
         static PBRet checkInputs(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, const OneWireBus* bus);
         const DS18B20_Info& getInfo(void) const { return _info; }

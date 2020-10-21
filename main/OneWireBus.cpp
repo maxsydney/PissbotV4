@@ -91,7 +91,8 @@ PBRet PBOneWire::_loadKnownDevices(const char* basePath, const char* partitionLa
         // Check if devices file exists
         struct stat st;
         if (stat(PBOneWire::deviceFile, &st) == 0) {
-            // TODO: Read saved devices file
+            ESP_LOGI(PBOneWire::Name, "Devices file found");
+            _printConfigFile();
         } else {
             ESP_LOGW(PBOneWire::Name, "No devices file was found");
             return PBRet::FAILURE;
@@ -140,6 +141,9 @@ PBRet PBOneWire::initialiseTempSensors(void)
     // NOTE: Just assigning the first for now. Assign properly from saved sensors JSON
     // Assign sensors
     _headTempSensor = _availableSensors.at(0);
+    if (_writeToFile() != PBRet::SUCCESS) {
+        return PBRet::FAILURE;
+    }
 
     // Connect other devices here
     
@@ -232,6 +236,129 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
     if (initialiseTempSensors() != PBRet::SUCCESS) {
         ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
     }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet PBOneWire::_writeToFile(void) const
+{
+    // Write the current sensor configuration to JSON
+    ESP_LOGI(PBOneWire::Name, "Writing OneWire sensor data to file");
+
+    char* JSONstr = _serialize();
+    if (JSONstr == nullptr) {
+        ESP_LOGW(PBOneWire::Name, "Failed to write sensor config to file");
+        return PBRet::FAILURE;
+    }
+    
+    // Mount filesystem
+    Filesystem F(PBOneWire::FSBasePath, PBOneWire::FSPartitionLabel, 5, true);
+    if (F.isOpen() == false) {
+        ESP_LOGW(PBOneWire::Name, "Failed to mount filesystem. Sensor data was not written to file");
+        free(JSONstr);
+        return PBRet::FAILURE;
+    }
+
+    // Check if devices file exists
+    struct stat st;
+    if (stat(PBOneWire::deviceFile, &st) == 0) {
+        ESP_LOGI(PBOneWire::Name, "Existing file will be overwritten");
+    } else {
+        ESP_LOGI(PBOneWire::Name, "No device file exists. Creating new file");
+    }
+
+    FILE* f = fopen(PBOneWire::deviceFile, "w");
+    if (f == NULL) {
+        ESP_LOGE(PBOneWire::Name, "Failed to open file for writing. Sensor data was not written to file");
+        fclose(f);
+        free(JSONstr);
+        return PBRet::FAILURE;
+    }
+
+    if (fputs(JSONstr, f) == EOF) {
+        ESP_LOGE(PBOneWire::Name, "Error writing JSON string to file");
+        fclose(f);
+        free(JSONstr);
+        return PBRet::FAILURE;
+    }
+
+    ESP_LOGI(PBOneWire::Name, "Successfully wrote sensor config to JSON file");
+
+    // Success by here
+    fclose(f);
+    free(JSONstr);
+    return PBRet::SUCCESS;
+}
+
+char* PBOneWire::_serialize(void) const
+{
+    // Helper method for writing out the sensor configuration to JSON
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(PBOneWire::Name, "Unable to create root JSON object");
+        return nullptr;
+    }
+
+    if (root == nullptr) {
+        ESP_LOGW(PBOneWire::Name, "Unable to create root JSON object");
+        return nullptr;
+    }
+
+    // Create an object for temperature sensors
+    cJSON* tempSensors = cJSON_CreateObject();
+    if (tempSensors == NULL) {
+        ESP_LOGW(PBOneWire::Name, "Unable to create tempSensors JSON object");
+        return nullptr;
+    }
+
+    cJSON_AddItemToObject(root, "TempSensors", tempSensors);
+
+    // Write individual sensors to tempSensors
+    if (_headTempSensor.isConfigured()) {
+        // Write out its data
+        cJSON* headTemp = cJSON_CreateObject();
+        if (headTemp == NULL) {
+            ESP_LOGW(PBOneWire::Name, "Unable to create headTemp JSON object");
+            return nullptr;
+        }
+
+        // TODO: Add headTemp to tempSensors and the modify inplace?
+        if (_headTempSensor.serialize(headTemp) != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Couldn't serialize head temp sensor");
+            cJSON_Delete(headTemp);
+            return nullptr;
+        }
+
+        cJSON_AddItemToObject(tempSensors, "headTemp", headTemp);
+    }
+
+    // When other sensors exist, write them out here
+
+    // Write JSON string to input pointer and free memory
+    char* JSONstr = cJSON_Print(root);
+    cJSON_Delete(root);
+
+    return JSONstr;
+} 
+
+PBRet PBOneWire::_printConfigFile(void) const
+{
+    // Print config JSON file to the console. Assumes filesystem is
+    // mounted
+
+    ESP_LOGI(PBOneWire::Name, "Reading config file");
+    FILE* f = fopen(PBOneWire::deviceFile, "r");
+    if (f == NULL) {
+        ESP_LOGW(PBOneWire::Name, "Failed to open config file for reading");
+        return PBRet::FAILURE;
+    }
+
+    // Stack allocation for now
+    char config[1024] = {0};
+    fgets(config, sizeof(config), f);
+    fclose(f);
+
+    ESP_LOGI(PBOneWire::Name, "%s", config);
 
     return PBRet::SUCCESS;
 }

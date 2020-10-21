@@ -84,6 +84,11 @@ class PBOneWire
         PBRet _readTempSensors(const TemperatureData& Tdata);
         PBRet _oneWireConvert(void) const;
 
+        // Utility
+        PBRet _writeToFile(void) const;
+        char* _serialize(void) const;
+        PBRet _printConfigFile(void) const;
+
         SemaphoreHandle_t _OWBMutex = NULL;
         OneWireBus* _owb = nullptr;
         owb_rmt_driver_info* _rmtDriver = nullptr;

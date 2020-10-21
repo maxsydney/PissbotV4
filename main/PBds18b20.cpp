@@ -48,3 +48,34 @@ PBRet Ds18b20::readTemp(float& temp)
 
     return PBRet::SUCCESS;
 }
+
+PBRet Ds18b20::serialize(cJSON* root) const
+{
+    // Write sensor configuration to JSON. Sensor configuration is
+    // DS18B20_Info (and maybe calibration data later)
+
+    if (root == nullptr) {
+        ESP_LOGW(Ds18b20::Name, "JSON pointer was null");
+        return PBRet::FAILURE;
+    }
+
+    // All we really need is the ROM code
+    cJSON* romCode = cJSON_CreateArray();
+    if (romCode == nullptr) {
+        ESP_LOGW(Ds18b20::Name, "Failed to create JSON array for sensor ROM code");
+        return PBRet::FAILURE;
+    }
+
+    for (int j=0; j < 8; j++) {
+        cJSON* byte = cJSON_CreateNumber((int) _info.rom_code.bytes[j]);
+        if (byte == nullptr) {
+            ESP_LOGW(Ds18b20::Name, "Error creating byte in JSON ROM code byte array");
+            cJSON_Delete(romCode);
+            return PBRet::FAILURE;
+        }
+        cJSON_AddItemToArray(romCode, byte);
+    }
+    cJSON_AddItemToArray(root, romCode);
+
+    return PBRet::SUCCESS;
+}
