@@ -43,6 +43,12 @@ class TemperatureData : public MessageBase
 // C++ wrapper around the esp32-owb library
 // https://github.com/DavidAntliff/esp32-owb
 
+struct PBOneWireConfig
+{
+    gpio_num_t OWPin = GPIO_NUM_NC;
+    DS18B20_RESOLUTION res = DS18B20_RESOLUTION_INVALID;
+};
+
 class PBOneWire
 {
     static constexpr const char* Name = "PBOneWire";
@@ -53,23 +59,23 @@ class PBOneWire
     public:
         // Constructors
         PBOneWire(void) = default;
-        explicit PBOneWire(gpio_num_t OWPin);
+        explicit PBOneWire(const PBOneWireConfig& cfg);
 
         // Initialisation
         PBRet scanForDevices(void);
         PBRet initialiseTempSensors(void);
-        PBRet connect(void);
 
         // Update
         PBRet readTempSensors(TemperatureData& Tdata);
 
-        static PBRet checkInputs(gpio_num_t OWPin);
+        static PBRet checkInputs(const PBOneWireConfig& cfg);
         bool isConfigured(void) const { return _configured; }
 
     private:
 
         // Initialisation
-        PBRet _initOWB(gpio_num_t OWPin);
+        PBRet _initFromParams(const PBOneWireConfig& cfg);
+        PBRet _initOWB();
         PBRet _loadKnownDevices(const char* basePath, const char* partitionLabel);
 
         // Update
@@ -89,9 +95,11 @@ class PBOneWire
 
         // Unassigned sensors
         size_t _connectedDevices = 0;
-        std::vector<OneWireBus_ROMCode> _availableRomCodes;     // TODO: Array of Ds18b20 objects
-        std::vector<OneWireBus_ROMCode> _savedRomCodes;
+        std::vector<Ds18b20> _availableSensors;
+        std::vector<Ds18b20> _savedSensors;
 
+        // Class data
+        PBOneWireConfig _cfg {};
         bool _configured = false;
 };
 
