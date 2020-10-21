@@ -78,7 +78,7 @@ class PBOneWire
 
         SemaphoreHandle_t _OWBMutex = NULL;
         OneWireBus* _owb = nullptr;
-        owb_rmt_driver_info _rmt_driver_info {};
+        owb_rmt_driver_info* _rmtDriver = nullptr;
 
         // Assigned sensors
         Ds18b20 _headTempSensor {};

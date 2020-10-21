@@ -34,17 +34,17 @@ void SensorManager::taskMain(void)
         _processQueue();
 
         // Read temperature sensors
-        // TemperatureData Tdata {};
-        // if (_OWBus.readTempSensors(Tdata) != PBRet::SUCCESS) {
-        //     ESP_LOGW(SensorManager::Name, "Unable to read temperature sensors");
+        TemperatureData Tdata {};
+        if (_OWBus.readTempSensors(Tdata) != PBRet::SUCCESS) {
+            ESP_LOGW(SensorManager::Name, "Unable to read temperature sensors");
             
-        //     // Record fault
-        // }
+            // Record fault
+        }
 
         // Read flowmeters
 
         // Broadcast data
-        // _broadcastTemps(Tdata);
+        _broadcastTemps(Tdata);
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }

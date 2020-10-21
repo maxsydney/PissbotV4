@@ -61,8 +61,14 @@ PBRet PBOneWire::checkInputs(gpio_num_t OWPin)
 
 PBRet PBOneWire::_initOWB(gpio_num_t OWPin)
 {
-    _owb = owb_rmt_initialize(&_rmt_driver_info, OWPin, RMT_CHANNEL_1, RMT_CHANNEL_0);
+    _rmtDriver = new owb_rmt_driver_info;
+    if (_rmtDriver == nullptr) {
+        ESP_LOGE(PBOneWire::Name, "Unable to allocate memory for RMT driver");
+        return PBRet::FAILURE;
+    }
 
+    // Fields are statically allocated within owb_rmt_initialize
+    _owb = owb_rmt_initialize(_rmtDriver, OWPin, RMT_CHANNEL_1, RMT_CHANNEL_0);
     if (_owb == nullptr) {
         ESP_LOGE(PBOneWire::Name, "OnewWireBus initialization returned nullptr");
         return PBRet::FAILURE;
