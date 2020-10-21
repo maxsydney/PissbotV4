@@ -28,12 +28,22 @@ PBOneWire::PBOneWire(const PBOneWireConfig& cfg)
 PBRet PBOneWire::checkInputs(const PBOneWireConfig& cfg)
 {
     // Check pin is valid GPIO
-    if ((cfg.OWPin <= GPIO_NUM_NC) || (cfg.OWPin > GPIO_NUM_MAX)) {
-        ESP_LOGE(PBOneWire::Name, "OneWire pin %d is invalid. Bus was not configured", cfg.OWPin);
+    if ((cfg.oneWirePin <= GPIO_NUM_NC) || (cfg.oneWirePin > GPIO_NUM_MAX)) {
+        ESP_LOGE(PBOneWire::Name, "OneWire pin %d is invalid. Bus was not configured", cfg.oneWirePin);
         return PBRet::FAILURE;
     }
 
-    if (cfg.res == DS18B20_RESOLUTION_INVALID) {
+    if ((cfg.refluxFlowPin <= GPIO_NUM_NC) || (cfg.refluxFlowPin > GPIO_NUM_MAX)) {
+        ESP_LOGE(PBOneWire::Name, "Reflux flowmeter GPIO %d is invalid. SensorManager was not configured", cfg.refluxFlowPin);
+        return PBRet::FAILURE;
+    }
+
+    if ((cfg.productFlowPin <= GPIO_NUM_NC) || (cfg.productFlowPin > GPIO_NUM_MAX)) {
+        ESP_LOGE(PBOneWire::Name, "Product flowmeter GPIO %d is invalid. SensorManager was not configured", cfg.productFlowPin);
+        return PBRet::FAILURE;
+    }
+
+    if (cfg.tempSensorResolution == DS18B20_RESOLUTION_INVALID) {
         ESP_LOGE(PBOneWire::Name, "Temperature sensor resolution was invalid");
         return PBRet::FAILURE;
     }
@@ -50,7 +60,7 @@ PBRet PBOneWire::_initOWB()
     }
 
     // Fields are statically allocated within owb_rmt_initialize
-    _owb = owb_rmt_initialize(_rmtDriver, _cfg.OWPin, RMT_CHANNEL_1, RMT_CHANNEL_0);
+    _owb = owb_rmt_initialize(_rmtDriver, _cfg.oneWirePin, RMT_CHANNEL_1, RMT_CHANNEL_0);
     if (_owb == nullptr) {
         ESP_LOGE(PBOneWire::Name, "OnewWireBus initialization returned nullptr");
         return PBRet::FAILURE;
@@ -106,7 +116,7 @@ PBRet PBOneWire::scanForDevices(void)
 
         owb_search_first(_owb, &search_state, &found);
         while (found) {
-            _availableSensors.emplace_back(Ds18b20(search_state.rom_code, _cfg.res, _owb));
+            _availableSensors.emplace_back(Ds18b20(search_state.rom_code, _cfg.tempSensorResolution, _owb));
             _connectedDevices++;
             owb_search_next(_owb, &search_state, &found);
         }
@@ -223,5 +233,5 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
         ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
     }
 
-    return PBRet::Success;
+    return PBRet::SUCCESS;
 }

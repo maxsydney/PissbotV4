@@ -11,10 +11,7 @@ class PBOneWire;
 struct SensorManagerConfig
 {
     double dt = 0.0;
-    gpio_num_t oneWirePin = GPIO_NUM_NC;
-    gpio_num_t refluxFlowPin = GPIO_NUM_NC;
-    gpio_num_t productFlowPin = GPIO_NUM_NC;
-    DS18B20_RESOLUTION tempSensorResolution = DS18B20_RESOLUTION_INVALID;
+    PBOneWireConfig oneWireConfig {};
 };
 
 class FlowrateData : public MessageBase

@@ -74,7 +74,7 @@ PBRet SensorManager::_initFromParams(const SensorManagerConfig& cfg)
     _cfg = cfg;
 
     // Initialize PBOneWire bus
-    _OWBus = PBOneWire(cfg.oneWirePin);
+    _OWBus = PBOneWire(cfg.oneWireConfig);
     if (_OWBus.isConfigured() == false) {
         ESP_LOGE(SensorManager::Name, "OneWire bus is not configured");
         err = ESP_FAIL;
@@ -100,18 +100,9 @@ PBRet SensorManager::checkInputs(const SensorManagerConfig& cfg)
         return PBRet::FAILURE;
     }
 
-    if ((cfg.oneWirePin <= GPIO_NUM_NC) || (cfg.oneWirePin > GPIO_NUM_MAX)) {
-        ESP_LOGE(SensorManager::Name, "OneWire GPIO %d is invalid. SensorManager was not configured", cfg.oneWirePin);
-        return PBRet::FAILURE;
-    }
-
-    if ((cfg.refluxFlowPin <= GPIO_NUM_NC) || (cfg.refluxFlowPin > GPIO_NUM_MAX)) {
-        ESP_LOGE(SensorManager::Name, "Reflux flowmeter GPIO %d is invalid. SensorManager was not configured", cfg.refluxFlowPin);
-        return PBRet::FAILURE;
-    }
-
-    if ((cfg.productFlowPin <= GPIO_NUM_NC) || (cfg.productFlowPin > GPIO_NUM_MAX)) {
-        ESP_LOGE(SensorManager::Name, "Product flowmeter GPIO %d is invalid. SensorManager was not configured", cfg.productFlowPin);
+    // Check PBOneWire config
+    if (PBOneWire::checkInputs(cfg.oneWireConfig) != PBRet::SUCCESS) {
+        ESP_LOGE(SensorManager::Name, "Onewire bus config was invalid. SensorManager was not configured");
         return PBRet::FAILURE;
     }
 

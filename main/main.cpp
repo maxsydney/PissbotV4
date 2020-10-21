@@ -48,10 +48,10 @@ void app_main()
     cfg.ctrlConfig.element2Pin = ELEMENT_2;
 
     cfg.sensorManagerConfig.dt = 1.0 / CONTROL_LOOP_FREQUENCY;
-    cfg.sensorManagerConfig.oneWirePin = ONEWIRE_BUS;
-    cfg.sensorManagerConfig.refluxFlowPin = REFLUX_FLOW;
-    cfg.sensorManagerConfig.productFlowPin = PROD_FLOW;
-    cfg.sensorManagerConfig.tempSensorResolution = DS18B20_RESOLUTION_11_BIT;
+    cfg.sensorManagerConfig.oneWireConfig.oneWirePin = ONEWIRE_BUS;
+    cfg.sensorManagerConfig.oneWireConfig.refluxFlowPin = REFLUX_FLOW;
+    cfg.sensorManagerConfig.oneWireConfig.productFlowPin = PROD_FLOW;
+    cfg.sensorManagerConfig.oneWireConfig.tempSensorResolution = DS18B20_RESOLUTION_11_BIT;
 
     DistillerManager* manager = DistillerManager::getInstance(5, 8192, 1, cfg);
     manager->begin();
