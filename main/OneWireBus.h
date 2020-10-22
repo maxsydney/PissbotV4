@@ -70,6 +70,9 @@ class PBOneWire
         // Update
         PBRet readTempSensors(TemperatureData& Tdata);
 
+        // Utility
+        bool isAvailable(const Ds18b20& sensor) const;
+
         static PBRet checkInputs(const PBOneWireConfig& cfg);
         bool isConfigured(void) const { return _configured; }
 
@@ -79,6 +82,8 @@ class PBOneWire
         PBRet _initFromParams(const PBOneWireConfig& cfg);
         PBRet _initOWB();
         PBRet _loadKnownDevices(const char* basePath, const char* partitionLabel);
+        PBRet _loadTempSensorsFromJSON(const cJSON* JSONTempSensors);
+        PBRet _loadFlowmetersFromJSON(const cJSON* JSONFlowmeters);
 
         // Update
         PBRet _readTempSensors(const TemperatureData& Tdata);
@@ -86,7 +91,7 @@ class PBOneWire
 
         // Utility
         PBRet _writeToFile(void) const;
-        char* _serialize(void) const;
+        PBRet _serialize(std::string& JSONstr) const;
         PBRet _printConfigFile(void) const;
 
         SemaphoreHandle_t _OWBMutex = NULL;
@@ -103,7 +108,6 @@ class PBOneWire
         // Unassigned sensors
         size_t _connectedDevices = 0;
         std::vector<Ds18b20> _availableSensors;
-        std::vector<Ds18b20> _savedSensors;
 
         // Class data
         PBOneWireConfig _cfg {};

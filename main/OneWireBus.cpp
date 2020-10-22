@@ -1,6 +1,9 @@
 #include "OneWireBus.h"
 #include "esp_spiffs.h"
 #include "Filesystem.h"
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 // Temporary filsystem testing
 #include <stdio.h>
@@ -22,6 +25,7 @@ PBOneWire::PBOneWire(const PBOneWireConfig& cfg)
         _configured = true;
     } else {
         ESP_LOGW(PBOneWire::Name, "Unable to configure PBOneWire");
+        _configured = false;
     }
 }
 
@@ -87,17 +91,83 @@ PBRet PBOneWire::_loadKnownDevices(const char* basePath, const char* partitionLa
     // Mount filesystem
     Filesystem F(PBOneWire::FSBasePath, PBOneWire::FSPartitionLabel, 5, true);
 
-    if (F.isOpen()) {
-        // Check if devices file exists
-        struct stat st;
-        if (stat(PBOneWire::deviceFile, &st) == 0) {
-            ESP_LOGI(PBOneWire::Name, "Devices file found");
-            _printConfigFile();
-        } else {
-            ESP_LOGW(PBOneWire::Name, "No devices file was found");
-            return PBRet::FAILURE;
+    // Read JSON string from file
+    std::ifstream configIn(PBOneWire::deviceFile);
+    if (configIn.good() == false) {
+        ESP_LOGW(PBOneWire::Name, "Devices file could not be opened");
+        return PBRet::FAILURE;
+    }
+
+    std::stringstream JSONBuffer;
+    JSONBuffer << configIn.rdbuf();
+
+    // Load JSON object
+    // Just load one sensor for now. Package into proper methods for loading all sensors once
+    // validated
+    cJSON* configRoot = cJSON_Parse(JSONBuffer.str().c_str());
+    if (configRoot == nullptr) {
+        ESP_LOGW(PBOneWire::Name, "Sensor config file was opened but could not be parsed");
+        return PBRet::FAILURE;
+    }
+
+    // Load saved temperature sensors
+    // No longer required to check for null, as this check is performed in 
+    // cJSON_GetObjectItemCaseSensitive
+    const cJSON* tempSensors = cJSON_GetObjectItemCaseSensitive(configRoot, "TempSensors");
+    if (_loadTempSensorsFromJSON(tempSensors) != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "No temperature sensor config data was available");
+    }
+
+    // Load saved flowmeters
+    const cJSON* flowmeters = cJSON_GetObjectItemCaseSensitive(configRoot, "Flowmeters");
+    if (_loadFlowmetersFromJSON(flowmeters) != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "No flowmeter sensor config data was available");
+    }
+
+    cJSON_Delete(configRoot);
+    return PBRet::SUCCESS;
+}
+
+PBRet PBOneWire::_loadTempSensorsFromJSON(const cJSON* JSONTempSensors)
+{
+    if (JSONTempSensors == nullptr) {
+        return PBRet::FAILURE;
+    }
+
+    Ds18b20 savedSensor {};
+
+    // If there is saved head temp sensor in the config file, load it
+    const cJSON* headTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, "headTemp");
+    if (headTemp != nullptr) {
+        savedSensor = Ds18b20(headTemp, _cfg.tempSensorResolution, _owb);
+        if (savedSensor.isConfigured() && isAvailable(savedSensor)) {
+            _headTempSensor = savedSensor;
+            ESP_LOGI(PBOneWire::Name, "Loaded saved head temp sensor from file");
         }
     }
+
+    // Load reflux out temp sensor
+    const cJSON* refluxTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, "refluxTemp");
+    if (refluxTemp != nullptr) {
+        savedSensor = Ds18b20(refluxTemp, _cfg.tempSensorResolution, _owb);
+        if (savedSensor.isConfigured() && isAvailable(savedSensor)) {
+            _refluxTempSensor = savedSensor;
+            ESP_LOGI(PBOneWire::Name, "Loaded reflux outflow temp sensor from file");
+        }
+    }
+
+    // TODO: Load others
+
+    return PBRet::SUCCESS;
+}
+
+PBRet PBOneWire::_loadFlowmetersFromJSON(const cJSON* JSONFlowmeters)
+{
+    if (JSONFlowmeters == nullptr) {
+        return PBRet::FAILURE;
+    }
+
+    // TODO: Implement
 
     return PBRet::SUCCESS;
 }
@@ -233,9 +303,11 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
         ESP_LOGW(PBOneWire::Name, "No saved devices were found");
     }
 
-    if (initialiseTempSensors() != PBRet::SUCCESS) {
-        ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
-    }
+    // // This is a temporary method to load a temperature sensor into the headTemp channel
+    // // for testing
+    // if (initialiseTempSensors() != PBRet::SUCCESS) {
+    //     ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
+    // }
 
     return PBRet::SUCCESS;
 }
@@ -245,8 +317,8 @@ PBRet PBOneWire::_writeToFile(void) const
     // Write the current sensor configuration to JSON
     ESP_LOGI(PBOneWire::Name, "Writing OneWire sensor data to file");
 
-    char* JSONstr = _serialize();
-    if (JSONstr == nullptr) {
+    std::string JSONstr;
+    if (_serialize(JSONstr) != PBRet::SUCCESS) {
         ESP_LOGW(PBOneWire::Name, "Failed to write sensor config to file");
         return PBRet::FAILURE;
     }
@@ -255,63 +327,37 @@ PBRet PBOneWire::_writeToFile(void) const
     Filesystem F(PBOneWire::FSBasePath, PBOneWire::FSPartitionLabel, 5, true);
     if (F.isOpen() == false) {
         ESP_LOGW(PBOneWire::Name, "Failed to mount filesystem. Sensor data was not written to file");
-        free(JSONstr);
         return PBRet::FAILURE;
     }
 
-    // Check if devices file exists
-    struct stat st;
-    if (stat(PBOneWire::deviceFile, &st) == 0) {
-        ESP_LOGI(PBOneWire::Name, "Existing file will be overwritten");
-    } else {
-        ESP_LOGI(PBOneWire::Name, "No device file exists. Creating new file");
-    }
-
-    FILE* f = fopen(PBOneWire::deviceFile, "w");
-    if (f == NULL) {
+    std::ofstream outFile(PBOneWire::deviceFile);
+    if (outFile.is_open() == false) {
         ESP_LOGE(PBOneWire::Name, "Failed to open file for writing. Sensor data was not written to file");
-        fclose(f);
-        free(JSONstr);
         return PBRet::FAILURE;
     }
 
-    if (fputs(JSONstr, f) == EOF) {
-        ESP_LOGE(PBOneWire::Name, "Error writing JSON string to file");
-        fclose(f);
-        free(JSONstr);
-        return PBRet::FAILURE;
-    }
+    // Write JSON string out to file
+    outFile << JSONstr;
 
-    ESP_LOGI(PBOneWire::Name, "Successfully wrote sensor config to JSON file");
-
-    // Success by here
-    fclose(f);
-    free(JSONstr);
+    ESP_LOGI(PBOneWire::Name, "Sensor configuration successfully written to file");
     return PBRet::SUCCESS;
 }
 
-char* PBOneWire::_serialize(void) const
+ PBRet PBOneWire::_serialize(std::string& JSONstr) const
 {
     // Helper method for writing out the sensor configuration to JSON
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         ESP_LOGW(PBOneWire::Name, "Unable to create root JSON object");
-        return nullptr;
-    }
-
-    if (root == nullptr) {
-        ESP_LOGW(PBOneWire::Name, "Unable to create root JSON object");
-        return nullptr;
+        return PBRet::FAILURE;
     }
 
     // Create an object for temperature sensors
     cJSON* tempSensors = cJSON_CreateObject();
     if (tempSensors == NULL) {
         ESP_LOGW(PBOneWire::Name, "Unable to create tempSensors JSON object");
-        return nullptr;
+        return PBRet::FAILURE;
     }
-
-    cJSON_AddItemToObject(root, "TempSensors", tempSensors);
 
     // Write individual sensors to tempSensors
     if (_headTempSensor.isConfigured()) {
@@ -319,26 +365,30 @@ char* PBOneWire::_serialize(void) const
         cJSON* headTemp = cJSON_CreateObject();
         if (headTemp == NULL) {
             ESP_LOGW(PBOneWire::Name, "Unable to create headTemp JSON object");
-            return nullptr;
+            return PBRet::FAILURE;
         }
 
         // TODO: Add headTemp to tempSensors and the modify inplace?
         if (_headTempSensor.serialize(headTemp) != PBRet::SUCCESS) {
             ESP_LOGW(PBOneWire::Name, "Couldn't serialize head temp sensor");
             cJSON_Delete(headTemp);
-            return nullptr;
+            return PBRet::FAILURE;
         }
 
         cJSON_AddItemToObject(tempSensors, "headTemp", headTemp);
     }
+    cJSON_AddItemToObject(root, "TempSensors", tempSensors);
 
     // When other sensors exist, write them out here
 
-    // Write JSON string to input pointer and free memory
-    char* JSONstr = cJSON_Print(root);
+    // Copy JSON to string. cJSON requires printing to a char* pointer. Copy into
+    // std::string and free memory to avoid memory leak
+    char* stringPtr = cJSON_Print(root);
+    JSONstr = std::string(stringPtr);
     cJSON_Delete(root);
+    free(stringPtr);
 
-    return JSONstr;
+    return PBRet::SUCCESS;
 } 
 
 PBRet PBOneWire::_printConfigFile(void) const
@@ -347,18 +397,31 @@ PBRet PBOneWire::_printConfigFile(void) const
     // mounted
 
     ESP_LOGI(PBOneWire::Name, "Reading config file");
-    FILE* f = fopen(PBOneWire::deviceFile, "r");
-    if (f == NULL) {
+
+    std::ifstream JSONstream(PBOneWire::deviceFile);
+    if (JSONstream.good() == false) {
         ESP_LOGW(PBOneWire::Name, "Failed to open config file for reading");
         return PBRet::FAILURE;
     }
 
-    // Stack allocation for now
-    char config[1024] = {0};
-    fgets(config, sizeof(config), f);
-    fclose(f);
+    std::stringstream JSONBuffer;
+    JSONBuffer << JSONstream.rdbuf();
 
-    ESP_LOGI(PBOneWire::Name, "%s", config);
+    printf("%s\n", JSONBuffer.str().c_str());
 
     return PBRet::SUCCESS;
+}
+
+bool PBOneWire::isAvailable(const Ds18b20& sensor) const
+{
+    // Returns true if a ds18b20 sensor exists in the list of available 
+    // sensors
+
+    for (const Ds18b20& available : _availableSensors) {
+        if (sensor == available) {
+            return true;
+        }
+    }
+
+    return false;
 }

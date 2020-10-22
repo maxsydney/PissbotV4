@@ -7,19 +7,53 @@ Ds18b20::Ds18b20(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, const OneWi
         _configured = false;
     }
 
-    // Initialize info
-    ds18b20_init(&_info, bus, romCode);
-    ds18b20_use_crc(&_info, true);
-    ds18b20_set_resolution(&_info, res);
-
-    // Check if sensor responds on bus
-    if (ds18b20_read_resolution(&_info) == DS18B20_RESOLUTION_INVALID) {
-        ESP_LOGW(Ds18b20::Name, "Device was initialised but didn't respond on bus");
+    if (_initFromParams(romCode, res, bus) == PBRet::SUCCESS) {
+        ESP_LOGI(Ds18b20::Name, "Device successfully configured!");
+        _configured = true;
+    } else {
+        ESP_LOGW(Ds18b20::Name, "ds18b20 sensor was not initialized");
         _configured = false;
     }
+}
 
-    ESP_LOGI(Ds18b20::Name, "Device successfully configured!");
-    _configured = true;
+Ds18b20::Ds18b20(const cJSON* JSONConfig, DS18B20_RESOLUTION res, const OneWireBus* bus)
+{
+    if (JSONConfig == nullptr) {
+        ESP_LOGW(Ds18b20::Name, "JSON pointer was null. Ds18b20 device not configured");
+        return;
+    }
+
+    const cJSON* romCode = cJSON_GetObjectItemCaseSensitive(JSONConfig, "romCode");
+    if (romCode == nullptr) {
+        ESP_LOGW(Ds18b20::Name, "Failed to find romCode property of JSON object");
+        return;
+    }
+
+    const cJSON* byte = nullptr;
+    OneWireBus_ROMCode romCodeIn {};
+    size_t i = 0;
+    cJSON_ArrayForEach(byte, romCode)
+    {
+        if (byte == nullptr) {
+            ESP_LOGW(Ds18b20::Name, "Failed to read byte from romCode");
+            return;
+        }
+
+        if (cJSON_IsNumber(byte) == false) {
+            ESP_LOGW(Ds18b20::Name, "Byte in romCode array was not of cJSON type number");
+            return;
+        }
+
+        romCodeIn.bytes[i++] = byte->valueint;
+    }
+
+    if (_initFromParams(romCodeIn, res, bus) == PBRet::SUCCESS) {
+        ESP_LOGI(Ds18b20::Name, "Device successfully configured!");
+        _configured = true;
+    } else {
+        ESP_LOGW(Ds18b20::Name, "ds18b20 sensor was not initialized");
+        _configured = false;
+    }
 }
 
 PBRet Ds18b20::checkInputs(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, const OneWireBus* bus)
@@ -75,7 +109,37 @@ PBRet Ds18b20::serialize(cJSON* root) const
         }
         cJSON_AddItemToArray(romCode, byte);
     }
-    cJSON_AddItemToArray(root, romCode);
+    cJSON_AddItemToObject(root, "romCode", romCode);
 
     return PBRet::SUCCESS;
+}
+
+PBRet Ds18b20::_initFromParams(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, const OneWireBus* bus)
+{
+    // Initialize info
+    ds18b20_init(&_info, bus, romCode);
+    ds18b20_use_crc(&_info, true);
+    ds18b20_set_resolution(&_info, res);
+
+    // Check if sensor responds on bus
+    if (ds18b20_read_resolution(&_info) == DS18B20_RESOLUTION_INVALID) {
+        ESP_LOGW(Ds18b20::Name, "Device was initialised but didn't respond on bus");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}
+
+bool Ds18b20::operator ==(const Ds18b20& other) const
+{
+    // Sensors are equal if their rom codes match
+    bool equal = true;
+    for (size_t i = 0; i < 8; i++) {
+        if (_info.rom_code.bytes[i] != other._info.rom_code.bytes[i]) {
+            equal = false;
+            break;
+        }
+    }
+
+    return equal;
 }
