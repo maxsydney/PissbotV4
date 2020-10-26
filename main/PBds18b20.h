@@ -15,7 +15,7 @@ class Ds18b20
         Ds18b20(const cJSON* JSONConfig, DS18B20_RESOLUTION res, const OneWireBus* bus);
 
         // Update
-        PBRet readTemp(float& temp);
+        PBRet readTemp(float& temp) const;
 
         // Utility
         PBRet serialize(cJSON* root) const;

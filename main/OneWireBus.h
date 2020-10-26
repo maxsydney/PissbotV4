@@ -51,12 +51,11 @@ struct PBOneWireConfig
     gpio_num_t productFlowPin = GPIO_NUM_NC;
 };
 
+enum class SensorType { Unknown, Head, Reflux, Product, Boiler, Radiator };
+
 class PBOneWire
 {
     static constexpr const char* Name = "PBOneWire";
-    static constexpr const char* FSBasePath = "/spiffs";
-    static constexpr const char* FSPartitionLabel = "PBData";
-    static constexpr const char* deviceFile = "/spiffs/devices.json";
 
     public:
         // Constructors
@@ -68,10 +67,15 @@ class PBOneWire
         PBRet initialiseTempSensors(void);
 
         // Update
-        PBRet readTempSensors(TemperatureData& Tdata);
+        PBRet readTempSensors(TemperatureData& Tdata) const;
+
+        // Get/Set
+        PBRet setTempSensor(SensorType type, const Ds18b20& sensor);
+        const OneWireBus* getOWB(void) const { return _owb; }               // Probably not a great idea. Consider removing
 
         // Utility
-        bool isAvailable(const Ds18b20& sensor) const;
+        bool isAvailableSensor(const Ds18b20& sensor) const;
+        PBRet serialize(std::string& JSONstr) const;
 
         static PBRet checkInputs(const PBOneWireConfig& cfg);
         bool isConfigured(void) const { return _configured; }
@@ -82,8 +86,6 @@ class PBOneWire
         PBRet _initFromParams(const PBOneWireConfig& cfg);
         PBRet _initOWB();
         PBRet _loadKnownDevices(const char* basePath, const char* partitionLabel);
-        PBRet _loadTempSensorsFromJSON(const cJSON* JSONTempSensors);
-        PBRet _loadFlowmetersFromJSON(const cJSON* JSONFlowmeters);
 
         // Update
         PBRet _readTempSensors(const TemperatureData& Tdata);
@@ -91,7 +93,6 @@ class PBOneWire
 
         // Utility
         PBRet _writeToFile(void) const;
-        PBRet _serialize(std::string& JSONstr) const;
         PBRet _printConfigFile(void) const;
 
         SemaphoreHandle_t _OWBMutex = NULL;

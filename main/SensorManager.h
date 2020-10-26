@@ -38,6 +38,10 @@ class FlowrateData : public MessageBase
 class SensorManager : public Task
 {
     static constexpr const char* Name = "SensorManager";
+    static constexpr const char* FSBasePath = "/spiffs";
+    static constexpr const char* FSPartitionLabel = "PBData";
+    static constexpr const char* deviceFile = "/spiffs/devices.json";
+
 
     public:
         // Constructors
@@ -51,14 +55,19 @@ class SensorManager : public Task
         // Initialization
         PBRet _initOneWireBus(const SensorManagerConfig& cfg) const;
         PBRet _initFlowmeters(const SensorManagerConfig& cfg) const;
+        PBRet _initFromParams(const SensorManagerConfig& cfg);
+        PBRet _setupCBTable(void) override;
+        PBRet _loadKnownDevices(const char* basePath, const char* partitionLabel);
+        PBRet _loadTempSensorsFromJSON(const cJSON* JSONTempSensors);
+        PBRet _loadFlowmetersFromJSON(const cJSON* JSONFlowmeters);
 
         // Updates
         PBRet _readFlowmeters(const FlowrateData& F) const;
         PBRet _broadcastTemps(const TemperatureData& Tdata) const;
 
-        // Setup methods
-        PBRet _initFromParams(const SensorManagerConfig& cfg);
-        PBRet _setupCBTable(void) override;
+        // Utilities
+        PBRet _writeSensorConfigToFile(void) const;
+        PBRet _printConfigFile(void) const;
 
         // FreeRTOS hook method
         void taskMain(void) override;
