@@ -11,6 +11,8 @@
 #include <sys/unistd.h>
 #include <sys/stat.h>
 
+// TODO: Move the load from JSON stuff to sensorManager
+
 PBOneWire::PBOneWire(const PBOneWireConfig& cfg)
 {
     // Check input parameters
