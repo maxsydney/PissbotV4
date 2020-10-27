@@ -1,28 +1,45 @@
-#include "Webserver.h"
+// #include "Webserver.h"
+// #include "connectionManager.h"
 
+// Webserver::Webserver(const WebserverConfig& cfg)
+// {
+//     // Init from params
+//     if (_initFromParams(cfg) == PBRet::SUCCESS) {
+//         ESP_LOGI(Webserver::Name, "Webserver configured!");
+//         _configured = true;
+//     } else {
+//         ESP_LOGW(Webserver::Name, "Unable to configure Webserver");
+//     }
+// }
 
-Webserver::Webserver(const WebserverConfig& cfg)
-{
-    // Init from params
-    if (_initFromParams(cfg) == PBRet::SUCCESS) {
-        ESP_LOGI(Webserver::Name, "Webserver configured!");
-        _configured = true;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to configure Webserver");
-    }
-}
+// PBRet Webserver::_initFromParams(const WebserverConfig& cfg)
+// {
+//     if (checkInputs(cfg) != PBRet::SUCCESS) {
+//         return PBRet::FAILURE;
+//     }
 
-PBRet Webserver::_initFromParams(const WebserverConfig& cfg)
-{
-    if (checkInputs(cfg) != PBRet::SUCCESS) {
-        return PBRet::FAILURE;
-    }
+//     if (_startupWebserver() == PBRet::FAILURE) {
+//         return PBRet::FAILURE;
+//     }
 
-    if (_startupWebserver() == PBRet::FAILURE) {
-        return PBRet::FAILURE;
-    }
+//     _cfg = cfg;
+//     return PBRet::SUCCESS;
+// }
 
-    _cfg = cfg;
-    return PBRet::SUCCESS;
-}
+// PBRet Webserver::_startupWebserver(void)
+// {
+// 	EspFsConfig espfs_conf = {
+// 		.memAddr = espfs_image_bin,
+// 	};
+// 	EspFs* fs = espFsInit(&espfs_conf);
+//     httpdRegisterEspfs(fs);
 
+// 	tcpip_adapter_init();
+// 	httpdFreertosInit(&httpdFreertosInstance,
+// 	                  builtInUrls,
+// 	                  LISTEN_PORT,
+// 	                  connectionMemory,
+// 	                  ConnectionManager::MAXCONNECTIONS,
+// 	                  HTTPD_FLAG_NONE);
+// 	httpdFreertosStart(&httpdFreertosInstance);
+// }
