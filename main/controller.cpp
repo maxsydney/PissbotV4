@@ -3,9 +3,7 @@
 // #endif
 
 #include "controller.h"
-#include "controlLoop.h"
 #include "MessageDefs.h"        // Phase this out. Bad design
-#include "gpio.h"
 
 Controller::Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const ControllerConfig& cfg)
     : Task(Controller::Name, priority, stackDepth, coreID)

@@ -23,21 +23,8 @@ extern "C" {
 
 void app_main()
 {
-    // // Initialise peripherals and drivers
-    // nvs_flash_init();
-    // nvs_initialize();
-    // uart_initialize();
-    // init_timer();
-    // gpio_init();
-    // wifi_connect();
-    // LCD_init(LCD_ADDR, LCD_SDA, LCD_SCL, LCD_COLS, LCD_ROWS);
-    // sensor_init(ONEWIRE_BUS, DS18B20_RESOLUTION_11_BIT);
-    // controller_init(CONTROL_LOOP_FREQUENCY);
-    // webServer_init();
-    // init_input();
-
-    ESP_LOGI(tag, "Redirecting log messages to websocket connection");
-    esp_log_set_vprintf(&_log_vprintf);
+    // ESP_LOGI(tag, "Redirecting log messages to websocket connection");
+    // esp_log_set_vprintf(&_log_vprintf);
     
     DistillerConfig cfg {};
     cfg.ctrlConfig.dt = 1.0 / CONTROL_LOOP_FREQUENCY;
@@ -55,14 +42,6 @@ void app_main()
 
     DistillerManager* manager = DistillerManager::getInstance(5, 8192, 1, cfg);
     manager->begin();
-    
-    // // Schedule tasks
-    // xTaskCreatePinnedToCore(&temp_sensor_task, "Temperature Sensor", 16384, NULL, 7, NULL, 1);
-    // // xTaskCreatePinnedToCore(&flowmeter_task, "Flowrate", 2048, NULL, 7, NULL, 1);
-    // xTaskCreatePinnedToCore(&control_loop, "Controller", 16384, NULL, 7, NULL, 0);
-    // // xTaskCreatePinnedToCore(&menu_task, "LCD task", 2048, NULL, 3, NULL, 0);
-    // xTaskCreatePinnedToCore(&inputButtonTask, "Input button task", 16384, NULL, 5, NULL, 1);
-    // xTaskCreatePinnedToCore(&heartBeatTask, "Heartbeat task", 16384, NULL, 1, NULL, 1);
 }
 
 #ifdef __cplusplus

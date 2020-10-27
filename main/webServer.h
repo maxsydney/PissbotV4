@@ -1,41 +1,37 @@
-#pragma once
+#ifndef WEBSERVER_H
+#define WEBSERVER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "PBCommon.h"
+#include <libesphttpd/esp.h>
+#include "libesphttpd/httpd.h"
+#include "libesphttpd/httpd-freertos.h"
 
-#include "libesphttpd/cgiwebsocket.h"
+class WebserverConfig
+{
+    int maxConnections = 0;
+};
 
-typedef struct {
-    char ip[16];
-    uint8_t len;
-} ota_t;
+class Webserver
+{
+    static constexpr const char* Name = "Webserver";
 
-/*
-*   --------------------------------------------------------------------  
-*   websocket_task
-*   --------------------------------------------------------------------
-*   Handles websocket connection with browser clients and passes data
-*   back and forth between ESP32 and the browser
-*/
-void websocket_task(void *pvParameters);
+    public:
+        Webserver(void) = default;
+        Webserver(const WebserverConfig& cfg);
 
-/*
-*   --------------------------------------------------------------------  
-*   webServer_init
-*   --------------------------------------------------------------------
-*   Spins up an http server to serve static browser client files
-*/
-void webServer_init(void);
+        static PBRet checkInputs(const WebserverConfig& cfg);
+        bool isConfigured(void) const { return _configured; }
 
-/*
-*   --------------------------------------------------------------------  
-*   wsLog
-*   --------------------------------------------------------------------
-*   If websocket connection is open, log messages to browser
-*/
-esp_err_t wsLog(const char* logMsg);
+    private:
 
-#ifdef __cplusplus
-}
-#endif
+        // Initialisation
+        PBRet _initFromParams(const WebserverConfig& cfg);
+        PBRet _startupWebserver(void);
+
+        HttpdFreertosInstance _httpdFreertosInstance {};
+
+        WebserverConfig _cfg {};
+        bool _configured = false;
+};
+
+#endif // WEBSERVER_H

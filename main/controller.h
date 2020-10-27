@@ -6,9 +6,27 @@
 #include "messageServer.h"
 #include "SensorManager.h"
 #include "pump.h"
-#include "messages.h"
 
 enum class ControllerState { OFF, ON };
+
+// Controller Settings
+// TODO: Replace these ASAP
+typedef struct { 
+    float setpoint;
+    float P_gain;
+    float I_gain;
+    float D_gain;
+    float LPFCutoff;
+} ctrlParams_t;
+
+typedef struct {
+    int fanState;
+    int flush;
+    int elementLow;
+    int elementHigh;
+    int prodCondensor;
+} ctrlSettings_t;
+
 
 struct ControllerConfig
 {
