@@ -6,6 +6,8 @@
 
 class ConnectionManager
 {
+    static constexpr const char* Name = "Connection Manager";
+
     public:
         static esp_err_t addConnection(Websock* ws);
         static esp_err_t removeConnection(Websock* ws);
@@ -17,7 +19,7 @@ class ConnectionManager
         static constexpr int MAX_CONNECTIONS = 12;
 
     private:
-        static constexpr char *tag = "Connection Manager";
+        
         static Websock* _activeWebsockets[MAX_CONNECTIONS];
         static int _nConnections;
 };

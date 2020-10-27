@@ -14,6 +14,7 @@ class WebserverConfig
 class Webserver
 {
     static constexpr const char* Name = "Webserver";
+    static constexpr int LISTEN_PORT = 80;
 
     public:
         Webserver(void) = default;
