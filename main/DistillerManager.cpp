@@ -1,5 +1,6 @@
 #include <functional>
 #include "DistillerManager.h"
+#include "WifiManager.h"
 #include "messageServer.h"
 #include "MessageDefs.h"
 
@@ -79,6 +80,9 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
         ESP_LOGW(DistillerManager::Name, "Unable to configure DistillerManager");
         return PBRet::FAILURE;
     }
+
+    // Connect to Wifi
+    WifiManager::connect("PBLink", "pissbot1");
 
     // Initialize Controller
     _controller = std::make_unique<Controller> (7, 8192, 1, cfg.ctrlConfig);
