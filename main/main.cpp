@@ -42,7 +42,7 @@ void app_main()
 
     cfg.webserverConfig.maxConnections = 12;
 
-    DistillerManager* manager = DistillerManager::getInstance(5, 8192, 1, cfg);
+    DistillerManager* manager = DistillerManager::getInstance(5, 16384, 1, cfg);
     manager->begin();
 }
 

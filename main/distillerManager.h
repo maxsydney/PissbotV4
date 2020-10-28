@@ -62,7 +62,7 @@ class DistillerManager : public Task
         // Class data
         bool _configured = false;
         DistillerConfig _cfg {};
-        Webserver _webserver {};                // TODO: Should webserver run it it's own task?
+        std::unique_ptr<Webserver> _webserver;
         std::unique_ptr<Controller> _controller;
         std::unique_ptr<SensorManager> _sensorManager;
 };

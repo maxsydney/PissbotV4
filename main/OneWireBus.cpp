@@ -109,9 +109,8 @@ PBRet PBOneWire::initialiseTempSensors(void)
 
     // NOTE: Just assigning the first for now. Assign properly from saved sensors JSON
     // Assign sensors
-    _headTempSensor = _availableSensors.at(0);
-    if (_writeToFile() != PBRet::SUCCESS) {
-        return PBRet::FAILURE;
+    if (_headTempSensor.isConfigured() == false) {
+        _headTempSensor = _availableSensors.at(0);
     }
 
     // Connect other devices here
@@ -199,9 +198,9 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
 
     // // This is a temporary method to load a temperature sensor into the headTemp channel
     // // for testing
-    // if (initialiseTempSensors() != PBRet::SUCCESS) {
-    //     ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
-    // }
+    if (initialiseTempSensors() != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
+    }
 
     return PBRet::SUCCESS;
 }

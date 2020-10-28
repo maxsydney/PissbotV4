@@ -12,8 +12,7 @@ class ConnectionManager
 
     public:
         ConnectionManager(void) = default;
-        ConnectionManager(int maxConnections)
-            : _maxConnections(maxConnections) {}
+        ConnectionManager(int maxConnections);
 
         PBRet addConnection(Websock* ws);
         PBRet removeConnection(Websock* ws);

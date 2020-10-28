@@ -2,6 +2,12 @@
 #include "esp_log.h"
 #include <algorithm>
 
+ConnectionManager::ConnectionManager(int maxConnections)
+    : _maxConnections(maxConnections) 
+{
+    _configured = true;
+}
+
 PBRet ConnectionManager::addConnection(Websock* ws)
 {
     if (_nConnections >= _maxConnections) {

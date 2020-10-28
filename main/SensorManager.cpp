@@ -89,6 +89,7 @@ PBRet SensorManager::_initFromParams(const SensorManagerConfig& cfg)
     if (_loadKnownDevices(SensorManager::FSBasePath, SensorManager::FSPartitionLabel) != PBRet::SUCCESS) {
         ESP_LOGW(SensorManager::Name, "No saved devices were found");
     }
+    
 
     // Initialize flowrate sensors
 

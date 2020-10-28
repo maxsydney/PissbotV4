@@ -58,7 +58,8 @@ PBRet Webserver::_startupWebserver(const WebserverConfig& cfg)
     }
 
     // Allocate connection memory
-    connectionMemory = (RtosConnType*) malloc(sizeof(RtosConnType) * _cfg.maxConnections);
+    ESP_LOGI(Webserver::Name, "Allocating %d bytes for webserver connection memory", sizeof(RtosConnType) * cfg.maxConnections);
+    connectionMemory = (RtosConnType*) malloc(sizeof(RtosConnType) * cfg.maxConnections);
     if (connectionMemory == nullptr) {
         ESP_LOGE(Webserver::Name, "Failed to allocate memory for webserver");               // TODO: Set flag to run without webserver
         return PBRet::FAILURE;
