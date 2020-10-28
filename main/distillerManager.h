@@ -4,6 +4,7 @@
 #include "PBCommon.h"
 #include "CppTask.h"
 #include "controller.h"
+#include "WebServer.h"
 #include "SensorManager.h"
 #include "MessageDefs.h"
 
@@ -17,6 +18,7 @@ class DistillerConfig
     public:
         ControllerConfig ctrlConfig {};
         SensorManagerConfig sensorManagerConfig {};
+        WebserverConfig webserverConfig {};
 };
 
 // TODO: With robust inter-task communication, tasks shouldn't need to get a pointer
@@ -60,6 +62,7 @@ class DistillerManager : public Task
         // Class data
         bool _configured = false;
         DistillerConfig _cfg {};
+        Webserver _webserver {};                // TODO: Should webserver run it it's own task?
         std::unique_ptr<Controller> _controller;
         std::unique_ptr<SensorManager> _sensorManager;
 };

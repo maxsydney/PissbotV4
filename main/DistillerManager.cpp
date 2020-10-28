@@ -96,6 +96,12 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
         ESP_LOGW(DistillerManager::Name, "Unable to start sensor manager");
     }
 
+    // Initialize Webserver
+    _webserver = Webserver(_cfg.webserverConfig);
+    if (_webserver.isConfigured() == false) {
+        ESP_LOGW(DistillerManager::Name, "Unable to start sensor webserver");
+    }
+
     return PBRet::SUCCESS;
 }
 

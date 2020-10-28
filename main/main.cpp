@@ -40,6 +40,8 @@ void app_main()
     cfg.sensorManagerConfig.oneWireConfig.productFlowPin = PROD_FLOW;
     cfg.sensorManagerConfig.oneWireConfig.tempSensorResolution = DS18B20_RESOLUTION_11_BIT;
 
+    cfg.webserverConfig.maxConnections = 12;
+
     DistillerManager* manager = DistillerManager::getInstance(5, 8192, 1, cfg);
     manager->begin();
 }

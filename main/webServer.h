@@ -2,13 +2,15 @@
 #define WEBSERVER_H
 
 #include "PBCommon.h"
+#include "ConnectionManager.h"
 #include <libesphttpd/esp.h>
 #include "libesphttpd/httpd.h"
 #include "libesphttpd/httpd-freertos.h"
 
 class WebserverConfig
 {
-    int maxConnections = 0;
+    public:
+        int maxConnections = 0;
 };
 
 class Webserver
@@ -27,9 +29,12 @@ class Webserver
 
         // Initialisation
         PBRet _initFromParams(const WebserverConfig& cfg);
-        PBRet _startupWebserver(void);
+        PBRet _startupWebserver(const WebserverConfig& cfg);
+
+        ConnectionManager _connManager {};
 
         HttpdFreertosInstance _httpdFreertosInstance {};
+        RtosConnType* connectionMemory = nullptr;
 
         WebserverConfig _cfg {};
         bool _configured = false;
