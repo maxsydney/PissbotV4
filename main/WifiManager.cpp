@@ -59,24 +59,13 @@ PBRet WifiManager::connect(const char* ssid, const char* password)
 {
     _wifiEventGroup = xEventGroupCreate();
 
-    if (esp_netif_init() != ESP_OK) {
-        ESP_LOGW(WifiManager::Name, "Failed to initialize TCP/IP stack");
-        return PBRet::FAILURE;
-    }
+    ESP_ERROR_CHECK(esp_netif_init());
 
-    if (esp_event_loop_create_default()) {
-        ESP_LOGW(WifiManager::Name, "Error creating event group");
-        return PBRet::FAILURE;
-    }
-
-    // TODO: Return type here is not used? 
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    if (esp_wifi_init(&cfg) != ESP_OK) {
-        ESP_LOGW(WifiManager::Name, "Error initializing wifi");
-        return PBRet::FAILURE;
-    }
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
     // TODO: Error checking here
     esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiManager::_eventHandler, NULL);
@@ -88,6 +77,9 @@ PBRet WifiManager::connect(const char* ssid, const char* password)
     wifiConfig.sta.pmf_cfg.required = false;
     strncpy((char*) wifiConfig.sta.ssid, ssid, 32);
     strncpy((char*) wifiConfig.sta.password, password, 64);
+
+    ESP_LOGW(WifiManager::Name, "SSID: %s", wifiConfig.sta.ssid);
+    ESP_LOGW(WifiManager::Name, "Password: %s", wifiConfig.sta.password);
 
     // TODO: Add proper error checking on these function calls
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
