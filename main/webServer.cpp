@@ -43,7 +43,7 @@ PBRet Webserver::checkInputs(const WebserverConfig& cfg)
 }
 
 static HttpdBuiltInUrl builtInUrls[] = {
-	ROUTE_REDIRECT("/", "/index.tpl"),
+	ROUTE_REDIRECT("/", "/index.html"),
 	ROUTE_FILESYSTEM(),
 	ROUTE_END()
 };

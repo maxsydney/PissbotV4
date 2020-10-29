@@ -89,5 +89,6 @@
         "typeinfo": "cpp",
         "variant": "cpp"
     },
-    "python.linting.pylintEnabled": false
+    "python.linting.pylintEnabled": false,
+    "python.pythonPath": "/usr/bin/python3"
 }
