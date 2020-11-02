@@ -65,21 +65,30 @@ PBRet Webserver::_startupWebserver(const WebserverConfig& cfg)
         return PBRet::FAILURE;
     }
 
+    // Allocate httpd instance
+    _httpdFreertosInstance = (HttpdFreertosInstance*) malloc(sizeof(HttpdFreertosInstance));
+    if (_httpdFreertosInstance == nullptr) {
+        ESP_LOGE(Webserver::Name, "Failed to allocate memory for webserver");               // TODO: Set flag to run without webserver
+        return PBRet::FAILURE;
+    } else {
+        ESP_LOGI(Webserver::Name, "Allocating %d bytes for webserver connection memory", sizeof(HttpdFreertosInstance));
+    }
+
     // Configure webserver
-	EspFsConfig espfs_conf = {
-		.memAddr = espfs_image_bin,
-	};
+	EspFsConfig espfs_conf {};
+    espfs_conf.memAddr = espfs_image_bin;
+    
 	EspFs* fs = espFsInit(&espfs_conf);
     httpdRegisterEspfs(fs);
 
 	esp_netif_init();
-	httpdFreertosInit(&_httpdFreertosInstance,
+	httpdFreertosInit(_httpdFreertosInstance,
 	                  builtInUrls,
 	                  LISTEN_PORT,
 	                  connectionMemory,
 	                  _cfg.maxConnections,
 	                  HTTPD_FLAG_NONE);
-	httpdFreertosStart(&_httpdFreertosInstance);
+	httpdFreertosStart(_httpdFreertosInstance);
 
     ESP_LOGI(Webserver::Name, "Webserver initialized");
     return PBRet::SUCCESS;

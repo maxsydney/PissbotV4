@@ -33,7 +33,7 @@ class Webserver
 
         ConnectionManager _connManager {};
 
-        HttpdFreertosInstance _httpdFreertosInstance {};
+        HttpdFreertosInstance* _httpdFreertosInstance {};
         RtosConnType* connectionMemory = nullptr;
 
         WebserverConfig _cfg {};
