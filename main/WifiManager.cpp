@@ -1,11 +1,13 @@
 #include "WifiManager.h"
 #include <cstring>
 #include <string>
+#include <lwip/sockets.h>
+#include <tcpip_adapter.h>
+#include <esp_wifi.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "esp_system.h"
-#include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
 
@@ -60,7 +62,6 @@ PBRet WifiManager::connect(const char* ssid, const char* password)
     _wifiEventGroup = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
-
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 

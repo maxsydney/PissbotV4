@@ -42,8 +42,14 @@ PBRet Webserver::checkInputs(const WebserverConfig& cfg)
     return PBRet::SUCCESS;
 }
 
+static void openConnection(Websock *ws) 
+{
+	ESP_LOGI("Webserver", "Got connection request");
+}
+
 static HttpdBuiltInUrl builtInUrls[] = {
 	ROUTE_REDIRECT("/", "/index.html"),
+    ROUTE_WS("/ws", openConnection),
 	ROUTE_FILESYSTEM(),
 	ROUTE_END()
 };
@@ -77,7 +83,7 @@ PBRet Webserver::_startupWebserver(const WebserverConfig& cfg)
     // Configure webserver
 	EspFsConfig espfs_conf {};
     espfs_conf.memAddr = espfs_image_bin;
-    
+
 	EspFs* fs = espFsInit(&espfs_conf);
     httpdRegisterEspfs(fs);
 
