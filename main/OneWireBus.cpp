@@ -1,7 +1,5 @@
 #include "OneWireBus.h"
 
-// TODO: Move the load from JSON stuff to sensorManager
-
 PBOneWire::PBOneWire(const PBOneWireConfig& cfg)
 {
     // Check input parameters

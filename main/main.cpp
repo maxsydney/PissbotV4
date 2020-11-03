@@ -42,6 +42,7 @@ void app_main()
     cfg.sensorManagerConfig.oneWireConfig.tempSensorResolution = DS18B20_RESOLUTION_11_BIT;
 
     cfg.webserverConfig.maxConnections = 12;
+    cfg.webserverConfig.maxBroadcastFreq = 10.0; // [Hz]
 
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();

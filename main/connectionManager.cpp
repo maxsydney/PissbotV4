@@ -2,11 +2,8 @@
 #include "esp_log.h"
 #include <algorithm>
 
-ConnectionManager::ConnectionManager(int maxConnections)
-    : _maxConnections(maxConnections) 
-{
-    _configured = true;
-}
+std::vector<Websock*> ConnectionManager::_activeWebsockets = std::vector<Websock*>(0, nullptr);
+int ConnectionManager::_nConnections = 0;
 
 PBRet ConnectionManager::addConnection(Websock* ws)
 {
@@ -16,6 +13,7 @@ PBRet ConnectionManager::addConnection(Websock* ws)
     }
 
     _activeWebsockets.push_back(ws);
+    _activeWebsockets.resize(++_nConnections);
     ESP_LOGI(ConnectionManager::Name, "Opening connection (%p)", ws);
     return PBRet::SUCCESS;
 }
@@ -24,11 +22,12 @@ PBRet ConnectionManager::removeConnection(Websock* ws)
 {
     ESP_LOGI(ConnectionManager::Name, "Closing connection (%p)", ws);
     _activeWebsockets.erase(std::remove(_activeWebsockets.begin(), _activeWebsockets.end(), ws), _activeWebsockets.end());
+    _activeWebsockets.resize(--_nConnections);
 
     return PBRet::SUCCESS;
 }
 
-PBRet ConnectionManager::checkConnection(Websock* ws) const
+PBRet ConnectionManager::checkConnection(Websock* ws)
 {
     if (std::find(_activeWebsockets.begin(), _activeWebsockets.end(), ws) != _activeWebsockets.end()) {
         return PBRet::SUCCESS;
@@ -37,13 +36,11 @@ PBRet ConnectionManager::checkConnection(Websock* ws) const
     return PBRet::FAILURE;
 }
 
-void ConnectionManager::printConnections(void) const
+void ConnectionManager::printConnections(void)
 {
     int count = 0;
     ESP_LOGI(ConnectionManager::Name, "--- %d Active websockets ---", _nConnections);
-    for (int i = 0; i < _maxConnections; i++) {
-        if ( _activeWebsockets[i] != NULL) {
-            ESP_LOGI(ConnectionManager::Name, "(%d) - %p", count++, _activeWebsockets[i]);
-        }
+    for (const Websock* ws : _activeWebsockets) {
+        ESP_LOGI(ConnectionManager::Name, "(%d) - %p", count++, ws);
     }
 }

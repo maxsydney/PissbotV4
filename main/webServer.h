@@ -1,7 +1,9 @@
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
 
+#include "CppTask.h"
 #include "PBCommon.h"
+#include "OneWireBus.h"
 #include "ConnectionManager.h"
 #include <libesphttpd/esp.h>
 #include "libesphttpd/httpd.h"
@@ -11,17 +13,22 @@ class WebserverConfig
 {
     public:
         int maxConnections = 0;
+        double maxBroadcastFreq = 0.0;
 };
 
-class Webserver
+class Webserver : public Task
 {
     static constexpr const char* Name = "Webserver";
     static constexpr int LISTEN_PORT = 80;
 
     public:
-        Webserver(void) = default;
-        Webserver(const WebserverConfig& cfg);
+        Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg);
 
+        // Websocket methods
+        static void openConnection(Websock *ws);
+        static void closeConnection(Websock *ws);
+
+        // Utility methods
         static PBRet checkInputs(const WebserverConfig& cfg);
         bool isConfigured(void) const { return _configured; }
 
@@ -30,8 +37,25 @@ class Webserver
         // Initialisation
         PBRet _initFromParams(const WebserverConfig& cfg);
         PBRet _startupWebserver(const WebserverConfig& cfg);
+        PBRet _setupCBTable(void) override; 
 
-        ConnectionManager _connManager {};
+        // Queue callbacks
+        PBRet _temperatureDataCB(std::shared_ptr<MessageBase> msg);
+        PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
+        PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
+        PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
+
+        // Message serialization
+        static PBRet serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr);
+
+        // Websocket methods
+        PBRet _sendToAll(const std::string& msg);
+
+        // Queued messages to broadcast
+        std::string _temperatureMessage {};
+
+        // FreeRTOS hook method
+        void taskMain(void) override;
 
         HttpdFreertosInstance _httpdFreertosInstance {};
         RtosConnType* connectionMemory = nullptr;

@@ -138,6 +138,7 @@ PBRet SensorManager::_loadKnownDevices(const char* basePath, const char* partiti
         return PBRet::FAILURE;
     }
 
+    // TODO: Stringstream is quite heavy for embedded. Might need to remove
     std::stringstream JSONBuffer;
     JSONBuffer << configIn.rdbuf();
 

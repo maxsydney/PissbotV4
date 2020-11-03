@@ -102,9 +102,10 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
     }
 
     // Initialize Webserver
-    ESP_LOGI(DistillerManager::Name, "Initializing Webserver");
-    _webserver = std::make_unique<Webserver> (cfg.webserverConfig);
-    if (_webserver->isConfigured() == false) {
+    _webserver = std::make_unique<Webserver> (7, 8192, 1, cfg.webserverConfig);
+    if (_webserver->isConfigured()) {
+        _webserver->begin();
+    } else {
         ESP_LOGW(DistillerManager::Name, "Unable to start sensor webserver");
     }
 

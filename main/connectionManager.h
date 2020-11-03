@@ -11,25 +11,21 @@ class ConnectionManager
     static constexpr const char* Name = "Connection Manager";
 
     public:
-        ConnectionManager(void) = default;
-        ConnectionManager(int maxConnections);
 
-        PBRet addConnection(Websock* ws);
-        PBRet removeConnection(Websock* ws);
-        PBRet checkConnection(Websock* ws) const;
-        void printConnections(void) const;
-        int getNumConnections(void) const { return _nConnections; }
-        PBRet getConnectionPtr(size_t i, Websock** conn);
+        static PBRet addConnection(Websock* ws);
+        static PBRet removeConnection(Websock* ws);
+        static PBRet checkConnection(Websock* ws);
+        static void printConnections(void);
+        static int getNumConnections(void) { return _nConnections; }
+        static PBRet getConnectionPtr(size_t i, Websock** conn);
 
-        bool isConfigured(void) const { return _configured; }
-        const std::vector<Websock*> getActiveWebsockets(void) const { return _activeWebsockets; }
+        static const std::vector<Websock*> getActiveWebsockets(void) { return _activeWebsockets; }
 
     private:
         
-        bool _configured = false;
-        std::vector<Websock*> _activeWebsockets {};
-        int _maxConnections = 0;
-        int _nConnections = 0;;
+        static std::vector<Websock*> _activeWebsockets;
+        static constexpr int _maxConnections = 12;
+        static int _nConnections;
 };
 
 #endif // CONNECTIONMANAGER_H
