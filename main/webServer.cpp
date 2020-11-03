@@ -44,6 +44,7 @@ PBRet Webserver::checkInputs(const WebserverConfig& cfg)
 
 static void openConnection(Websock *ws) 
 {
+    // TODO: Implement socket server task
 	ESP_LOGI("Webserver", "Got connection request");
 }
 
@@ -67,34 +68,28 @@ PBRet Webserver::_startupWebserver(const WebserverConfig& cfg)
     ESP_LOGI(Webserver::Name, "Allocating %d bytes for webserver connection memory", sizeof(RtosConnType) * cfg.maxConnections);
     connectionMemory = (RtosConnType*) malloc(sizeof(RtosConnType) * cfg.maxConnections);
     if (connectionMemory == nullptr) {
-        ESP_LOGE(Webserver::Name, "Failed to allocate memory for webserver");               // TODO: Set flag to run without webserver
+        // TODO: In the case of failure, set flag to run without webserver
+        ESP_LOGE(Webserver::Name, "Failed to allocate memory for webserver");
         return PBRet::FAILURE;
-    }
-
-    // Allocate httpd instance
-    _httpdFreertosInstance = (HttpdFreertosInstance*) malloc(sizeof(HttpdFreertosInstance));
-    if (_httpdFreertosInstance == nullptr) {
-        ESP_LOGE(Webserver::Name, "Failed to allocate memory for webserver");               // TODO: Set flag to run without webserver
-        return PBRet::FAILURE;
-    } else {
-        ESP_LOGI(Webserver::Name, "Allocating %d bytes for webserver connection memory", sizeof(HttpdFreertosInstance));
     }
 
     // Configure webserver
 	EspFsConfig espfs_conf {};
     espfs_conf.memAddr = espfs_image_bin;
-
 	EspFs* fs = espFsInit(&espfs_conf);
+    if (fs == nullptr) {
+        ESP_LOGE(Webserver::Name, "Failed to initialise espfs file system");
+        return PBRet::FAILURE;
+    }
+    
     httpdRegisterEspfs(fs);
-
-	esp_netif_init();
-	httpdFreertosInit(_httpdFreertosInstance,
+	httpdFreertosInit(&_httpdFreertosInstance,
 	                  builtInUrls,
 	                  LISTEN_PORT,
 	                  connectionMemory,
-	                  _cfg.maxConnections,
+	                  cfg.maxConnections,
 	                  HTTPD_FLAG_NONE);
-	httpdFreertosStart(_httpdFreertosInstance);
+	httpdFreertosStart(&_httpdFreertosInstance);
 
     ESP_LOGI(Webserver::Name, "Webserver initialized");
     return PBRet::SUCCESS;
