@@ -46,9 +46,11 @@ void Webserver::taskMain(void)
 
         // Broadcast data
         _sendToAll(_temperatureMessage);
+        _sendToAll(_ctrlTuningMessage);
 
         // Clear sent messages
         _temperatureMessage.clear();
+        _ctrlTuningMessage.clear();
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -87,6 +89,7 @@ void Webserver::openConnection(Websock *ws)
 {
 	ESP_LOGI("Webserver", "Got connection request");
     ws->closeCb = Webserver::closeConnection;
+    _requestControllerTuning();
     ConnectionManager::addConnection(ws);
     ConnectionManager::printConnections();
 }
@@ -396,4 +399,14 @@ PBRet Webserver::_sendToAll(const std::string& msg)
     }
 
     return PBRet::SUCCESS;
+}
+
+PBRet Webserver::_requestControllerTuning(void)
+{
+    // Request controller tuning settings
+    // 
+
+    std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::Tuning);
+
+    return MessageServer::broadcastMessage(msg);
 }

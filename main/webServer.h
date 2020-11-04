@@ -50,6 +50,9 @@ class Webserver : public Task
         static PBRet serializeControlTuningMsg(const ControlTuning& ctrlTuning, std::string& outStr);
         static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);
 
+        // Utility methods
+        static PBRet _requestControllerTuning(void);
+
         // Websocket methods
         PBRet _sendToAll(const std::string& msg);
 

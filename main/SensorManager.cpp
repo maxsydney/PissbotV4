@@ -101,7 +101,7 @@ PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
     // Send a temperature data message to the queue
     std::shared_ptr<TemperatureData> msg = std::make_shared<TemperatureData> (Tdata);
 
-    return MessageServer::broadcastMessage(msg);;
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet SensorManager::checkInputs(const SensorManagerConfig& cfg)

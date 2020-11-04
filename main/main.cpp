@@ -16,8 +16,6 @@
 #include "webServer.h"
 #include "DistillerManager.h"
 
-static const char* tag = "Main";
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,6 +26,8 @@ void app_main()
     // esp_log_set_vprintf(&_log_vprintf);
     
     DistillerConfig cfg {};
+    cfg.ctrlConfig.ctrlTuning = ControlTuning(70.0, 1.0, 1.0, 1.0, 1.0);
+    cfg.ctrlConfig.ctrlSettings = ControlSettings(false, false, false, false, false);
     cfg.ctrlConfig.dt = 1.0 / CONTROL_LOOP_FREQUENCY;
     cfg.ctrlConfig.refluxPumpCfg = PumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
     cfg.ctrlConfig.prodPumpCfg = PumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);

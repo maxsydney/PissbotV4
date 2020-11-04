@@ -28,7 +28,8 @@ void Controller::taskMain(void)
         MessageType::TemperatureData,
         MessageType::ControlTuning,
         MessageType::ControlCommand,
-        MessageType::ControlSettings
+        MessageType::ControlSettings,
+        MessageType::ControllerDataRequest
     };
     Subscriber sub(Controller::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -66,11 +67,11 @@ PBRet Controller::_generalMessageCB(std::shared_ptr<MessageBase> msg)
 }
 PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
 {
-    std::shared_ptr<TemperatureData> TData = std::static_pointer_cast<TemperatureData>(msg);
+    // std::shared_ptr<TemperatureData> TData = std::static_pointer_cast<TemperatureData>(msg);
 
-    ESP_LOGI(Controller::Name, "Received temperature message:\nHead: %.3lf\nReflux condensor: %.3f\nProduct condensor: %.3lf\n"
-                               "Radiator: %.3f\nBoiler: %.3lf\nUptime: %ld", TData->getHeadTemp(), TData->getRefluxCondensorTemp(),
-                                TData->getProdCondensorTemp(), TData->getRadiatorTemp(), TData->getBoilerTemp(), (long int) TData->getTimeStamp());
+    // ESP_LOGI(Controller::Name, "Received temperature message:\nHead: %.3lf\nReflux condensor: %.3f\nProduct condensor: %.3lf\n"
+    //                            "Radiator: %.3f\nBoiler: %.3lf\nUptime: %ld", TData->getHeadTemp(), TData->getRefluxCondensorTemp(),
+    //                             TData->getProdCondensorTemp(), TData->getRadiatorTemp(), TData->getBoilerTemp(), (long int) TData->getTimeStamp());
 
     return PBRet::SUCCESS;
 }
@@ -100,6 +101,41 @@ PBRet Controller::_controlTuningCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;
 }
 
+PBRet Controller::_controlDataRequestCB(std::shared_ptr<MessageBase> msg)
+{
+    // Broadcast the requested data
+    //
+
+    ESP_LOGI(Controller::Name, "Got request for data");
+
+    ControllerDataRequest request = *std::static_pointer_cast<ControllerDataRequest>(msg);
+
+    switch (request.getType())
+    {
+        case (ControllerDataRequestType::Tuning):
+        {
+            return _broadcastControllerTuning();
+        }
+        case (ControllerDataRequestType::Settings):
+        {
+            return _broadcastControllerSettings();
+        }
+        case (ControllerDataRequestType::None):
+        {
+            ESP_LOGW(Controller::Name, "Cannot respond to request for data None");
+            break;
+        }
+        default:
+        {
+            ESP_LOGW(Controller::Name, "Controller data request not supported");
+            break;
+        }
+    }
+
+    // If we have made it here, we haven't been able to respond to data request
+    return PBRet::FAILURE;
+}
+
 PBRet Controller::_setupCBTable(void)
 {
     _cbTable = std::map<MessageType, queueCallback> {
@@ -107,10 +143,28 @@ PBRet Controller::_setupCBTable(void)
         {MessageType::TemperatureData, std::bind(&Controller::_temperatureDataCB, this, std::placeholders::_1)},
         {MessageType::ControlCommand, std::bind(&Controller::_controlCommandCB, this, std::placeholders::_1)},
         {MessageType::ControlSettings, std::bind(&Controller::_controlSettingsCB, this, std::placeholders::_1)},
-        {MessageType::ControlTuning, std::bind(&Controller::_controlTuningCB, this, std::placeholders::_1)}
+        {MessageType::ControlTuning, std::bind(&Controller::_controlTuningCB, this, std::placeholders::_1)},
+        {MessageType::ControllerDataRequest, std::bind(&Controller::_controlDataRequestCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
+}
+
+PBRet Controller::_broadcastControllerTuning(void) const
+{
+    // Send a temperature data message to the queue
+    std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (_cfg.ctrlTuning);
+
+    ESP_LOGI(Controller::Name, "Broadcasting controller tuning");
+    return MessageServer::broadcastMessage(msg);
+}
+
+PBRet Controller::_broadcastControllerSettings(void) const
+{
+    // Send a temperature data message to the queue
+    std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (_cfg.ctrlSettings);
+
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet Controller::_initIO(const ControllerConfig& cfg) const
@@ -169,13 +223,13 @@ PBRet Controller::_doControl(double headTemp)
     // Implements a basic PID controller with anti-integral windup
     // and filtering on derivative
 
-    double err = headTemp - _ctrlParams.setpoint;
+    double err = headTemp - _cfg.ctrlTuning.getSetpoint();
 
     // Proportional term
-    double proportional = _ctrlParams.P_gain * err;
+    double proportional = _cfg.ctrlTuning.getPGain() * err;
 
     // Integral term (discretized via bilinear transform)
-    _integral += 0.5 * _ctrlParams.I_gain * _cfg.dt * (err + _prevError);
+    _integral += 0.5 * _cfg.ctrlTuning.getIGain() * _cfg.dt * (err + _prevError);
 
     // Dynamic integral clamping
     double intLimMin = 0.0;
@@ -203,7 +257,7 @@ PBRet Controller::_doControl(double headTemp)
     // Derivative term (discretized via backwards temperature differentiation)
     // TODO: Filtering on D term? Quite tricky due to low temp sensor sample rate
     const double alpha = 0.15;      // TODO: Improve hacky dterm filter
-    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlParams.D_gain * (headTemp - _prevTemp) / _cfg.dt);
+    _derivative = (1 - alpha) * _derivative + alpha * (_cfg.ctrlTuning.getDGain() * (headTemp - _prevTemp) / _cfg.dt);
 
     // Compute limited output
     double output = proportional + _integral + _derivative;

@@ -27,18 +27,6 @@ typedef struct {
     int prodCondensor;
 } ctrlSettings_t;
 
-
-struct ControllerConfig
-{
-    double dt = 0.0;
-    ctrlParams_t ctrlTuningParams {};
-    PumpCfg refluxPumpCfg = {};
-    PumpCfg prodPumpCfg = {};
-    gpio_num_t fanPin = GPIO_NUM_NC;
-    gpio_num_t element1Pin = GPIO_NUM_NC;
-    gpio_num_t element2Pin = GPIO_NUM_NC;
-};
-
 enum class ControllerDataRequestType { None, Tuning, Settings };
 
 class ControlSettings : public MessageBase
@@ -93,6 +81,18 @@ class ControlTuning : public MessageBase
         double _IGain = 0.0;
         double _DGain = 0.0;
         double _LPFCutoff = 0.0;
+};
+
+struct ControllerConfig
+{
+    double dt = 0.0;
+    ControlTuning ctrlTuning {};
+    ControlSettings ctrlSettings {};
+    PumpCfg refluxPumpCfg {};
+    PumpCfg prodPumpCfg {};
+    gpio_num_t fanPin = GPIO_NUM_NC;
+    gpio_num_t element1Pin = GPIO_NUM_NC;
+    gpio_num_t element2Pin = GPIO_NUM_NC;
 };
 
 class ControllerDataRequest : public MessageBase
@@ -171,10 +171,14 @@ class Controller: public Task
         PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
         PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
         PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
+        PBRet _controlDataRequestCB(std::shared_ptr<MessageBase> msg);
 
+        // Data broadcast
+        PBRet _broadcastControllerTuning(void) const;
+        PBRet _broadcastControllerSettings(void) const;
+        
         // Controller data
         ControllerConfig _cfg {};
-        ctrlParams_t _ctrlParams {};
         ControlCommand _outputState {};
         TemperatureData _currentTemp {};
 
