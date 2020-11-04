@@ -245,9 +245,10 @@ PBRet Webserver::serializeTemperatureDataMsg(const TemperatureData& TData, std::
     }
 
     char* tempMessageJSON = cJSON_Print(root);
+    cJSON_Delete(root);
+
     if (tempMessageJSON == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to allocate memory for temperature data JSON string");
-        cJSON_Delete(root);
         return PBRet::FAILURE;
     }
 
@@ -306,14 +307,77 @@ PBRet Webserver::serializeControlTuningMsg(const ControlTuning& ctrlTuning, std:
     }
 
     char* tuningMsgJson = cJSON_Print(root);
+    cJSON_Delete(root);
+
     if (tuningMsgJson == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to allocate memory for control tuning data JSON string");
-        cJSON_Delete(root);
         return PBRet::FAILURE;
     }
 
     outStr = tuningMsgJson;
     free(tuningMsgJson);
+
+    return PBRet::SUCCESS;
+}
+
+PBRet Webserver::serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr)
+{
+    // Convert a ControlTuning message into a JSON representation
+    //
+
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddStringToObject(root, "MessageType", "ControlSettings") == nullptr)
+    {
+        ESP_LOGW(Webserver::Name, "Unable to add MessageType to control settings JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddNumberToObject(root, "FanState", ctrlSettings.getFanState()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add fanstate to control settings JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddNumberToObject(root, "ElementLow", ctrlSettings.getElementLow()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add low power element to settings tuning JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    } 
+
+    if (cJSON_AddNumberToObject(root, "ElementHigh", ctrlSettings.getElementHigh()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add high power element to control settings JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    } 
+
+    if (cJSON_AddNumberToObject(root, "ProdPump", ctrlSettings.getProdCondensorPump()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add product condensor pump state to control settings JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddNumberToObject(root, "RefluxPump", ctrlSettings.getRefluxCondensorPump()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add reflux condensor pump state to control settings JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    char* ctrlSettingsMsgJson = cJSON_Print(root);
+    cJSON_Delete(root);
+
+    if (ctrlSettingsMsgJson == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to allocate memory for control settings data JSON string");
+        return PBRet::FAILURE;
+    }
+
+    outStr = ctrlSettingsMsgJson;
+    free(ctrlSettingsMsgJson);
 
     return PBRet::SUCCESS;
 }

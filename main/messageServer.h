@@ -28,7 +28,8 @@ enum class MessageType {
     FlowrateData,
     ControlTuning,
     ControlCommand,
-    ControlSettings
+    ControlSettings,
+    ControllerDataRequest
 };
 
 // Base class for all messages to be passed over network

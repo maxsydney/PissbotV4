@@ -39,6 +39,8 @@ struct ControllerConfig
     gpio_num_t element2Pin = GPIO_NUM_NC;
 };
 
+enum class ControllerDataRequestType { None, Tuning, Settings };
+
 class ControlSettings : public MessageBase
 {
     static constexpr MessageType messageType = MessageType::ControlSettings;
@@ -91,6 +93,24 @@ class ControlTuning : public MessageBase
         double _IGain = 0.0;
         double _DGain = 0.0;
         double _LPFCutoff = 0.0;
+};
+
+class ControllerDataRequest : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::ControllerDataRequest;
+    static constexpr const char* Name = "Controller data request";
+
+    public:
+        ControllerDataRequest(void) = default;
+        ControllerDataRequest(ControllerDataRequestType requestType)
+            : MessageBase(ControllerDataRequest::messageType, ControllerDataRequest::Name),
+              _requestType(requestType) {}
+
+        ControllerDataRequestType getType(void) const { return _requestType; }
+
+    private:
+
+        ControllerDataRequestType _requestType = ControllerDataRequestType::None;
 };
 
 class ControlCommand : public MessageBase

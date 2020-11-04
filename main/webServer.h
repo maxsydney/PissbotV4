@@ -4,6 +4,7 @@
 #include "CppTask.h"
 #include "PBCommon.h"
 #include "OneWireBus.h"
+#include "controller.h"
 #include "ConnectionManager.h"
 #include <libesphttpd/esp.h>
 #include "libesphttpd/httpd.h"
@@ -41,13 +42,13 @@ class Webserver : public Task
 
         // Queue callbacks
         PBRet _temperatureDataCB(std::shared_ptr<MessageBase> msg);
-        PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
         PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
         PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
 
         // Message serialization
         static PBRet serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr);
         static PBRet serializeControlTuningMsg(const ControlTuning& ctrlTuning, std::string& outStr);
+        static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);
 
         // Websocket methods
         PBRet _sendToAll(const std::string& msg);
@@ -55,13 +56,13 @@ class Webserver : public Task
         // Queued messages to broadcast
         std::string _temperatureMessage {};
         std::string _ctrlTuningMessage {};
+        std::string _ctrlSettingsMessage {};
 
         // FreeRTOS hook method
         void taskMain(void) override;
 
         HttpdFreertosInstance _httpdFreertosInstance {};
         RtosConnType* connectionMemory = nullptr;
-
         WebserverConfig _cfg {};
         bool _configured = false;
 };
