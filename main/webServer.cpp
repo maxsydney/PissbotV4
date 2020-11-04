@@ -1,6 +1,7 @@
 
 #include "Webserver.h"
 #include "connectionManager.h"
+#include "controller.h"
 #include "espfs.h"
 #include "espfs_image.h"
 #include "libesphttpd/httpd-espfs.h"
@@ -141,7 +142,6 @@ PBRet Webserver::_setupCBTable(void)
 {
     _cbTable = std::map<MessageType, queueCallback> {
         {MessageType::TemperatureData, std::bind(&Webserver::_temperatureDataCB, this, std::placeholders::_1)},
-        {MessageType::ControlCommand, std::bind(&Webserver::_controlCommandCB, this, std::placeholders::_1)},
         {MessageType::ControlSettings, std::bind(&Webserver::_controlSettingsCB, this, std::placeholders::_1)},
         {MessageType::ControlTuning, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)}
     };
@@ -173,11 +173,6 @@ PBRet Webserver::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;   
 }
 
-PBRet Webserver::_controlCommandCB(std::shared_ptr<MessageBase> msg)
-{
-    return PBRet::SUCCESS;
-}
-
 PBRet Webserver::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
 {
     return PBRet::SUCCESS;
@@ -185,6 +180,20 @@ PBRet Webserver::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
 
 PBRet Webserver::_controlTuningCB(std::shared_ptr<MessageBase> msg)
 {
+    // Serialize the controller tuning parameters and broadcast to all 
+    // connected websockets
+
+    // Get controlTuning object
+    ControlTuning TData = *std::static_pointer_cast<ControlTuning>(msg);
+
+    // // Serialize to TemperatureData JSON string memory
+    // if (serializeTemperatureDataMsg(TData, _temperatureMessage) != PBRet::SUCCESS)
+    // {
+    //     ESP_LOGW(Webserver::Name, "Error writing TemperatureData object to JSON string. Deleting");
+    //     _temperatureMessage.clear();
+    //     return PBRet::FAILURE;
+    // }
+
     return PBRet::SUCCESS;
 }
 

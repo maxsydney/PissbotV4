@@ -39,6 +39,60 @@ struct ControllerConfig
     gpio_num_t element2Pin = GPIO_NUM_NC;
 };
 
+class ControlSettings : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::ControlSettings;
+    static constexpr const char* Name = "Controller settings";
+
+    public:
+        ControlSettings(void) = default;
+        ControlSettings(bool fanState, bool elementLow, bool elementHigh, 
+                        bool prodCondensorPump, bool refluxCondensorPump)
+            : MessageBase(ControlSettings::messageType, ControlSettings::Name), _fanState(fanState), 
+              _elementLow(elementLow), _elementHigh(elementHigh), _prodCondensorPump(prodCondensorPump), 
+              _refluxCondensorPump(refluxCondensorPump) {}
+
+        bool getFanState(void) const { return _fanState; }
+        bool getElementLow(void) const { return _elementLow; }
+        bool getElementHigh(void) const { return _elementHigh; }
+        bool getProdCondensorPump(void) const { return _prodCondensorPump; }
+        bool getRefluxCondensorPump(void) const { return _refluxCondensorPump; }
+
+    private:
+
+        bool _fanState = false;
+        bool _elementLow = false;
+        bool _elementHigh = false;
+        bool _prodCondensorPump = false;
+        bool _refluxCondensorPump = false;
+};
+
+class ControlTuning : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::ControlTuning;
+    static constexpr const char* Name = "Controller tuning";
+
+    public:
+        ControlTuning(void) = default;
+        ControlTuning(double setpoint, double PGain, double IGain, double DGain, double LPFCutoff)
+            : MessageBase(ControlTuning::messageType, ControlTuning::Name), _setpoint(setpoint),
+              _PGain(PGain), _IGain(IGain), _DGain(DGain), _LPFCutoff(LPFCutoff) {}
+
+        double getSetpoint(void) const { return _setpoint; }
+        double getPGain(void) const { return _PGain; }
+        double getIGain(void) const { return _IGain; }
+        double getDGain(void) const { return _DGain; }
+        double getLPFCutoff(void) const { return _LPFCutoff; }
+
+    private:
+
+        double _setpoint = 0.0;
+        double _PGain = 0.0;
+        double _IGain = 0.0;
+        double _DGain = 0.0;
+        double _LPFCutoff = 0.0;
+};
+
 class ControlCommand : public MessageBase
 {
     static constexpr MessageType messageType = MessageType::ControlCommand;
