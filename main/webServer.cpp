@@ -184,15 +184,15 @@ PBRet Webserver::_controlTuningCB(std::shared_ptr<MessageBase> msg)
     // connected websockets
 
     // Get controlTuning object
-    ControlTuning TData = *std::static_pointer_cast<ControlTuning>(msg);
+    ControlTuning ctrlTuning = *std::static_pointer_cast<ControlTuning>(msg);
 
-    // // Serialize to TemperatureData JSON string memory
-    // if (serializeTemperatureDataMsg(TData, _temperatureMessage) != PBRet::SUCCESS)
-    // {
-    //     ESP_LOGW(Webserver::Name, "Error writing TemperatureData object to JSON string. Deleting");
-    //     _temperatureMessage.clear();
-    //     return PBRet::FAILURE;
-    // }
+    // Serialize to ControlTuning JSON string memory
+    if (serializeControlTuningMsg(ctrlTuning, _ctrlTuningMessage) != PBRet::SUCCESS)
+    {
+        ESP_LOGW(Webserver::Name, "Error writing ControlTuning object to JSON string. Deleting");
+        _ctrlTuningMessage.clear();
+        return PBRet::FAILURE;
+    }
 
     return PBRet::SUCCESS;
 }
@@ -253,6 +253,67 @@ PBRet Webserver::serializeTemperatureDataMsg(const TemperatureData& TData, std::
 
     outStr = tempMessageJSON;
     free(tempMessageJSON);
+
+    return PBRet::SUCCESS;
+}
+
+PBRet Webserver::serializeControlTuningMsg(const ControlTuning& ctrlTuning, std::string& outStr)
+{
+    // Convert a ControlTuning message into a JSON representation
+    //
+
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddStringToObject(root, "MessageType", "ControlTuning") == nullptr)
+    {
+        ESP_LOGW(Webserver::Name, "Unable to add MessageType to ControlTuning JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddNumberToObject(root, "Setpoint", ctrlTuning.getSetpoint()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add setpoint to control tuning JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddNumberToObject(root, "PGain", ctrlTuning.getPGain()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add P gain to control tuning JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddNumberToObject(root, "IGain", ctrlTuning.getIGain()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add I gain to control tuning JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddNumberToObject(root, "DGain", ctrlTuning.getDGain()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add D gain to control tuning JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddNumberToObject(root, "LPFCutoff", ctrlTuning.getLPFCutoff()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add LPF cutoff to control tuning JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    char* tuningMsgJson = cJSON_Print(root);
+    if (tuningMsgJson == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to allocate memory for control tuning data JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    outStr = tuningMsgJson;
+    free(tuningMsgJson);
 
     return PBRet::SUCCESS;
 }

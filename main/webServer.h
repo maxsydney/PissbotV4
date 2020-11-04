@@ -47,12 +47,14 @@ class Webserver : public Task
 
         // Message serialization
         static PBRet serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr);
+        static PBRet serializeControlTuningMsg(const ControlTuning& ctrlTuning, std::string& outStr);
 
         // Websocket methods
         PBRet _sendToAll(const std::string& msg);
 
         // Queued messages to broadcast
         std::string _temperatureMessage {};
+        std::string _ctrlTuningMessage {};
 
         // FreeRTOS hook method
         void taskMain(void) override;
