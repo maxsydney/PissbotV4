@@ -164,6 +164,7 @@ PBRet Controller::_broadcastControllerSettings(void) const
     // Send a temperature data message to the queue
     std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (_cfg.ctrlSettings);
 
+    ESP_LOGI(Controller::Name, "Broadcasting controller settings");
     return MessageServer::broadcastMessage(msg);
 }
 

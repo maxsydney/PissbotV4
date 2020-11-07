@@ -52,11 +52,13 @@ class Webserver : public Task
 
         // Utility methods
         static PBRet _requestControllerTuning(void);
+        static PBRet _requestControllerSettings(void);
 
         // Websocket methods
         PBRet _sendToAll(const std::string& msg);
 
         // Queued messages to broadcast
+        // TODO: Replace these with actual data objects
         std::string _temperatureMessage {};
         std::string _ctrlTuningMessage {};
         std::string _ctrlSettingsMessage {};

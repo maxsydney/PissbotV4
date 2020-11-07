@@ -47,10 +47,12 @@ void Webserver::taskMain(void)
         // Broadcast data
         _sendToAll(_temperatureMessage);
         _sendToAll(_ctrlTuningMessage);
+        _sendToAll(_ctrlSettingsMessage);
 
         // Clear sent messages
         _temperatureMessage.clear();
         _ctrlTuningMessage.clear();
+        _ctrlSettingsMessage.clear();
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -90,6 +92,7 @@ void Webserver::openConnection(Websock *ws)
 	ESP_LOGI("Webserver", "Got connection request");
     ws->closeCb = Webserver::closeConnection;
     _requestControllerTuning();
+    _requestControllerSettings();
     ConnectionManager::addConnection(ws);
     ConnectionManager::printConnections();
 }
@@ -178,6 +181,20 @@ PBRet Webserver::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
 
 PBRet Webserver::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
 {
+    // Serialize the controller settings and broadcast to all 
+    // connected websockets
+
+    // Get controlTuning object
+    ControlSettings ctrlSettings = *std::static_pointer_cast<ControlSettings>(msg);
+
+    // Serialize to ControlTuning JSON string memory
+    if (serializeControlSettingsMessage(ctrlSettings, _ctrlSettingsMessage) != PBRet::SUCCESS)
+    {
+        ESP_LOGW(Webserver::Name, "Error writing ControlSettings object to JSON string. Deleting");
+        _ctrlSettingsMessage.clear();
+        return PBRet::FAILURE;
+    }
+
     return PBRet::SUCCESS;
 }
 
@@ -407,6 +424,16 @@ PBRet Webserver::_requestControllerTuning(void)
     // 
 
     std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::Tuning);
+
+    return MessageServer::broadcastMessage(msg);
+}
+
+PBRet Webserver::_requestControllerSettings(void)
+{
+    // Request controller settings
+    // 
+
+    std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::Settings);
 
     return MessageServer::broadcastMessage(msg);
 }
