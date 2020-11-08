@@ -90,6 +90,7 @@ PBRet Webserver::checkInputs(const WebserverConfig& cfg)
 void Webserver::openConnection(Websock *ws) 
 {
 	ESP_LOGI("Webserver", "Got connection request");
+    ws->recvCb = Webserver::processWebsocketMessage;
     ws->closeCb = Webserver::closeConnection;
     _requestControllerTuning();
     _requestControllerSettings();
@@ -101,6 +102,41 @@ void Webserver::closeConnection(Websock *ws)
 {
     ConnectionManager::removeConnection(ws);
     ConnectionManager::printConnections();
+}
+
+void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int flags)
+{
+    // Websocket message is not null terminated. Copy into string with null
+    // terminator
+    char* socketMsg = (char*) malloc(len+1);
+    std::string msgTypeStr {};
+    memset(socketMsg, 0, len+1);
+    memcpy(socketMsg, data, len);
+
+    cJSON* root = cJSON_Parse(socketMsg);
+    if (root == nullptr) {
+        ESP_LOGW(Webserver::Name, "Failed to parse JSON string");
+        return;
+    }
+
+    // Get message type
+    cJSON* msgType = cJSON_GetObjectItem(root, "type");
+    if (msgType != nullptr) {
+        msgTypeStr = std::string(msgType->valuestring);
+    } else {
+        ESP_LOGI(Webserver::Name, "Unable to read msgType from JSON string");
+        return;
+    }
+
+    // Parse string
+    if (msgTypeStr == Webserver::CtrlTuning) {
+        _parseControlTuningMessage(root);
+    } else {
+        ESP_LOGI(Webserver::Name, "Unable to process %s message", msgTypeStr.c_str());
+    }
+
+    // Can't return PBRet from this callback
+    return;
 }
 
 // TODO: Make this a member of Webserver
@@ -264,6 +300,12 @@ PBRet Webserver::serializeTemperatureDataMsg(const TemperatureData& TData, std::
         return PBRet::FAILURE;
     }
 
+    if (cJSON_AddNumberToObject(root, "uptime", TData.getTimeStamp()) == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to add timestamp to temperature JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
     char* tempMessageJSON = cJSON_Print(root);
     cJSON_Delete(root);
 
@@ -399,6 +441,70 @@ PBRet Webserver::serializeControlSettingsMessage(const ControlSettings& ctrlSett
     outStr = ctrlSettingsMsgJson;
     free(ctrlSettingsMsgJson);
 
+    return PBRet::SUCCESS;
+}
+
+PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
+{
+    ControlTuning ctrlTuning {};
+    double PGain, IGain, DGain, setpoint, LPFCutoff;
+
+    if (msgRoot == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse control tuning message. cJSON object was null");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
+    if (msgData == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse data from control tuning message");
+        return PBRet::SUCCESS;
+    }
+    
+    cJSON* PGainJSON = cJSON_GetObjectItemCaseSensitive(msgData, "PGain");
+    if (cJSON_IsNumber(PGainJSON)) {
+        PGain = PGainJSON->valuedouble;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read PGain from control tuning message");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* IGainJSON = cJSON_GetObjectItemCaseSensitive(msgData, "IGain");
+    if (cJSON_IsNumber(IGainJSON)) {
+        IGain = IGainJSON->valuedouble;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read IGain from control tuning message");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* DGainJSON = cJSON_GetObjectItemCaseSensitive(msgData, "DGain");
+    if (cJSON_IsNumber(DGainJSON)) {
+        DGain = DGainJSON->valuedouble;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read DGain from control tuning message");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* setpointJSON = cJSON_GetObjectItemCaseSensitive(msgData, "Setpoint");
+    if (cJSON_IsNumber(setpointJSON)) {
+        setpoint = setpointJSON->valuedouble;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read setpoint from control tuning message");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* LPFCutoffJSON = cJSON_GetObjectItemCaseSensitive(msgData, "LPFCutoff");
+    if (cJSON_IsNumber(LPFCutoffJSON)) {
+        LPFCutoff = LPFCutoffJSON->valuedouble;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read lowpass filter cutoff from control tuning message");
+        return PBRet::SUCCESS;
+    }
+
+    std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (setpoint, PGain, IGain, DGain, LPFCutoff);
+
+    ESP_LOGI(Webserver::Name, "Broadcasting controller tuning");
+    return MessageServer::broadcastMessage(msg);
+    
     return PBRet::SUCCESS;
 }
 

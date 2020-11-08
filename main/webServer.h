@@ -21,6 +21,7 @@ class Webserver : public Task
 {
     static constexpr const char* Name = "Webserver";
     static constexpr int LISTEN_PORT = 80;
+    static constexpr const char* CtrlTuning = "ControlTuning";
 
     public:
         Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg);
@@ -28,6 +29,7 @@ class Webserver : public Task
         // Websocket methods
         static void openConnection(Websock *ws);
         static void closeConnection(Websock *ws);
+        static void processWebsocketMessage(Websock *ws, char *data, int len, int flags);
 
         // Utility methods
         static PBRet checkInputs(const WebserverConfig& cfg);
@@ -49,6 +51,9 @@ class Webserver : public Task
         static PBRet serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr);
         static PBRet serializeControlTuningMsg(const ControlTuning& ctrlTuning, std::string& outStr);
         static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);
+
+        // Message parsing
+        static PBRet _parseControlTuningMessage(cJSON* msgRoot);
 
         // Utility methods
         static PBRet _requestControllerTuning(void);

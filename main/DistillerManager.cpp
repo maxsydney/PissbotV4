@@ -47,10 +47,6 @@ void DistillerManager::taskMain(void)
     Subscriber sub(DistillerManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
 
-    // Send a test message to the queue
-    std::shared_ptr<GeneralMessage> msg = std::make_shared<GeneralMessage> ("This is a test");
-    MessageServer::broadcastMessage(msg);
-
     while(true) {
         _processQueue();
 
@@ -83,6 +79,8 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
     }
 
     // Connect to Wifi
+    // TODO: Could move this to its own task, currently blocks the rest of the 
+    //       distiller software which is not ideal
     WifiManager::connect("PBLink", "pissbot1");
 
     // Initialize Controller
