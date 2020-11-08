@@ -21,7 +21,8 @@ class Webserver : public Task
 {
     static constexpr const char* Name = "Webserver";
     static constexpr int LISTEN_PORT = 80;
-    static constexpr const char* CtrlTuning = "ControlTuning";
+    static constexpr const char* CtrlTuningStr = "ControlTuning";
+    static constexpr const char* CtrlSettingsStr = "ControlSettings";
 
     public:
         Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg);
@@ -54,6 +55,7 @@ class Webserver : public Task
 
         // Message parsing
         static PBRet _parseControlTuningMessage(cJSON* msgRoot);
+        static PBRet _parseControlSettingsMessage(cJSON* msgRoot);
 
         // Utility methods
         static PBRet _requestControllerTuning(void);

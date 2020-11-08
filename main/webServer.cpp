@@ -113,6 +113,8 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
     memset(socketMsg, 0, len+1);
     memcpy(socketMsg, data, len);
 
+    ESP_LOGI(Webserver::Name, "Message: %s", socketMsg);
+
     cJSON* root = cJSON_Parse(socketMsg);
     if (root == nullptr) {
         ESP_LOGW(Webserver::Name, "Failed to parse JSON string");
@@ -129,8 +131,10 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
     }
 
     // Parse string
-    if (msgTypeStr == Webserver::CtrlTuning) {
+    if (msgTypeStr == Webserver::CtrlTuningStr) {
         _parseControlTuningMessage(root);
+    } else if (msgTypeStr == Webserver::CtrlSettingsStr) {
+        _parseControlSettingsMessage(root);
     } else {
         ESP_LOGI(Webserver::Name, "Unable to process %s message", msgTypeStr.c_str());
     }
@@ -503,6 +507,70 @@ PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
     std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (setpoint, PGain, IGain, DGain, LPFCutoff);
 
     ESP_LOGI(Webserver::Name, "Broadcasting controller tuning");
+    return MessageServer::broadcastMessage(msg);
+    
+    return PBRet::SUCCESS;
+}
+
+PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
+{
+    ControlTuning ctrlTuning {};
+    bool fanState, elementLow, elementHigh, prodPump, refluxPump;
+
+    if (msgRoot == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse control settings message. cJSON object was null");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
+    if (msgData == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse data from control settings message");
+        return PBRet::SUCCESS;
+    }
+    
+    cJSON* fanStateJSON = cJSON_GetObjectItemCaseSensitive(msgData, "fanState");
+    if (cJSON_IsNumber(fanStateJSON)) {
+        fanState = fanStateJSON->valueint;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read fanState from control settings message");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* elementLowJSON = cJSON_GetObjectItemCaseSensitive(msgData, "elementLow");
+    if (cJSON_IsNumber(elementLowJSON)) {
+        elementLow = elementLowJSON->valueint;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read low power element state from control settings message");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* elementHighJSON = cJSON_GetObjectItemCaseSensitive(msgData, "elementHigh");
+    if (cJSON_IsNumber(elementHighJSON)) {
+        elementHigh = elementHighJSON->valueint;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read high power element state from control settings message");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* prodPumpJSON = cJSON_GetObjectItemCaseSensitive(msgData, "prodPump");
+    if (cJSON_IsNumber(prodPumpJSON)) {
+        prodPump = prodPumpJSON->valueint;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read product pump state from control settings message");
+        return PBRet::SUCCESS;
+    }
+
+    cJSON* refluxPumpJSON = cJSON_GetObjectItemCaseSensitive(msgData, "refluxPump");
+    if (cJSON_IsNumber(refluxPumpJSON)) {
+        refluxPump = refluxPumpJSON->valueint;
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to read reflux pump state from control settings message");
+        return PBRet::SUCCESS;
+    }
+
+    std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (fanState, elementLow, elementHigh, prodPump, refluxPump);
+
+    ESP_LOGI(Webserver::Name, "Broadcasting controller settings");
     return MessageServer::broadcastMessage(msg);
     
     return PBRet::SUCCESS;

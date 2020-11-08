@@ -76,6 +76,7 @@ PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;
 }
 
+// TODO: This can be removed
 PBRet Controller::_controlCommandCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<ControlCommand> cmd = std::static_pointer_cast<ControlCommand>(msg);
@@ -91,13 +92,26 @@ PBRet Controller::_controlCommandCB(std::shared_ptr<MessageBase> msg)
 
 PBRet Controller::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
 {
-    // TODO: Implement
+    std::shared_ptr<ControlSettings> cmd = std::static_pointer_cast<ControlSettings>(msg);
+    _cfg.ctrlSettings = ControlSettings(*cmd);
+
+    ESP_LOGI(Controller::Name, "Controller settings were updated");
+
+    if (_updateAuxOutputs(_outputState) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary componenst did not update successfully");
+        return PBRet::FAILURE;
+    }
+
     return PBRet::SUCCESS;
 }
 
 PBRet Controller::_controlTuningCB(std::shared_ptr<MessageBase> msg)
 {
-    // TODO: Implement
+    std::shared_ptr<ControlTuning> cmd = std::static_pointer_cast<ControlTuning>(msg);
+    _cfg.ctrlTuning = ControlTuning(*cmd);
+
+    ESP_LOGI(Controller::Name, "Controller tuning was updated");
+
     return PBRet::SUCCESS;
 }
 
