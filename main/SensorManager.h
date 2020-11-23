@@ -14,6 +14,26 @@ struct SensorManagerConfig
     PBOneWireConfig oneWireConfig {};
 };
 
+enum class SensorManagerCmdType { None, BroadcastSensorsStart, BroadcastSensorsStop};
+
+class SensorManagerCommand : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::SensorManagerCmd;
+    static constexpr const char* Name = "Sensor Manager Command";
+
+    public:
+        SensorManagerCommand(void) = default;
+        SensorManagerCommand(SensorManagerCmdType cmdType)
+            : MessageBase(SensorManagerCommand::messageType, SensorManagerCommand::Name),
+              _cmdType(cmdType) {}
+
+        SensorManagerCmdType getCommandType(void) const { return _cmdType; }
+    
+    private:
+
+        SensorManagerCmdType _cmdType = SensorManagerCmdType::None;
+};
+
 class FlowrateData : public MessageBase
 {
     static constexpr MessageType messageType = MessageType::FlowrateData;
@@ -41,7 +61,6 @@ class SensorManager : public Task
     static constexpr const char* FSBasePath = "/spiffs";
     static constexpr const char* FSPartitionLabel = "PBData";
     static constexpr const char* deviceFile = "/spiffs/devices.json";
-
 
     public:
         // Constructors
@@ -74,12 +93,14 @@ class SensorManager : public Task
 
         // Queue callbacks
         PBRet _generalMessageCB(std::shared_ptr<MessageBase> msg);
+        PBRet _commandMessageCB(std::shared_ptr<MessageBase> msg);
 
         // SensorManager data
         SensorManagerConfig _cfg {};
 
         // TODO: Sensor ID table
         PBOneWire _OWBus {};
+        bool _broadcastSensors = false;
         bool _configured = false;
 
 };

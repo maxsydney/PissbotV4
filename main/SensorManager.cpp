@@ -63,10 +63,42 @@ PBRet SensorManager::_generalMessageCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;
 }
 
+PBRet SensorManager::_commandMessageCB(std::shared_ptr<MessageBase> msg)
+{
+    SensorManagerCommand cmd = *std::static_pointer_cast<SensorManagerCommand>(msg);
+
+    switch (cmd.getCommandType()):
+    {
+        case (SensorManagerCmdType::BroadcastSensorsStart):
+        {
+            _broadcastSensors = true;
+            break;
+        }
+        case (SensorManagerCmdType::BroadcastSensorsStart):
+        {
+            _broadcastTemps = false;
+            break;
+        }
+        case (SensorManagerCmdType::None):
+        {
+            ESP_LOGW(SensorManager::Name, "Received command None");
+            break;
+        }
+        default:
+        {
+            ESP_LOGW(SensorManager::Name, "Unsupported command");
+            break;
+        }
+    } 
+
+    return PBRet::SUCCESS;
+}
+
 PBRet SensorManager::_setupCBTable(void)
 {
     _cbTable = std::map<MessageType, queueCallback> {
         {MessageType::General, std::bind(&SensorManager::_generalMessageCB, this, std::placeholders::_1)},
+        {MessageType::SensorManagerCommand, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
