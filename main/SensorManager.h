@@ -69,6 +69,8 @@ class SensorManager : public Task
         static PBRet checkInputs(const SensorManagerConfig& cfg);
         bool isConfigured(void) const { return _configured; }
 
+        friend class SensorManagerUT;
+
     private:
 
         // Initialization
@@ -100,7 +102,10 @@ class SensorManager : public Task
 
         // TODO: Sensor ID table
         PBOneWire _OWBus {};
-        bool _broadcastSensors = false;
+
+        // When set to true 
+        bool _doBroadcastSensors = false;
+        bool _doBroadcastTemps = false;
         bool _configured = false;
 
 };

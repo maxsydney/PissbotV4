@@ -67,16 +67,16 @@ PBRet SensorManager::_commandMessageCB(std::shared_ptr<MessageBase> msg)
 {
     SensorManagerCommand cmd = *std::static_pointer_cast<SensorManagerCommand>(msg);
 
-    switch (cmd.getCommandType()):
+    switch (cmd.getCommandType())
     {
         case (SensorManagerCmdType::BroadcastSensorsStart):
         {
-            _broadcastSensors = true;
+            _doBroadcastSensors = true;
             break;
         }
-        case (SensorManagerCmdType::BroadcastSensorsStart):
+        case (SensorManagerCmdType::BroadcastSensorsStop):
         {
-            _broadcastTemps = false;
+            _doBroadcastTemps = false;
             break;
         }
         case (SensorManagerCmdType::None):
