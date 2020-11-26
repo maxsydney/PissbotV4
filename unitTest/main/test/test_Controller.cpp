@@ -3,8 +3,6 @@
 #include "main/controller.h"
 #include "main/pump.h"
 #include "main/pinDefs.h"
-#include "/Users/maxsydney/esp/esp-idf/components/soc/include/hal/ledc_types.h"
-
 
 TEST_CASE("Constructor", "[Controller]")
 {
