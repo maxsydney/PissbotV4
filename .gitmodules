@@ -4,10 +4,9 @@
 [submodule "components/esp32-owb"]
 	path = components/esp32-owb
 	url = https://github.com/DavidAntliff/esp32-owb.git
-[submodule "components/libesphttpd"]
-	path = components/libesphttpd
-	url = https://github.com/chmorgan/libesphttpd.git
-
 [submodule "components/espfs"]
 	path = components/espfs
 	url = https://github.com/maxsydney/esp32-espfs.git
+[submodule "components/libesphttpd"]
+	path = components/libesphttpd
+	url = https://github.com/maxsydney/libesphttpd.git
