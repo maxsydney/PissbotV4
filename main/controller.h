@@ -90,9 +90,9 @@ struct ControllerConfig
     ControlSettings ctrlSettings {};
     PumpCfg refluxPumpCfg {};
     PumpCfg prodPumpCfg {};
-    gpio_num_t fanPin = GPIO_NUM_NC;
-    gpio_num_t element1Pin = GPIO_NUM_NC;
-    gpio_num_t element2Pin = GPIO_NUM_NC;
+    gpio_num_t fanPin = (gpio_num_t) GPIO_NUM_NC;
+    gpio_num_t element1Pin = (gpio_num_t) GPIO_NUM_NC;
+    gpio_num_t element2Pin = (gpio_num_t) GPIO_NUM_NC;
 };
 
 class ControllerDataRequest : public MessageBase
