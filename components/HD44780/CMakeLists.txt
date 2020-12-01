@@ -1,5 +1,8 @@
-idf_component_register(SRCS ./HD44780.c)
-                       INCLUDE_DIRS include                       # Edit following two lines to set component requirements (see docs)
-                       REQUIRES )
-                       PRIV_REQUIRES )
+idf_component_register(
+    SRCS 
+        ./HD44780.c
+    INCLUDE_DIRS "include"
+    REQUIRES
+    PRIV_REQUIRES 
+)
 
