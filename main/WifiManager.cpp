@@ -76,8 +76,8 @@ PBRet WifiManager::connect(const char* ssid, const char* password)
     wifiConfig.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
     wifiConfig.sta.pmf_cfg.capable = true;
     wifiConfig.sta.pmf_cfg.required = false;
-    strncpy((char*) wifiConfig.sta.ssid, ssid, 32);
-    strncpy((char*) wifiConfig.sta.password, password, 64);
+    strncpy((char*) wifiConfig.sta.ssid, ssid, 31);
+    strncpy((char*) wifiConfig.sta.password, password, 63);
 
     ESP_LOGW(WifiManager::Name, "SSID: %s", wifiConfig.sta.ssid);
     ESP_LOGW(WifiManager::Name, "Password: %s", wifiConfig.sta.password);
