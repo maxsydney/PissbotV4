@@ -1,6 +1,6 @@
 #include "unity.h"
 #include <stdio.h>
-#include "main/thermo.h"
+#include "thermo.h"
 
 TEST_CASE("Antoine Equation Ethanol", "[Thermo}")
 {

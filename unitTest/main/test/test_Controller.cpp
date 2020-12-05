@@ -1,8 +1,8 @@
 #include "unity.h"
 #include <stdio.h>
-#include "main/controller.h"
-#include "main/pump.h"
-#include "main/pinDefs.h"
+#include "controller.h"
+#include "pump.h"
+#include "pinDefs.h"
 
 TEST_CASE("Constructor", "[Controller]")
 {

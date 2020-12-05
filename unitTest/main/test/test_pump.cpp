@@ -1,6 +1,6 @@
 #include "unity.h"
 #include <stdio.h>
-#include "main/pump.h"
+#include "pump.h"
 
 TEST_CASE("Constructor", "[Pump]")
 {

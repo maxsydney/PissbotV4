@@ -1,7 +1,7 @@
 #include "unity.h"
 #include <stdio.h>
-#include "main/messages.h"
-#include "main/controlLoop.h"
+#include "messages.h"
+#include "controlLoop.h"
 
 TEST_CASE("ReadCtrlParams", "[Messages]")
 {
