@@ -17,7 +17,6 @@
 int WifiManager::_numRetries = 0;
 EventGroupHandle_t WifiManager::_wifiEventGroup = nullptr;
 
-// TODO: Handling for more events
 void WifiManager::_eventHandler(void* arg, esp_event_base_t eventBase, int32_t eventID, void* eventData)
 {
     if (eventBase == WIFI_EVENT) {
@@ -56,21 +55,48 @@ void WifiManager::_eventHandler(void* arg, esp_event_base_t eventBase, int32_t e
     }   
 }
 
-// TODO: Replace ESP_ERROR_CHECK with proper error handling
 PBRet WifiManager::connect(const char* ssid, const char* password)
 {
     _wifiEventGroup = xEventGroupCreate();
 
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+    if (esp_netif_init() != ESP_OK) {
+        ESP_LOGW(WifiManager::Name, "Failed to initialize netif interface");
+        return PBRet::FAILURE;
+    }
 
+    if (esp_event_loop_create_default() != ESP_OK) {
+        ESP_LOGW(WifiManager::Name, "Failed to create WiFi event loop");
+        return PBRet::FAILURE;
+    }
+
+    esp_netif_t* netif = esp_netif_create_default_wifi_sta();
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    if (esp_wifi_init(&cfg) != ESP_OK) {
+        ESP_LOGW(WifiManager::Name, "Failed to initialize WiFi driver");
+        return PBRet::FAILURE;
+    }
 
-    // TODO: Error checking here
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiManager::_eventHandler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &WifiManager::_eventHandler, NULL));
+    
+    if (esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiManager::_eventHandler, NULL) != ESP_OK) {
+        ESP_LOGW(WifiManager::Name, "Failed to register WiFi event handler");
+        return PBRet::FAILURE;
+    }
+
+    if (esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &WifiManager::_eventHandler, NULL) != ESP_OK) {
+        ESP_LOGW(WifiManager::Name, "Failed to register IP event handler");
+        return PBRet::FAILURE;
+    }
+
+    // Set static IP
+    esp_netif_dhcpc_stop(netif);
+    esp_netif_ip_info_t ip_info;
+    IP4_ADDR(&ip_info.ip, 192, 168, 1, 201);
+   	IP4_ADDR(&ip_info.gw, 192, 168, 15, 1);
+   	IP4_ADDR(&ip_info.netmask, 255, 255, 255, 0);
+    if (esp_netif_set_ip_info(netif, &ip_info) != ESP_OK) {
+        ESP_LOGW(WifiManager::Name, "Failed to register static IP");
+        return PBRet::FAILURE;
+    }
 
     wifi_config_t wifiConfig {};
     wifiConfig.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
@@ -79,12 +105,14 @@ PBRet WifiManager::connect(const char* ssid, const char* password)
     strncpy((char*) wifiConfig.sta.ssid, ssid, 31);
     strncpy((char*) wifiConfig.sta.password, password, 63);
 
-    ESP_LOGW(WifiManager::Name, "SSID: %s", wifiConfig.sta.ssid);
-    ESP_LOGW(WifiManager::Name, "Password: %s", wifiConfig.sta.password);
-
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifiConfig));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    esp_err_t err = ESP_OK;
+    err |= esp_wifi_set_mode(WIFI_MODE_STA);
+    err |= esp_wifi_set_config(ESP_IF_WIFI_STA, &wifiConfig);
+    err |= esp_wifi_start();
+    if (err != ESP_OK) {
+        ESP_LOGW(WifiManager::Name, "Failed to configure WiFi driver");
+        return PBRet::FAILURE;
+    }
 
     ESP_LOGI(WifiManager::Name, "Wifi initialized as station");
 
@@ -107,8 +135,8 @@ PBRet WifiManager::connect(const char* ssid, const char* password)
     }
 
     /* The event will not be processed after unregister */
-    ESP_ERROR_CHECK(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &WifiManager::_eventHandler));
-    ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiManager::_eventHandler));
+    esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &WifiManager::_eventHandler);
+    esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiManager::_eventHandler);
     vEventGroupDelete(_wifiEventGroup);
 
     return PBRet::SUCCESS;
