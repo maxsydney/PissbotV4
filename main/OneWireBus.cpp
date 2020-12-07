@@ -69,7 +69,7 @@ PBRet PBOneWire::_initOWB()
     return PBRet::SUCCESS;
 }
 
-PBRet PBOneWire::scanForDevices(void)
+PBRet PBOneWire::_scanForDevices(void)
 {
     if (_owb == nullptr) {
         ESP_LOGW(PBOneWire::Name, "Onewire bus pointer was null");
@@ -90,11 +90,29 @@ PBRet PBOneWire::scanForDevices(void)
         }
         xSemaphoreGive(_OWBMutex);
     } else {
-        ESP_LOGW(PBOneWire::Name, "(scanForDevices) Unable to access PBOneWire shared resource");
+        ESP_LOGW(PBOneWire::Name, "(_scanForDevices) Unable to access PBOneWire shared resource");
         return PBRet::FAILURE;
     }
 
     return PBRet::SUCCESS;
+}
+
+PBRet PBOneWire::_broadcastDeviceAddresses(void) const
+{
+    // Broadcast the available device addresses to all listening tasks
+    std::shared_ptr<DeviceData> msg = std::make_shared<DeviceData> (_availableSensors);
+
+    return MessageServer::broadcastMessage(msg);
+}
+
+PBRet PBOneWire::broadcastAvailableDevices(void)
+{
+    if (_scanForDevices() != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "Scan of OneWire bus failed");
+        return PBRet::FAILURE;
+    }
+
+    return _broadcastDeviceAddresses();
 }
 
 PBRet PBOneWire::initialiseTempSensors(void)
@@ -189,7 +207,9 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
 
     // The following cases can fail and be recovered from. Don't return failure
     // Find available devices on bus
-    scanForDevices();
+    if (_scanForDevices() != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "Failed to scan OneWire bus for deveices");
+    }
     if (_connectedDevices <= 0) {
         ESP_LOGW(PBOneWire::Name, "No devices were found on OneWire bus");
     }

@@ -89,6 +89,7 @@ class SensorManager : public Task
         // Utilities
         PBRet _writeSensorConfigToFile(void) const;
         PBRet _printConfigFile(void) const;
+        PBRet _broadcastSensors(void);
 
         // FreeRTOS hook method
         void taskMain(void) override;
@@ -103,11 +104,8 @@ class SensorManager : public Task
         // TODO: Sensor ID table
         PBOneWire _OWBus {};
 
-        // When set to true 
-        bool _doBroadcastSensors = false;
-        bool _doBroadcastTemps = false;
+        // Class data
         bool _configured = false;
-
 };
 
 #endif // SENSOR_MANAGER_H

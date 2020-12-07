@@ -25,7 +25,8 @@ void SensorManager::taskMain(void)
 {
     // Subscribe to messages
     std::set<MessageType> subscriptions = { 
-        MessageType::General
+        MessageType::General,
+        MessageType::SensorManagerCmd
     };
     Subscriber sub(SensorManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -66,18 +67,14 @@ PBRet SensorManager::_generalMessageCB(std::shared_ptr<MessageBase> msg)
 PBRet SensorManager::_commandMessageCB(std::shared_ptr<MessageBase> msg)
 {
     SensorManagerCommand cmd = *std::static_pointer_cast<SensorManagerCommand>(msg);
+    ESP_LOGI(SensorManager::Name, "Got SensorManagerCommand message");
 
     switch (cmd.getCommandType())
     {
         case (SensorManagerCmdType::BroadcastSensorsStart):
         {
-            _doBroadcastSensors = true;
-            break;
-        }
-        case (SensorManagerCmdType::BroadcastSensorsStop):
-        {
-            _doBroadcastTemps = false;
-            break;
+            ESP_LOGI(SensorManager::Name, "Broadcasting sensor adresses");
+            return _broadcastSensors();
         }
         case (SensorManagerCmdType::None):
         {
@@ -98,7 +95,7 @@ PBRet SensorManager::_setupCBTable(void)
 {
     _cbTable = std::map<MessageType, queueCallback> {
         {MessageType::General, std::bind(&SensorManager::_generalMessageCB, this, std::placeholders::_1)},
-        {MessageType::SensorManagerCommand, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)}
+        {MessageType::SensorManagerCmd, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -295,4 +292,11 @@ PBRet SensorManager::_printConfigFile(void) const
     printf("%s\n", JSONBuffer.str().c_str());
 
     return PBRet::SUCCESS;
+}
+
+PBRet SensorManager::_broadcastSensors(void)
+{
+    // Scan OneWire bus for available sensors and advertise
+    // addresses
+    return _OWBus.broadcastAvailableDevices();
 }

@@ -23,6 +23,8 @@ class Webserver : public Task
     static constexpr int LISTEN_PORT = 80;
     static constexpr const char* CtrlTuningStr = "ControlTuning";
     static constexpr const char* CtrlSettingsStr = "ControlSettings";
+    static constexpr const char* CommandStr = "Command";
+    static constexpr const char* AssignSensors = "AssignSensors";
 
     public:
         Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg);
@@ -47,6 +49,7 @@ class Webserver : public Task
         PBRet _temperatureDataCB(std::shared_ptr<MessageBase> msg);
         PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
         PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
+        PBRet _deviceDataCB(std::shared_ptr<MessageBase> msg);
 
         // Message serialization
         static PBRet serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr);
@@ -56,6 +59,7 @@ class Webserver : public Task
         // Message parsing
         static PBRet _parseControlTuningMessage(cJSON* msgRoot);
         static PBRet _parseControlSettingsMessage(cJSON* msgRoot);
+        static PBRet _parseCommandMessage(cJSON* root);
 
         // Utility methods
         static PBRet _requestControllerTuning(void);

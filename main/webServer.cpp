@@ -31,7 +31,8 @@ void Webserver::taskMain(void)
         MessageType::TemperatureData,
         MessageType::ControlTuning,
         MessageType::ControlCommand,
-        MessageType::ControlSettings
+        MessageType::ControlSettings,
+        MessageType::DeviceData
     };
     Subscriber sub(Webserver::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -135,6 +136,8 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
         _parseControlTuningMessage(root);
     } else if (msgTypeStr == Webserver::CtrlSettingsStr) {
         _parseControlSettingsMessage(root);
+    } else if (msgTypeStr == Webserver::CommandStr) {
+        _parseCommandMessage(root);
     } else {
         ESP_LOGI(Webserver::Name, "Unable to process %s message", msgTypeStr.c_str());
     }
@@ -189,7 +192,8 @@ PBRet Webserver::_setupCBTable(void)
     _cbTable = std::map<MessageType, queueCallback> {
         {MessageType::TemperatureData, std::bind(&Webserver::_temperatureDataCB, this, std::placeholders::_1)},
         {MessageType::ControlSettings, std::bind(&Webserver::_controlSettingsCB, this, std::placeholders::_1)},
-        {MessageType::ControlTuning, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)}
+        {MessageType::ControlTuning, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)},
+        {MessageType::DeviceData, std::bind(&Webserver::_deviceDataCB, this, std::placeholders::_1)}        
     };
 
     return PBRet::SUCCESS;
@@ -253,6 +257,49 @@ PBRet Webserver::_controlTuningCB(std::shared_ptr<MessageBase> msg)
         _ctrlTuningMessage.clear();
         return PBRet::FAILURE;
     }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet Webserver::_deviceDataCB(std::shared_ptr<MessageBase> msg)
+{
+    // Serialize the device data message and broadcast to all connected
+    // websockets
+
+    // Get controlTuning object
+    DeviceData deviceData = *std::static_pointer_cast<DeviceData>(msg);
+
+    // Serialize the device addresses
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    cJSON* sensors = cJSON_CreateArray();
+    if (sensors == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to create sensors array");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    cJSON_AddStringToObject(root, "type", "sensorID");
+    cJSON_AddItemToObject(root, "sensors", sensors);
+
+    for (const Ds18b20& sensor: deviceData.getDevices()) {
+        sensor.serialize(sensors);
+    }
+
+    char* deviceDataJSON = cJSON_Print(root);
+    cJSON_Delete(root);
+
+    if (deviceDataJSON == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to allocate memory for device data JSON string");
+        return PBRet::FAILURE;
+    }
+
+    _sendToAll(deviceDataJSON);
+    free(deviceDataJSON);
 
     return PBRet::SUCCESS;
 }
@@ -455,13 +502,13 @@ PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
 
     if (msgRoot == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to parse control tuning message. cJSON object was null");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
     if (msgData == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to parse data from control tuning message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
     
     cJSON* PGainJSON = cJSON_GetObjectItemCaseSensitive(msgData, "PGain");
@@ -469,7 +516,7 @@ PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
         PGain = PGainJSON->valuedouble;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read PGain from control tuning message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* IGainJSON = cJSON_GetObjectItemCaseSensitive(msgData, "IGain");
@@ -477,7 +524,7 @@ PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
         IGain = IGainJSON->valuedouble;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read IGain from control tuning message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* DGainJSON = cJSON_GetObjectItemCaseSensitive(msgData, "DGain");
@@ -485,7 +532,7 @@ PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
         DGain = DGainJSON->valuedouble;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read DGain from control tuning message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* setpointJSON = cJSON_GetObjectItemCaseSensitive(msgData, "Setpoint");
@@ -493,7 +540,7 @@ PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
         setpoint = setpointJSON->valuedouble;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read setpoint from control tuning message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* LPFCutoffJSON = cJSON_GetObjectItemCaseSensitive(msgData, "LPFCutoff");
@@ -501,7 +548,7 @@ PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
         LPFCutoff = LPFCutoffJSON->valuedouble;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read lowpass filter cutoff from control tuning message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (setpoint, PGain, IGain, DGain, LPFCutoff);
@@ -519,13 +566,13 @@ PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
 
     if (msgRoot == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to parse control settings message. cJSON object was null");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
     if (msgData == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to parse data from control settings message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
     
     cJSON* fanStateJSON = cJSON_GetObjectItemCaseSensitive(msgData, "fanState");
@@ -533,7 +580,7 @@ PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
         fanState = fanStateJSON->valueint;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read fanState from control settings message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* elementLowJSON = cJSON_GetObjectItemCaseSensitive(msgData, "elementLow");
@@ -541,7 +588,7 @@ PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
         elementLow = elementLowJSON->valueint;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read low power element state from control settings message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* elementHighJSON = cJSON_GetObjectItemCaseSensitive(msgData, "elementHigh");
@@ -549,7 +596,7 @@ PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
         elementHigh = elementHighJSON->valueint;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read high power element state from control settings message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* prodPumpJSON = cJSON_GetObjectItemCaseSensitive(msgData, "prodPump");
@@ -557,7 +604,7 @@ PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
         prodPump = prodPumpJSON->valueint;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read product pump state from control settings message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     cJSON* refluxPumpJSON = cJSON_GetObjectItemCaseSensitive(msgData, "refluxPump");
@@ -565,15 +612,41 @@ PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
         refluxPump = refluxPumpJSON->valueint;
     } else {
         ESP_LOGW(Webserver::Name, "Unable to read reflux pump state from control settings message");
-        return PBRet::SUCCESS;
+        return PBRet::FAILURE;
     }
 
     std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (fanState, elementLow, elementHigh, prodPump, refluxPump);
 
     ESP_LOGI(Webserver::Name, "Broadcasting controller settings");
     return MessageServer::broadcastMessage(msg);
-    
-    return PBRet::SUCCESS;
+}
+
+PBRet Webserver::_parseCommandMessage(cJSON* root)
+{
+    if (root == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse command message. cJSON object was null");
+        return PBRet::FAILURE;
+    }
+
+    std::string subtypeStr {};
+
+    cJSON* subtype = cJSON_GetObjectItemCaseSensitive(root, "subtype");
+    if (subtype != nullptr) {
+        subtypeStr = std::string(subtype->valuestring);
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to parse subtype from command message");
+        return PBRet::FAILURE;
+    }
+
+    if (subtypeStr == Webserver::AssignSensors) {
+        // Send message to trigger scan of sensor bus
+        std::shared_ptr<SensorManagerCommand> msg = std::make_shared<SensorManagerCommand> (SensorManagerCmdType::BroadcastSensorsStart);
+        ESP_LOGI(Webserver::Name, "Sending message to start sensor assign task");
+        return MessageServer::broadcastMessage(msg);
+    } else {
+        ESP_LOGW(Webserver::Name, "Unable to parse command message with subtype %s", subtypeStr.c_str());
+        return PBRet::FAILURE;
+    }
 }
 
 PBRet Webserver::_sendToAll(const std::string& msg)

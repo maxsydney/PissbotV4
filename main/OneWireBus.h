@@ -40,6 +40,23 @@ class TemperatureData : public MessageBase
         int64_t _timeStamp = 0;
 };
 
+class DeviceData : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::DeviceData;
+    static constexpr const char* Name = "OneWireBus Device Data";
+
+    public:
+        DeviceData(void) = default;
+        DeviceData(const std::vector<Ds18b20>& devices)
+            : MessageBase(DeviceData::messageType, DeviceData::Name), _devices(devices) {}
+
+        const std::vector<Ds18b20>& getDevices(void) const { return _devices; }
+
+    private:
+
+        std::vector<Ds18b20> _devices {};
+};
+
 // C++ wrapper around the esp32-owb library
 // https://github.com/DavidAntliff/esp32-owb
 
@@ -63,7 +80,6 @@ class PBOneWire
         explicit PBOneWire(const PBOneWireConfig& cfg);
 
         // Initialisation
-        PBRet scanForDevices(void);
         PBRet initialiseTempSensors(void);
 
         // Update
@@ -76,6 +92,7 @@ class PBOneWire
         // Utility
         bool isAvailableSensor(const Ds18b20& sensor) const;
         PBRet serialize(std::string& JSONstr) const;
+        PBRet broadcastAvailableDevices(void);
 
         static PBRet checkInputs(const PBOneWireConfig& cfg);
         bool isConfigured(void) const { return _configured; }
@@ -94,6 +111,8 @@ class PBOneWire
         // Utility
         PBRet _writeToFile(void) const;
         PBRet _printConfigFile(void) const;
+        PBRet _scanForDevices(void);
+        PBRet _broadcastDeviceAddresses(void) const;
 
         SemaphoreHandle_t _OWBMutex = NULL;
         OneWireBus* _owb = nullptr;
