@@ -328,3 +328,35 @@ PBRet PBOneWire::setTempSensor(SensorType type, const Ds18b20& sensor)
 
     return PBRet::SUCCESS;
 }
+
+// TODO: Replace this with a more robust mapping
+SensorType PBOneWire::mapSensorIDToType(int sensorID)
+{
+    switch (sensorID)
+    {
+        case (0):
+        {
+            return SensorType::Head;
+        }
+        case (1):
+        {
+            return SensorType::Reflux;
+        }
+        case (2):
+        {
+            return SensorType::Product;
+        }
+        case (3):
+        {
+            return SensorType::Boiler;
+        }
+        case (4):
+        {
+            return SensorType::Radiator;
+        }
+        default:
+        {
+            return SensorType::Unknown;
+        }
+    }
+}

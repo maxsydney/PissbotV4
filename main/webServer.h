@@ -24,7 +24,8 @@ class Webserver : public Task
     static constexpr const char* CtrlTuningStr = "ControlTuning";
     static constexpr const char* CtrlSettingsStr = "ControlSettings";
     static constexpr const char* CommandStr = "Command";
-    static constexpr const char* AssignSensors = "AssignSensors";
+    static constexpr const char* BroadcastDevices = "BroadcastDevices";
+    static constexpr const char* AssignSensor = "AssignSensor";
 
     public:
         Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg);
@@ -64,6 +65,7 @@ class Webserver : public Task
         // Utility methods
         static PBRet _requestControllerTuning(void);
         static PBRet _requestControllerSettings(void);
+        static PBRet _processAssignSensorMessage(cJSON* root);
 
         // Websocket methods
         PBRet _sendToAll(const std::string& msg);

@@ -93,6 +93,7 @@ class PBOneWire
         bool isAvailableSensor(const Ds18b20& sensor) const;
         PBRet serialize(std::string& JSONstr) const;
         PBRet broadcastAvailableDevices(void);
+        static SensorType mapSensorIDToType(int sensorID);
 
         static PBRet checkInputs(const PBOneWireConfig& cfg);
         bool isConfigured(void) const { return _configured; }

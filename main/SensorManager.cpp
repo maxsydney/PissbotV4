@@ -26,7 +26,8 @@ void SensorManager::taskMain(void)
     // Subscribe to messages
     std::set<MessageType> subscriptions = { 
         MessageType::General,
-        MessageType::SensorManagerCmd
+        MessageType::SensorManagerCmd,
+        MessageType::AssignSensor
     };
     Subscriber sub(SensorManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -91,11 +92,26 @@ PBRet SensorManager::_commandMessageCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;
 }
 
+PBRet SensorManager::_assignSensorCB(std::shared_ptr<MessageBase> msg)
+{
+    AssignSensorCommand cmd = *std::static_pointer_cast<AssignSensorCommand>(msg);
+    ESP_LOGI(SensorManager::Name, "Got AssignSensorCommand message");
+
+    const Ds18b20 sensor(cmd.getAddress(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
+    if (sensor.isConfigured() == false) {
+        ESP_LOGW(SensorManager::Name, "Failed to create valid Ds18b20 sensor");
+        return PBRet::FAILURE;
+    }
+
+    return _OWBus.setTempSensor(cmd.getSensorType(), sensor);
+}
+
 PBRet SensorManager::_setupCBTable(void)
 {
     _cbTable = std::map<MessageType, queueCallback> {
         {MessageType::General, std::bind(&SensorManager::_generalMessageCB, this, std::placeholders::_1)},
-        {MessageType::SensorManagerCmd, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)}
+        {MessageType::SensorManagerCmd, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)},
+        {MessageType::AssignSensor, std::bind(&SensorManager::_assignSensorCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;

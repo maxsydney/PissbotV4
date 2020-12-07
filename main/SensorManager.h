@@ -55,6 +55,26 @@ class FlowrateData : public MessageBase
         int64_t _timeStamp = 0;             // [uS]
 };
 
+class AssignSensorCommand : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::AssignSensor;
+    static constexpr const char* Name = "Assign Sensor";
+
+    public:
+        AssignSensorCommand(void) = default;
+        AssignSensorCommand(const OneWireBus_ROMCode& addr, SensorType sensorType)
+            : MessageBase(AssignSensorCommand::messageType, AssignSensorCommand::Name),
+              _address(addr), _sensorType(sensorType) {}
+        
+        const OneWireBus_ROMCode& getAddress(void) const { return _address; }
+        SensorType getSensorType(void) const { return _sensorType; }
+
+    private:
+
+        OneWireBus_ROMCode _address {};
+        SensorType _sensorType = SensorType::Unknown;
+};
+
 class SensorManager : public Task
 {
     static constexpr const char* Name = "SensorManager";
@@ -97,6 +117,7 @@ class SensorManager : public Task
         // Queue callbacks
         PBRet _generalMessageCB(std::shared_ptr<MessageBase> msg);
         PBRet _commandMessageCB(std::shared_ptr<MessageBase> msg);
+        PBRet _assignSensorCB(std::shared_ptr<MessageBase> msg);
 
         // SensorManager data
         SensorManagerConfig _cfg {};

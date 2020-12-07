@@ -128,6 +128,7 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
         msgTypeStr = std::string(msgType->valuestring);
     } else {
         ESP_LOGI(Webserver::Name, "Unable to read msgType from JSON string");
+        cJSON_Delete(root);
         return;
     }
 
@@ -143,6 +144,7 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
     }
 
     // Can't return PBRet from this callback
+    cJSON_Delete(root);
     return;
 }
 
@@ -638,15 +640,64 @@ PBRet Webserver::_parseCommandMessage(cJSON* root)
         return PBRet::FAILURE;
     }
 
-    if (subtypeStr == Webserver::AssignSensors) {
+    if (subtypeStr == Webserver::BroadcastDevices) {
         // Send message to trigger scan of sensor bus
         std::shared_ptr<SensorManagerCommand> msg = std::make_shared<SensorManagerCommand> (SensorManagerCmdType::BroadcastSensorsStart);
         ESP_LOGI(Webserver::Name, "Sending message to start sensor assign task");
         return MessageServer::broadcastMessage(msg);
+    } else if (subtypeStr == Webserver::AssignSensor) {
+        return _processAssignSensorMessage(root);
     } else {
         ESP_LOGW(Webserver::Name, "Unable to parse command message with subtype %s", subtypeStr.c_str());
         return PBRet::FAILURE;
     }
+}
+
+PBRet Webserver::_processAssignSensorMessage(cJSON* root)
+{
+    if (root == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse assign sensor message. cJSON object was null");
+        return PBRet::FAILURE;
+    }
+
+    ESP_LOGI(Webserver::Name, "Decoding assign sensor message");
+
+    cJSON* sensorData = cJSON_GetObjectItemCaseSensitive(root, "data");
+    if (sensorData == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse sensor data from assign sensor message");
+        return PBRet::FAILURE;
+    }
+
+    // TODO: Allow Ds18b20 initialization from JSON
+    cJSON* sensorAddr = cJSON_GetObjectItemCaseSensitive(sensorData, "addr");
+    if (sensorAddr == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse sensor address from assign sensor message");
+        return PBRet::FAILURE;
+    }
+
+    // Read address from JSON
+    OneWireBus_ROMCode romCode {};
+    cJSON* byte = nullptr;
+    int i = 0;
+    cJSON_ArrayForEach(byte, sensorAddr)
+    {
+        if (cJSON_IsNumber(byte) == false) {
+            ESP_LOGW(Webserver::Name, "Unable to decode sensor address. Address byte was not a number");
+            return PBRet::FAILURE;
+        }
+        romCode.bytes[i++] = byte->valueint;
+    }
+
+    // Read assigned sensor task from JSON
+    cJSON* task = cJSON_GetObjectItemCaseSensitive(sensorData, "task");
+    if (task == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse assigned sensor task from assign sensor message");
+        return PBRet::FAILURE;
+    }
+    SensorType sensorType = PBOneWire::mapSensorIDToType(task->valueint);
+
+    std::shared_ptr<AssignSensorCommand> msg = std::make_shared<AssignSensorCommand> (romCode, sensorType);
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet Webserver::_sendToAll(const std::string& msg)
