@@ -130,7 +130,7 @@ PBRet Ds18b20::_initFromParams(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION re
     return PBRet::SUCCESS;
 }
 
-bool Ds18b20::operator ==(const Ds18b20& other) const
+bool Ds18b20::operator==(const Ds18b20& other) const
 {
     // Sensors are equal if their rom codes match
     bool equal = true;

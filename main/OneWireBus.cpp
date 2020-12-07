@@ -155,7 +155,13 @@ PBRet PBOneWire::_oneWireConvert(void) const
 PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
 {
     // Read all available temperature sensors
+    
+    // TODO: Replace these with direct memory access
     float headTemp = 0.0;
+    float refluxTemp = 0.0;
+    float productTemp = 0.0;
+    float radiatorTemp = 0.0;
+    float boilerTemp = 0.0;
 
     if (_configured == false) {
         ESP_LOGW(PBOneWire::Name, "Cannot read temperatures before PBOneWireBuse is configured");
@@ -169,11 +175,37 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
             return PBRet::FAILURE;
         }
 
-        if (_headTempSensor.readTemp(headTemp) != PBRet::SUCCESS) {
-            // Error message printed in readTemp
-            xSemaphoreGive(_OWBMutex);
-            return PBRet::FAILURE;
+        // Read all available temperature sensors
+        if (_headTempSensor.isConfigured()) {
+            if (_headTempSensor.readTemp(headTemp) != PBRet::SUCCESS) {
+                ESP_LOGW(PBOneWire::Name, "Head temperature sensor is configured but was not able to be read");
+            }
         }
+
+        if (_refluxTempSensor.isConfigured()) {
+            if (_headTempSensor.readTemp(refluxTemp) != PBRet::SUCCESS) {
+                ESP_LOGW(PBOneWire::Name, "Reflux condensor temperature sensor is configured but was not able to be read");
+            }
+        }
+
+        if (_productTempSensor.isConfigured()) {
+            if (_productTempSensor.readTemp(productTemp) != PBRet::SUCCESS) {
+                ESP_LOGW(PBOneWire::Name, "Product condensor temperature sensor is configured but was not able to be read");
+            }
+        }
+
+        if (_radiatorTempSensor.isConfigured()) {
+            if (_radiatorTempSensor.readTemp(radiatorTemp) != PBRet::SUCCESS) {
+                ESP_LOGW(PBOneWire::Name, "Radiator temperature sensor is configured but was not able to be read");
+            }
+        }
+
+        if (_boilerTempSensor.isConfigured()) {
+            if (_boilerTempSensor.readTemp(boilerTemp) != PBRet::SUCCESS) {
+                ESP_LOGW(PBOneWire::Name, "Boiler temperature sensor is configured but was not able to be read");
+            }
+        }
+
         xSemaphoreGive(_OWBMutex);
     } else {
         ESP_LOGW(PBOneWire::Name, "Unable to access PBOneWire shared resource");
@@ -183,7 +215,7 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
     // Read other sensors here
 
     // Fill data structure
-    Tdata = TemperatureData(headTemp, 0.0, 0.0, 0.0, 0.0);
+    Tdata = TemperatureData(headTemp, refluxTemp, productTemp, radiatorTemp, boilerTemp);
 
     return PBRet::SUCCESS;
 }
@@ -287,6 +319,22 @@ bool PBOneWire::isAvailableSensor(const Ds18b20& sensor) const
 
 PBRet PBOneWire::setTempSensor(SensorType type, const Ds18b20& sensor)
 {
+    // TODO: This function is very manual and could be tidied up a lot
+    
+    // First, we must "unassign" the sensor if it is already assigned
+    if (_headTempSensor == sensor) {
+        _headTempSensor = Ds18b20();
+    } else if (_refluxTempSensor == sensor) {
+        _refluxTempSensor = Ds18b20();
+    } else if (_productTempSensor == sensor) {
+        _productTempSensor = Ds18b20();
+    } else if (_radiatorTempSensor == sensor) {
+        _radiatorTempSensor = Ds18b20();
+    } else if (_boilerTempSensor == sensor) {
+        _boilerTempSensor = Ds18b20();
+    }
+
+    // Assign the sensor to the selected task
     switch (type)
     {
         case SensorType::Head:

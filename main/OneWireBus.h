@@ -31,7 +31,6 @@ class TemperatureData : public MessageBase
         double getBoilerTemp(void) const { return _boilerTemp; }
         int64_t getTimeStamp(void) const { return _timeStamp; }
 
-    private:
         double _headTemp = 0.0;
         double _refluxCondensorTemp = 0.0;
         double _prodCondensorTemp = 0.0;
@@ -119,6 +118,8 @@ class PBOneWire
         OneWireBus* _owb = nullptr;
         owb_rmt_driver_info* _rmtDriver = nullptr;
 
+        // TODO: This interface could be cleaned up a lot by using key-val mapping between
+        // assigned task and sensor object
         // Assigned sensors
         Ds18b20 _headTempSensor {};
         Ds18b20 _refluxTempSensor {};
