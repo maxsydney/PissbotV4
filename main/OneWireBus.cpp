@@ -146,8 +146,8 @@ PBRet PBOneWire::_oneWireConvert(void) const
         return PBRet::FAILURE;
     }
 
-    ds18b20_convert(&_headTempSensor.getInfo());
-    ds18b20_wait_for_conversion(&_headTempSensor.getInfo());
+    ds18b20_convert_all(_owb);
+    ds18b20_wait_for_conversion(&_availableSensors.front().getInfo());
 
     return PBRet::SUCCESS;
 }
@@ -183,7 +183,7 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
         }
 
         if (_refluxTempSensor.isConfigured()) {
-            if (_headTempSensor.readTemp(refluxTemp) != PBRet::SUCCESS) {
+            if (_refluxTempSensor.readTemp(refluxTemp) != PBRet::SUCCESS) {
                 ESP_LOGW(PBOneWire::Name, "Reflux condensor temperature sensor is configured but was not able to be read");
             }
         }
