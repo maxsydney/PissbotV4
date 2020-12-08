@@ -91,6 +91,12 @@ class SensorManager : public Task
 
         friend class SensorManagerUT;
 
+        static constexpr const char* HeadTempSensorKey = "headTempSensor";
+        static constexpr const char* RefluxTempSensorKey = "refluxTempSensor";
+        static constexpr const char* ProductTempSensorKey = "productTempSensor";
+        static constexpr const char* RadiatorTempSensorKey = "radiatorTempSensor";
+        static constexpr const char* BoilerTempSensorKey = "boilerTempSensor";
+
     private:
 
         // Initialization

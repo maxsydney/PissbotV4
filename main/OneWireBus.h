@@ -67,7 +67,7 @@ struct PBOneWireConfig
     gpio_num_t productFlowPin = (gpio_num_t) GPIO_NUM_NC;
 };
 
-enum class SensorType { Unknown, Head, Reflux, Product, Boiler, Radiator };
+enum class SensorType { Unknown, Head, Reflux, Product, Radiator, Boiler };
 
 class PBOneWire
 {
