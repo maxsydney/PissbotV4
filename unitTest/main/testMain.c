@@ -1,28 +1,21 @@
-/* Example test application for testable component.
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
-
 #include <stdio.h>
 #include <string.h>
 #include "unity.h"
+#include "includeTestFiles.h"
 
 static void print_banner(const char* text);
 
+// This function calls a dummy function in each test file to 
+// force the tests to be linked and discovered by unity
+static void includeAllTests(void)
+{
+    includeThermoTests();
+}
+
 void app_main(void)
 {
-    /* These are the different ways of running registered tests.
-     * In practice, only one of them is usually needed.
-     *
-     * UNITY_BEGIN() and UNITY_END() calls tell Unity to print a summary
-     * (number of tests executed/failed/ignored) of tests executed between these calls.
-     */
+    includeAllTests();      // Force discovery of all tests
 
-    // testFn();
     print_banner("Running all the registered tests");
     UNITY_BEGIN();
     unity_run_all_tests();

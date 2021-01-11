@@ -4,6 +4,7 @@ set(DEPENDENCIES
     spiffs
     nvs_flash
     libesphttpd
+    espfs
 )
 
 idf_component_register(

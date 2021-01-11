@@ -1,6 +1,15 @@
-#include "unity.h"
 #include <stdio.h>
+#include "unity.h"
 #include "main/thermo.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void includeThermoTests(void)
+{
+    printf("\n");
+}
 
 TEST_CASE("Antoine Equation Ethanol", "[Thermo}")
 {
@@ -34,6 +43,10 @@ TEST_CASE("Vapour Pressure H20", "[Thermo}")
     TEST_ASSERT_FLOAT_WITHIN(5e-2, 47.3730, Thermo::computeVapourPressureH20(80.0));
     TEST_ASSERT_FLOAT_WITHIN(5e-2, 70.1170, Thermo::computeVapourPressureH20(90.0));
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 // TODO: Test cases for vapour and boiler concentration
 
