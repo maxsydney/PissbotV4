@@ -8,7 +8,7 @@ extern "C" {
 
 void includeThermoTests(void)
 {
-    printf("\n");
+    // Dummy function to force discovery of unit tests by main test runner
 }
 
 TEST_CASE("Antoine Equation Ethanol", "[Thermo}")

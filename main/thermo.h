@@ -28,10 +28,13 @@ class ThermoConversions
 class Thermo
 {
     public:
-        static double computeVapourPressureAntoine(double a, double b, double c, double temp);
-        static double computeVapourPressureH20(double temp);
-        static double computeLiquidEthConcentration(double temp);
-        static double computeVapourEthConcentration(double temp);
+        static double computeVapourPressureAntoine(double a, double b, double c, double T);
+        static double computeVapourPressureH20(double T);
+        static double computeLiquidEthMolFraction(double T);
+        static double computeVapourEthMolFraction(double T);
+        static double computeMassFraction(double molFrac);
+        static double computeVapourABV(double T);
+        static double computeLiquidABV(double T);
 };
 
 #ifdef __cplusplus
