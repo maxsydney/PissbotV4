@@ -13,5 +13,5 @@ idf_component_register(
     REQUIRES ${DEPENDENCIES}
 )
 
-target_compile_options(${COMPONENT_LIB} PRIVATE -std=c++14)
+target_compile_options(${COMPONENT_LIB} PRIVATE -std=c++17)
 

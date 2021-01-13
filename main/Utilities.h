@@ -12,6 +12,7 @@ class Utilities
 
         // Math
         static PBRet polyVal(const std::vector<double>& coeffs, double val, double& result);
+        static double bound(double val, double lowerLim, double upperLim);
 
         // Checkers
         static bool check(double val);

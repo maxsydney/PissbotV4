@@ -31,6 +31,17 @@ PBRet Utilities::polyVal(const std::vector<double>& coeffs, double val, double& 
     return PBRet::SUCCESS;
 }
 
+double Utilities::bound(double val, double lowerLim, double upperLim)
+{
+    if (val < lowerLim) {
+        return lowerLim;
+    } else if (val > upperLim) {
+        return upperLim;
+    } else {
+        return val;
+    }
+}
+
 bool Utilities::check(double val)
 {
     if (std::isnan(val) || !std::isfinite(val)) {
