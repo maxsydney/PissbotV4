@@ -8,7 +8,7 @@ set(DEPENDENCIES
 )
 
 idf_component_register(
-    SRC_DIRS .
+    SRC_DIRS "."
     INCLUDE_DIRS ""
     REQUIRES ${DEPENDENCIES}
 )

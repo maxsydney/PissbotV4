@@ -11,7 +11,7 @@ void includeThermoTests(void)
     // Dummy function to force discovery of unit tests by main test runner
 }
 
-TEST_CASE("Antoine Equation Ethanol", "[Thermo}")
+TEST_CASE("Antoine Equation Ethanol", "[Thermo]")
 {
     // Test cases generated from 
     // http://ddbonline.ddbst.com/computeVapourPressureCalculation/computeVapourPressureCalculationCGI.exe
@@ -22,7 +22,7 @@ TEST_CASE("Antoine Equation Ethanol", "[Thermo}")
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 112.767, Thermo::computeVapourPressureAntoine(ThermoConstants::ETH_A, ThermoConstants::ETH_B, ThermoConstants::ETH_C, 81.0));
 }
 
-TEST_CASE("Antoine Equation H20", "[Thermo}")
+TEST_CASE("Antoine Equation H20", "[Thermo]")
 {
     // Test cases generated from 
     // http://ddbonline.ddbst.com/computeVapourPressureCalculation/computeVapourPressureCalculationCGI.exe
@@ -33,7 +33,7 @@ TEST_CASE("Antoine Equation H20", "[Thermo}")
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 70.0298, Thermo::computeVapourPressureAntoine(ThermoConstants::H20_A, ThermoConstants::H20_B, ThermoConstants::H20_C, 90.0));
 }
 
-TEST_CASE("Vapour Pressure H20", "[Thermo}")
+TEST_CASE("Vapour Pressure H20", "[Thermo]")
 {
     // Test cases generated from 
     // https://en.wikipedia.org/wiki/Vapour_pressure_of_water

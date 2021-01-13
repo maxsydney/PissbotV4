@@ -1,6 +1,7 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
+#include "PBCommon.h"
 #include <vector>
 
 class Utilities
@@ -9,7 +10,13 @@ class Utilities
 
     public:
 
-        double polyVal(const std::vector<double>& coeffs, double val);
+        // Math
+        static PBRet polyVal(const std::vector<double>& coeffs, double val, double& result);
+
+        // Checkers
+        static bool check(double val);
+        static bool check(const std::vector<double>& val);
+
 };
 
 #endif // UTILITIES_H

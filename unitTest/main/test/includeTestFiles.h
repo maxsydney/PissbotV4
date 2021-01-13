@@ -5,5 +5,6 @@
 // TODO: Replace this workaround with build system instructions
 
 void includeThermoTests(void);
+void includeUtilitiesTests(void);
 
 #endif // INCLUDE_TEST_FILES

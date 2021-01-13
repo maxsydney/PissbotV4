@@ -1,9 +1,8 @@
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 
 #include <cmath>
 #include "thermo.h"
+#include "Utilities.h"
 
 // Compute the partial vapour pressure in kPa based on the
 // Antoine equation https://en.wikipedia.org/wiki/computeVapourPressure_equation
@@ -59,6 +58,3 @@ double Thermo::computeLiquidABV(double T)
     return 0.0;
 }
 
-#ifdef __cplusplus
-}
-#endif

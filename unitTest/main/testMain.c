@@ -10,6 +10,7 @@ static void print_banner(const char* text);
 static void includeAllTests(void)
 {
     includeThermoTests();
+    includeUtilitiesTests();
 }
 
 void app_main(void)
