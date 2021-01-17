@@ -54,6 +54,17 @@ PBRet Utilities::interpLinear(const std::vector<double>& x, const std::vector<do
         return PBRet::FAILURE;
     }
 
+    // Avoid access of invalid memory
+    if (xVal == x.front()) {
+        yVal = y.front();
+        return PBRet::SUCCESS;
+    }
+
+    if (xVal == x.back()) {
+        yVal = y.back();
+        return PBRet::SUCCESS;
+    }
+
     // Get iterator to first value in x that is equal to or greater than xVal
     size_t idx = std::lower_bound(x.begin(), x.end(), xVal) - x.begin();
 
