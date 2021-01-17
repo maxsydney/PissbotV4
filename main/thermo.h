@@ -34,6 +34,13 @@ class AntoineModels
         static constexpr AntoineParams Ethanol = {7.68117, 1332.04, 199.2, 77.0, 243.0, ThermoConversions::mmHg_to_kPa};  // Ref: http://ddbonline.ddbst.com/AntoineCalculation/AntoineCalculationCGI.exe
 };
 
+class MolarMass
+{
+    public:
+        static constexpr double Ethanol = 46.0684;      // [g / mol] - Ref: On the Conversion of Alcohol - Edwin Croissant
+        static constexpr double H20 = 18.0153;          // [g / mol] - Ref: On the Conversion of Alcohol - Edwin Croissant
+};
+
 class ThermoConstants
 {
     public:
@@ -42,6 +49,8 @@ class ThermoConstants
 
 class Thermo
 {
+    static constexpr const char* Name = "Thermo";
+
     public:
         static double computeVapourPressureAntoine(const AntoineParams& model, double T);
         static double computeVapourPressureH20(double T);
@@ -50,6 +59,7 @@ class Thermo
         static double computeMassFraction(double molFrac);
         static double computeVapourABV(double T);
         static double computeLiquidABV(double T);
+        static double computeABV(double massFrac);
 };
 
 #ifdef __cplusplus

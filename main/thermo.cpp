@@ -45,9 +45,34 @@ double Thermo::computeVapourEthMolFraction(double T)
 double Thermo::computeMassFraction(double molFrac)
 {
     // Compute ethanol mass fraction from mol fraction
-    // Ref: 
+    // Ref: On the Conversion of Alcohol - Edwin Croissant
 
-    return 0.0;
+    return molFrac / (molFrac + MolarMass::H20 / MolarMass::Ethanol * (1 - molFrac));
+}
+
+double Thermo::computeABV(double massFrac)
+{
+    // Compute ethanol ABV from mass fraction (ABW) using a polynomial fit
+    // Ref: On the Conversion of Alcohol - Edwin Croissant
+
+    static const std::vector<double> coeffs =  {
+        -2.0695760421183493E+00,
+        8.8142267038252680E+00,
+        -1.5765836469736477E+01,
+        1.5009692673927390E+01,
+        -7.8964816507513707E+00,
+        2.0463351302912738E+00,
+        -4.0926819348115739E-01,
+        1.2709666849144778E+00,
+        -3.9705486746795932E-05
+    };
+
+    double ABV = 0.0;
+    if (Utilities::polyVal(coeffs, massFrac, ABV) != PBRet::SUCCESS) {
+        ESP_LOGW(Thermo::Name, "Unable to compute ABV");
+    }
+
+    return ABV;
 }
 
 double Thermo::computeVapourABV(double T)
@@ -55,7 +80,11 @@ double Thermo::computeVapourABV(double T)
     // Compute ethanol ABV from vapour temperature using a polynomial fit
     // Ref: On the Conversion of Alcohol - Edwin Croissant
 
-    return 0.0;
+    const double molFrac = Thermo::computeVapourEthMolFraction(T);
+    const double massFrac = Thermo::computeMassFraction(molFrac);
+    const double ethABV = Thermo::computeABV(massFrac);
+
+    return ethABV;
 }
 
 double Thermo::computeLiquidABV(double T)
@@ -63,6 +92,10 @@ double Thermo::computeLiquidABV(double T)
     // Compute ethanol ABV from liquid temperature using a polynomial fit
     // Ref: On the Conversion of Alcohol - Edwin Croissant
 
-    return 0.0;
+    const double molFrac = Thermo::computeLiquidEthMolFraction(T);
+    const double massFrac = Thermo::computeMassFraction(molFrac);
+    const double ethABV = Thermo::computeABV(massFrac);
+
+    return ethABV;
 }
 
