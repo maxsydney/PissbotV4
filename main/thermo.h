@@ -60,6 +60,8 @@ class Thermo
         static double computeVapourABV(double T);
         static double computeLiquidABV(double T);
         static double computeABV(double massFrac);
+        static double computeLiquidABVLookup(double T);
+        static double computeVapourABVLookup(double T);
 };
 
 #ifdef __cplusplus

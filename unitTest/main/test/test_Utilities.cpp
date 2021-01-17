@@ -92,15 +92,13 @@ TEST_CASE("interpLinear", "[Utilities]")
     // Search value smaller than first x value
     {
         double output = 0.0;
-        TEST_ASSERT_EQUAL(PBRet::SUCCESS, Utilities::interpLinear(xVector, yVector, -1.0, output));
-        TEST_ASSERT_EQUAL(5.0, output);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, Utilities::interpLinear(xVector, yVector, -1.0, output));
     }
 
-    // Search value larger than last c value
+    // Search value larger than last x value
     {
         double output = 0.0;
-        TEST_ASSERT_EQUAL(PBRet::SUCCESS, Utilities::interpLinear(xVector, yVector, 6.0, output));
-        TEST_ASSERT_EQUAL(100.0, output);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, Utilities::interpLinear(xVector, yVector, 6.0, output));
     }
 
     // Valid search at known x
@@ -108,6 +106,20 @@ TEST_CASE("interpLinear", "[Utilities]")
         double output = 0.0;
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, Utilities::interpLinear(xVector, yVector, 2.0, output));
         TEST_ASSERT_EQUAL(25.0, output);
+    }
+
+    // Search value equal to first x value
+    {
+        double output = 0.0;
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, Utilities::interpLinear(xVector, yVector, xVector.front(), output));
+        TEST_ASSERT_EQUAL(yVector.front(), output);
+    }
+
+    // Search value equal to last x value
+    {
+        double output = 0.0;
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, Utilities::interpLinear(xVector, yVector, xVector.back(), output));
+        TEST_ASSERT_EQUAL(yVector.back(), output);
     }
 
     // Midway point

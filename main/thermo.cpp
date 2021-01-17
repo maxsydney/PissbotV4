@@ -1,6 +1,7 @@
 #include <cmath>
 #include "thermo.h"
 #include "Utilities.h"
+#include "ABVTables.h"
 
 double Thermo::computeVapourPressureAntoine(const AntoineParams& model, double T)
 {
@@ -99,3 +100,32 @@ double Thermo::computeLiquidABV(double T)
     return ethABV;
 }
 
+double Thermo::computeLiquidABVLookup(double T)
+{
+    // Compute the ethanol ABV from liquid temperature based on a lookup table
+    // Ref: Higher Alcohols in the Alcoholic Distillation From Fermented 
+    //      Cane Molasses - EQUILIBRIUM COMPOSITIONS FOR THE SYSTEM ETHANOL-WATER 
+    //      AT ONE ATMOSPHERE
+    double ABV = 0.0;
+
+    if (Utilities::interpLinear(ABVTables::T, ABVTables::liquidABV, T, ABV) != PBRet::SUCCESS) {
+        ESP_LOGW(Thermo::Name, "Unable to compute liquid ABV from lookup table");
+    }
+
+    return ABV;
+}
+
+double Thermo::computeVapourABVLookup(double T)
+{
+    // Compute the ethanol ABV from vapour temperature based on a lookup table
+    // Ref: Higher Alcohols in the Alcoholic Distillation From Fermented 
+    //      Cane Molasses - EQUILIBRIUM COMPOSITIONS FOR THE SYSTEM ETHANOL-WATER 
+    //      AT ONE ATMOSPHERE
+    double ABV = 0.0;
+
+    if (Utilities::interpLinear(ABVTables::T, ABVTables::vapourABV, T, ABV) != PBRet::SUCCESS) {
+        ESP_LOGW(Thermo::Name, "Unable to compute vapour ABV from lookup table");
+    }
+
+    return ABV;
+}

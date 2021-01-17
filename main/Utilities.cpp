@@ -36,6 +36,7 @@ PBRet Utilities::interpLinear(const std::vector<double>& x, const std::vector<do
 {
     // Performs binary search on data to find appropriate interval, then performs linear search
     // on the interval indentified
+    //
     // Note: Assumes x is sorted
 
     if (x.size() != y.size()) {
@@ -43,16 +44,14 @@ PBRet Utilities::interpLinear(const std::vector<double>& x, const std::vector<do
         return PBRet::FAILURE;
     }
 
-    if (xVal <= x.front()) {
-        // Return first y value as best guess
-        yVal = y.front();
-        return PBRet::SUCCESS;      // Or should this be failure
+    if (xVal < x.front()) {
+        ESP_LOGW(Utilities::Name, "xVal outside of interpolation range");
+        return PBRet::FAILURE;      // Or should this be failure
     }
 
-    if (xVal >= x.back()) {
-        // Return last y value as best guess
-        yVal = y.back();
-        return PBRet::SUCCESS;      // Or should this be failure
+    if (xVal > x.back()) {
+        ESP_LOGW(Utilities::Name, "xVal outside of interpolation range");
+        return PBRet::FAILURE;      // Or should this be failure
     }
 
     // Get iterator to first value in x that is equal to or greater than xVal
