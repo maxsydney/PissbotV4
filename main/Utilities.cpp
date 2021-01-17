@@ -1,6 +1,7 @@
 #include "Utilities.h"
 #include "esp_log.h"
 #include <cmath>
+#include <algorithm>
 
 PBRet Utilities::polyVal(const std::vector<double>& coeffs, double val, double& result)
 {
@@ -28,6 +29,38 @@ PBRet Utilities::polyVal(const std::vector<double>& coeffs, double val, double& 
         result += coeffs[i];
     }
     
+    return PBRet::SUCCESS;
+}
+
+PBRet Utilities::interpLinear(const std::vector<double>& x, const std::vector<double>& y, double xVal, double& yVal)
+{
+    // Performs binary search on data to find appropriate interval, then performs linear search
+    // on the interval indentified
+    // Note: Assumes x is sorted
+
+    if (x.size() != y.size()) {
+        ESP_LOGW(Utilities::Name, "x and y vectors were not of the same length");
+        return PBRet::FAILURE;
+    }
+
+    if (xVal <= x.front()) {
+        // Return first y value as best guess
+        yVal = y.front();
+        return PBRet::SUCCESS;      // Or should this be failure
+    }
+
+    if (xVal >= x.back()) {
+        // Return last y value as best guess
+        yVal = y.back();
+        return PBRet::SUCCESS;      // Or should this be failure
+    }
+
+    // Get iterator to first value in x that is equal to or greater than xVal
+    size_t idx = std::lower_bound(x.begin(), x.end(), xVal) - x.begin();
+
+    const double p = (xVal - x[idx-1]) / (x[idx] - x[idx-1]);
+    yVal = (1 - p) * y[idx - 1] + p * y[idx];
+
     return PBRet::SUCCESS;
 }
 

@@ -12,6 +12,7 @@ class Utilities
 
         // Math
         static PBRet polyVal(const std::vector<double>& coeffs, double val, double& result);
+        static PBRet interpLinear(const std::vector<double>& x, const std::vector<double>& y, double xVal, double& yVal);
         static double bound(double val, double lowerLim, double upperLim);
 
         // Checkers
