@@ -74,10 +74,10 @@ extern "C"
         // The Compleat Distiller - Fig. 8-6
         // Note: Tolerance is slightly larger here due to using different antoine coefficients
         //       to those used in the reference
-        TEST_ASSERT_FLOAT_WITHIN(5e-3, 0.86996, Thermo::computeLiquidEthMolFraction(80.0));
-        TEST_ASSERT_FLOAT_WITHIN(5e-3, 0.58316, Thermo::computeLiquidEthMolFraction(85.0));
-        TEST_ASSERT_FLOAT_WITHIN(5e-3, 0.35372, Thermo::computeLiquidEthMolFraction(90.0));
-        TEST_ASSERT_FLOAT_WITHIN(5e-3, 0.16252, Thermo::computeLiquidEthMolFraction(95.0));
+        TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.86996, Thermo::computeLiquidEthMolFraction(80.0));
+        TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.58316, Thermo::computeLiquidEthMolFraction(85.0));
+        TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.35372, Thermo::computeLiquidEthMolFraction(90.0));
+        TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.16252, Thermo::computeLiquidEthMolFraction(95.0));
     }
 
     TEST_CASE("Mol fraction vapour", "[Thermo]")
@@ -86,10 +86,10 @@ extern "C"
         // The Compleat Distiller - Fig. 8-6
         // Note: Tolerance is slightly larger here due to using different antoine coefficients
         //       to those used in the reference
-        // TEST_ASSERT_FLOAT_WITHIN(5e-3, 0.91776, Thermo::computeVapourEthMolFraction(80.0));
-        // TEST_ASSERT_FLOAT_WITHIN(5e-3, 0.74568, Thermo::computeVapourEthMolFraction(85.0));
-        TEST_ASSERT_FLOAT_WITHIN(5e-3, 0.53536, Thermo::computeVapourEthMolFraction(90.0));
-        TEST_ASSERT_FLOAT_WITHIN(5e-3, 0.29636, Thermo::computeVapourEthMolFraction(95.0));
+        TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.94, Thermo::computeVapourEthMolFraction(80.09125));
+        TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.76, Thermo::computeVapourEthMolFraction(85.09472));
+        TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.55, Thermo::computeVapourEthMolFraction(90.00073));
+        TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.29, Thermo::computeVapourEthMolFraction(95.1303));
     }
 
 #ifdef __cplusplus

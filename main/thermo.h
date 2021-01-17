@@ -30,8 +30,8 @@ class ThermoConversions
 class AntoineModels
 { 
     public:
-        static constexpr AntoineParams H20 = {8.07131, 1730.63, 233.426, 1.0, 100.0, ThermoConversions::mbar_to_kPa};       // Ref: http://ddbonline.ddbst.com/AntoineCalculation/AntoineCalculationCGI.exe
-        static constexpr AntoineParams Ethanol = {8.236515, 1592.864, 226.184, 20.0, 93.0, ThermoConversions::mbar_to_kPa};  // Ref: http://ddbonline.ddbst.com/AntoineCalculation/AntoineCalculationCGI.exe
+        static constexpr AntoineParams H20 = {8.07131, 1730.63, 233.426, 1.0, 100.0, ThermoConversions::mmHg_to_kPa};       // Ref: http://ddbonline.ddbst.com/AntoineCalculation/AntoineCalculationCGI.exe
+        static constexpr AntoineParams Ethanol = {7.68117, 1332.04, 199.2, 77.0, 243.0, ThermoConversions::mmHg_to_kPa};  // Ref: http://ddbonline.ddbst.com/AntoineCalculation/AntoineCalculationCGI.exe
 };
 
 class ThermoConstants
