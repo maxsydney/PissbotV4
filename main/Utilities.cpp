@@ -46,12 +46,12 @@ PBRet Utilities::interpLinear(const std::vector<double>& x, const std::vector<do
 
     if (xVal < x.front()) {
         ESP_LOGW(Utilities::Name, "xVal outside of interpolation range");
-        return PBRet::FAILURE;      // Or should this be failure
+        return PBRet::FAILURE;
     }
 
     if (xVal > x.back()) {
         ESP_LOGW(Utilities::Name, "xVal outside of interpolation range");
-        return PBRet::FAILURE;      // Or should this be failure
+        return PBRet::FAILURE;
     }
 
     // Get iterator to first value in x that is equal to or greater than xVal
