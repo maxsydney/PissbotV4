@@ -104,6 +104,9 @@ double Thermo::computeLiquidABVLookup(double T)
 {
     // Compute the ethanol ABV from liquid temperature based on a lookup table
     // Ref: Higher Alcohols in the Alcoholic Distillation From Fermented 
+    //
+    // Note: Assumes p = 1atm
+    //
     //      Cane Molasses - EQUILIBRIUM COMPOSITIONS FOR THE SYSTEM ETHANOL-WATER 
     //      AT ONE ATMOSPHERE
     double ABV = 0.0;
@@ -118,6 +121,9 @@ double Thermo::computeLiquidABVLookup(double T)
 double Thermo::computeVapourABVLookup(double T)
 {
     // Compute the ethanol ABV from vapour temperature based on a lookup table
+    //
+    // Note: Assumes p = 1atm
+    //
     // Ref: Higher Alcohols in the Alcoholic Distillation From Fermented 
     //      Cane Molasses - EQUILIBRIUM COMPOSITIONS FOR THE SYSTEM ETHANOL-WATER 
     //      AT ONE ATMOSPHERE
