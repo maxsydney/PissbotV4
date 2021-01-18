@@ -145,6 +145,29 @@ TEST_CASE("Compute liquid ABV Lookup", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0, Thermo::computeLiquidABVLookup(100.0));
 }
 
+TEST_CASE("Compute vapour ABV Lookup", "[Thermo]")
+{
+    // Test cases based on
+    // Higher Alcohols in the Alcoholic Distillation From Fermented Cane Molasses - EQUILIBRIUM COMPOSITIONS 
+    // FOR THE SYSTEM ETHANOL-WATER AT ONE ATMOSPHERE
+
+    // Test some known cases
+    TEST_ASSERT_FLOAT_WITHIN(1e-2, 23.59, Thermo::computeVapourABVLookup(98.05));
+    TEST_ASSERT_FLOAT_WITHIN(1e-2, 39.09, Thermo::computeVapourABVLookup(96.0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-2, 55.94, Thermo::computeVapourABVLookup(93.1));
+    TEST_ASSERT_FLOAT_WITHIN(1e-2, 65.91, Thermo::computeVapourABVLookup(90.02));
+    TEST_ASSERT_FLOAT_WITHIN(1e-2, 73.34, Thermo::computeVapourABVLookup(87.02));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 77.30, Thermo::computeVapourABVLookup(85.04));
+
+    // Test interpolation working
+    TEST_ASSERT_FLOAT_WITHIN(1e-2, 73.155, Thermo::computeVapourABVLookup(87.17));
+    TEST_ASSERT_FLOAT_WITHIN(1e-2, 37.615, Thermo::computeVapourABVLookup(96.28));
+
+    // Edge cases
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0, Thermo::computeVapourABVLookup(0.0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0, Thermo::computeVapourABVLookup(100.0));
+}
+
 
 #ifdef __cplusplus
 }
