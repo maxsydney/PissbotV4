@@ -20,6 +20,13 @@ PBRet ConnectionManager::addConnection(Websock* ws)
 
 PBRet ConnectionManager::removeConnection(Websock* ws)
 {
+    // Check connection exists
+    if (ConnectionManager::checkConnection(ws) != PBRet::SUCCESS) {
+        ESP_LOGW(ConnectionManager::Name, "Attempted to remove connection that does not exist(%p)", ws);
+        return PBRet::FAILURE;
+    }
+
+    // Connection found. Remove from list
     ESP_LOGI(ConnectionManager::Name, "Closing connection (%p)", ws);
     _activeWebsockets.erase(std::remove(_activeWebsockets.begin(), _activeWebsockets.end(), ws), _activeWebsockets.end());
     _activeWebsockets.resize(--_nConnections);

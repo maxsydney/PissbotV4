@@ -3,6 +3,12 @@
 
 #include <vector>
 
+// ABV lookup tables
+// Data can be found in "Higher Alcohols in the Alcoholic Distillation From Fermented 
+// Cane Molasses" - EQUILIBRIUM COMPOSITIONS FOR THE SYSTEM ETHANOL-WATER AT ONE ATMOSPHERE
+//
+// Data assumes p = 1 atm
+
 namespace ABVTables
 {
     static const std::vector<double> T = {

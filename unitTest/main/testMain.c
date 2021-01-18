@@ -11,6 +11,7 @@ static void includeAllTests(void)
 {
     includeThermoTests();
     includeUtilitiesTests();
+    includeConnectionManagerTests();
 }
 
 void app_main(void)

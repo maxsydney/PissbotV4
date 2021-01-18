@@ -21,6 +21,8 @@ class ConnectionManager
 
         static const std::vector<Websock*> getActiveWebsockets(void) { return _activeWebsockets; }
 
+        friend class ConnectionManagerUT;
+
     private:
         
         static std::vector<Websock*> _activeWebsockets;
