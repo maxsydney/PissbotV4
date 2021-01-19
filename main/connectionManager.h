@@ -17,7 +17,6 @@ class ConnectionManager
         static PBRet checkConnection(Websock* ws);
         static void printConnections(void);
         static int getNumConnections(void) { return _nConnections; }
-        static PBRet getConnectionPtr(size_t i, Websock** conn);
 
         static const std::vector<Websock*> getActiveWebsockets(void) { return _activeWebsockets; }
 
