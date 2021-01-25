@@ -95,6 +95,7 @@ class PBOneWire
         static SensorType mapSensorIDToType(int sensorID);
 
         static PBRet checkInputs(const PBOneWireConfig& cfg);
+        static PBRet loadFromJSON(PBOneWireConfig& cfg, const cJSON* cfgRoot);
         bool isConfigured(void) const { return _configured; }
 
     private:

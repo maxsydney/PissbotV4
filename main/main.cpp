@@ -15,6 +15,7 @@
 #include "pinDefs.h"
 #include "webServer.h"
 #include "DistillerManager.h"
+#include "ConfigManager.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,8 +25,12 @@ void app_main()
 {
     // ESP_LOGI(tag, "Redirecting log messages to websocket connection");
     // esp_log_set_vprintf(&_log_vprintf);
-    
+
     DistillerConfig cfg {};
+
+    ConfigManager::loadConfig("/spiffs/PissbotConfig.json", cfg);
+    
+    
     cfg.ctrlConfig.ctrlTuning = ControlTuning(70.0, 1.0, 1.0, 1.0, 1.0);
     cfg.ctrlConfig.ctrlSettings = ControlSettings(false, false, false, false, false);
     cfg.ctrlConfig.dt = 1.0 / CONTROL_LOOP_FREQUENCY;

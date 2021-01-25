@@ -15,3 +15,4 @@ idf_component_register(
 
 target_compile_options(${COMPONENT_LIB} PRIVATE -std=c++17)
 
+spiffs_create_partition_image(config ../Config FLASH_IN_PROJECT)

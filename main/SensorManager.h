@@ -87,6 +87,7 @@ class SensorManager : public Task
         SensorManager(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const SensorManagerConfig& cfg);
 
         static PBRet checkInputs(const SensorManagerConfig& cfg);
+        static PBRet loadFromJSON(SensorManagerConfig& cfg, const cJSON* cfgRoot);
         bool isConfigured(void) const { return _configured; }
 
         friend class SensorManagerUT;

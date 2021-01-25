@@ -45,6 +45,55 @@ PBRet PBOneWire::checkInputs(const PBOneWireConfig& cfg)
     return PBRet::SUCCESS;
 }
 
+PBRet PBOneWire::loadFromJSON(PBOneWireConfig& cfg, const cJSON* cfgRoot)
+{
+    // Load PBOneWire struct from JSON
+
+    if (cfgRoot == nullptr) {
+        ESP_LOGW(PBOneWire::Name, "cfgRoot was null");
+        return PBRet::FAILURE;
+    }
+
+    // Get Onewire GPIO
+    cJSON* GPIOOneWireNode = cJSON_GetObjectItem(cfgRoot, "GPIO_onewire");
+    if (cJSON_IsNumber(GPIOOneWireNode)) {
+        cfg.oneWirePin = static_cast<gpio_num_t>(GPIOOneWireNode->valueint);      // TODO: Update name to GPIOOnewire
+    } else {
+        ESP_LOGI(PBOneWire::Name, "Unable to read Onewire GPIO from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get DS18B20 resolution
+    cJSON* resolutionNode = cJSON_GetObjectItem(cfgRoot, "DS18B20Resolution");
+    if (cJSON_IsNumber(resolutionNode)) {
+        cfg.tempSensorResolution = static_cast<DS18B20_RESOLUTION>(resolutionNode->valueint);      // TODO: Typecast here?
+    } else {
+        ESP_LOGI(PBOneWire::Name, "Unable to read DS18B20 resolution from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get reflux flowmeter GPIO
+    cJSON* refluxFlowNode = cJSON_GetObjectItem(cfgRoot, "GPIO_refluxFlow");
+    if (cJSON_IsNumber(refluxFlowNode)) {
+        cfg.refluxFlowPin = static_cast<gpio_num_t>(refluxFlowNode->valueint);
+    } else {
+        ESP_LOGI(PBOneWire::Name, "Unable to read reflux flowmeter pin from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get product flowmeter GPIO
+    cJSON* prodFlowNode = cJSON_GetObjectItem(cfgRoot, "GPIO_prodFlow");
+    if (cJSON_IsNumber(prodFlowNode)) {
+        cfg.productFlowPin = static_cast<gpio_num_t>(prodFlowNode->valueint);
+    } else {
+        ESP_LOGI(PBOneWire::Name, "Unable to read product flowmeter pin from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Success by here
+    return PBRet::SUCCESS;
+}
+
 PBRet PBOneWire::_initOWB()
 {
     _rmtDriver = new owb_rmt_driver_info;

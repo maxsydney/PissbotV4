@@ -305,6 +305,28 @@ PBRet SensorManager::_loadFlowmetersFromJSON(const cJSON* JSONFlowmeters)
     return PBRet::SUCCESS;
 }
 
+PBRet SensorManager::loadFromJSON(SensorManagerConfig& cfg, const cJSON* cfgRoot)
+{
+    // Load SensorManagerConfig struct from JSON
+    if (cfgRoot == nullptr) {
+        ESP_LOGW(SensorManager::Name, "cfgRoot was null");
+        return PBRet::FAILURE;
+    }
+
+    // Get SensorManager dt
+    cJSON* dtNode = cJSON_GetObjectItem(cfgRoot, "dt");
+    if (cJSON_IsNumber(dtNode)) {
+        cfg.dt = dtNode->valuedouble;
+    } else {
+        ESP_LOGI(SensorManager::Name, "Unable to read SensorManager dt from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get OneWireBus configuration
+    cJSON* OWBNode = cJSON_GetObjectItem(cfgRoot, "oneWireConfig");
+    return PBOneWire::loadFromJSON(cfg.oneWireConfig, OWBNode);
+}
+
 PBRet SensorManager::_writeSensorConfigToFile(void) const
 {
     // Write the current sensor configuration to JSON

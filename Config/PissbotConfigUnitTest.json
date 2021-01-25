@@ -2,6 +2,13 @@
     "DistillerConfig": {
         "ControllerConfig": {
             "dt": 0.2,
+            "ControlTuning": {
+                "setpoint": 20,
+                "PGain": 50,
+                "IGain": 2,
+                "DGain": 75,
+                "LPFCutoff": 5
+            },
             "ControlSettings": {
                 "fanState": false,
                 "elementLow": false,
