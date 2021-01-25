@@ -168,7 +168,6 @@ TEST_CASE("Compute vapour ABV Lookup", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0, Thermo::computeVapourABVLookup(100.0));
 }
 
-
 #ifdef __cplusplus
 }
 #endif

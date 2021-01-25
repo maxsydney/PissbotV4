@@ -11,6 +11,7 @@ set(COMPONENT_ADD_INCLUDEDIRS
     "../../components/libesphttpd/include"
     "../../"
     "./test"
+    "./testData"
     "/Users/maxsydney/esp/PissbotV4/components/espfs/include"
 )
 

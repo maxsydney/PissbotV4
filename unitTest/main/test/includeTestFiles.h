@@ -7,5 +7,6 @@
 void includeThermoTests(void);
 void includeUtilitiesTests(void);
 void includeConnectionManagerTests(void);
+void includeSensorManagerTests(void);
 
 #endif // INCLUDE_TEST_FILES
