@@ -17,22 +17,44 @@ void includeSensorManagerTests(void)
     // Dummy function to force discovery of unit tests by main test runner
 }
 
+static SensorManagerConfig validConfig(void)
+{
+    SensorManagerConfig cfg {};
+    cfg.dt = 0.1;
+    cfg.oneWireConfig.oneWirePin = GPIO_NUM_0;
+    cfg.oneWireConfig.productFlowPin = GPIO_NUM_0;
+    cfg.oneWireConfig.refluxFlowPin = GPIO_NUM_0;
+    cfg.oneWireConfig.tempSensorResolution = DS18B20_RESOLUTION_12_BIT;
+
+    return cfg;
+}
+
 TEST_CASE("checkInputs", "[SensorManager]")
 {
-    // Valid configuration
+    // Default configuration invalid
     {
-        SensorManagerConfig cfg{};
+        SensorManagerConfig cfg {};
         TEST_ASSERT_EQUAL(PBRet::FAILURE, SensorManager::checkInputs(cfg));
+    }
+
+    // Valid config
+    {
+        SensorManagerConfig cfg = validConfig();
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, SensorManager::checkInputs(cfg));
     }
 
     // Invalid dt
     {
-
+        SensorManagerConfig cfg = validConfig();
+        cfg.dt = -1.0;
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, SensorManager::checkInputs(cfg));
     }
 
     // Invalid PBOneWire config
     {
-
+        SensorManagerConfig cfg = validConfig();
+        cfg.oneWireConfig.oneWirePin = static_cast<gpio_num_t>(-1);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, SensorManager::checkInputs(cfg));
     }
 }
 
