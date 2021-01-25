@@ -13,6 +13,7 @@ static void includeAllTests(void)
     includeUtilitiesTests();
     includeConnectionManagerTests();
     includeSensorManagerTests();
+    includeOneWireBusTests();
 }
 
 void app_main(void)

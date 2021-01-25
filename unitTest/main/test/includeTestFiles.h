@@ -8,5 +8,6 @@ void includeThermoTests(void);
 void includeUtilitiesTests(void);
 void includeConnectionManagerTests(void);
 void includeSensorManagerTests(void);
+void includeOneWireBusTests(void);
 
 #endif // INCLUDE_TEST_FILES
