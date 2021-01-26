@@ -88,8 +88,8 @@ struct ControllerConfig
     double dt = 0.0;
     ControlTuning ctrlTuning {};
     ControlSettings ctrlSettings {};
-    PumpCfg refluxPumpCfg {};
-    PumpCfg prodPumpCfg {};
+    PumpConfig refluxPumpConfig {};
+    PumpConfig prodPumpConfig {};
     gpio_num_t fanPin = (gpio_num_t) GPIO_NUM_NC;
     gpio_num_t element1Pin = (gpio_num_t) GPIO_NUM_NC;
     gpio_num_t element2Pin = (gpio_num_t) GPIO_NUM_NC;
@@ -152,7 +152,7 @@ class Controller: public Task
     private:
         // Initialization
         PBRet _initIO(const ControllerConfig& cfg) const;
-        PBRet _initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg);
+        PBRet _initPumps(const PumpConfig& refluxPumpConfig, const PumpConfig& prodPumpConfig);
 
         // Updates
         PBRet _doControl(double temp);

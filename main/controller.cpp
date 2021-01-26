@@ -209,12 +209,12 @@ PBRet Controller::_initIO(const ControllerConfig& cfg) const
     return PBRet::SUCCESS;
 }
 
-PBRet Controller::_initPumps(const PumpCfg& refluxPumpCfg, const PumpCfg& prodPumpCfg)
+PBRet Controller::_initPumps(const PumpConfig& refluxPumpConfig, const PumpConfig& prodPumpConfig)
 {
     // Initialize both pumps to active control idle
 
-    _refluxPump = Pump(refluxPumpCfg);
-    _prodPump = Pump(prodPumpCfg);
+    _refluxPump = Pump(refluxPumpConfig);
+    _prodPump = Pump(prodPumpConfig);
     _refluxPump.setMode(PumpMode::ACTIVE);
     _prodPump.setMode(PumpMode::ACTIVE);
     _refluxPump.setSpeed(Pump::PUMP_MIN_OUTPUT);
@@ -354,7 +354,7 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
         return PBRet::FAILURE;
     }
 
-    if (_initPumps(cfg.refluxPumpCfg, cfg.prodPumpCfg) != PBRet::SUCCESS) {
+    if (_initPumps(cfg.refluxPumpConfig, cfg.prodPumpConfig) != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Unable to configure one or more pumps");
         return PBRet::FAILURE;
     }

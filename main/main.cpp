@@ -34,8 +34,8 @@ void app_main()
     cfg.ctrlConfig.ctrlTuning = ControlTuning(70.0, 1.0, 1.0, 1.0, 1.0);
     cfg.ctrlConfig.ctrlSettings = ControlSettings(false, false, false, false, false);
     cfg.ctrlConfig.dt = 1.0 / CONTROL_LOOP_FREQUENCY;
-    cfg.ctrlConfig.refluxPumpCfg = PumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-    cfg.ctrlConfig.prodPumpCfg = PumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+    cfg.ctrlConfig.refluxPumpConfig = PumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    cfg.ctrlConfig.prodPumpConfig = PumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
     cfg.ctrlConfig.fanPin = FAN_SWITCH;
     cfg.ctrlConfig.element1Pin = ELEMENT_1;
     cfg.ctrlConfig.element2Pin = ELEMENT_2;

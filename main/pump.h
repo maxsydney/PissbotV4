@@ -9,11 +9,11 @@ enum class PumpMode {
     FIXED
 };
 
-class PumpCfg
+class PumpConfig
 {
     public:
-        PumpCfg() = default;
-        PumpCfg(gpio_num_t pumpGPIO, ledc_channel_t PWMChannel, ledc_timer_t timerChannel)
+        PumpConfig() = default;
+        PumpConfig(gpio_num_t pumpGPIO, ledc_channel_t PWMChannel, ledc_timer_t timerChannel)
             : pumpGPIO(pumpGPIO), PWMChannel(PWMChannel), timerChannel(timerChannel) {}
 
         gpio_num_t pumpGPIO = (gpio_num_t) GPIO_NUM_NC;
@@ -28,7 +28,7 @@ class Pump
     public:
         // Constructors
         Pump() = default;
-        Pump(const PumpCfg& cfg);
+        Pump(const PumpConfig& cfg);
 
         // Update
         void commandPump();
@@ -36,8 +36,8 @@ class Pump
         void setMode(PumpMode pumpMode) {_pumpMode = pumpMode;};
 
         // Utility
-        static PBRet checkInputs(const PumpCfg& cfg);
-        static PBRet loadFromJSON(PumpCfg& cfg, const cJSON* cfgRoot);
+        static PBRet checkInputs(const PumpConfig& cfg);
+        static PBRet loadFromJSON(PumpConfig& cfg, const cJSON* cfgRoot);
 
         // Getters
         uint16_t getSpeed() const {return _pumpSpeed;}
@@ -54,5 +54,5 @@ class Pump
         bool _configured = false;
         uint16_t _pumpSpeed = 0;;
         PumpMode _pumpMode = PumpMode::ACTIVE;
-        PumpCfg _cfg;
+        PumpConfig _cfg;
 };

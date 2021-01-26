@@ -11,9 +11,9 @@
 //     const uint8_t freq = 5;
 //     const ctrlParams_t ctrlParams = {50.0, 10.0, 1.0, 1.0};
 //     const ctrlSettings_t ctrlSettings = {};
-//     PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-//     PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+//     PumpConfig refluxPumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+//     PumpConfig prodPumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpConfig,  prodPumpConfig, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
 //     TEST_ASSERT_EQUAL_DOUBLE(Ctrl.getSetpoint(), 50.0);
 //     TEST_ASSERT_EQUAL_DOUBLE(Ctrl.getPGain(), 10.0);
@@ -32,9 +32,9 @@
 //     const uint8_t freq = 5;
 //     const ctrlParams_t ctrlParams = {0.0, 1.0, 0.0, 0.0};
 //     const ctrlSettings_t ctrlSettings = {};
-//     PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-//     PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+//     PumpConfig refluxPumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+//     PumpConfig prodPumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpConfig,  prodPumpConfig, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
 //     Ctrl.updatePumpSpeed(25.0);
 //     TEST_ASSERT_EQUAL_INT16(25, Ctrl.getRefluxPumpSpeed());
@@ -52,9 +52,9 @@
 //     const uint8_t freq = 1;
 //     const ctrlParams_t ctrlParams = {0.0, 0.0, 1.0, 0.0};
 //     const ctrlSettings_t ctrlSettings = {};
-//     PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-//     PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+//     PumpConfig refluxPumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+//     PumpConfig prodPumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpConfig,  prodPumpConfig, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
 //     Ctrl.updatePumpSpeed(25.0);
 //     TEST_ASSERT_EQUAL_INT16(25, Ctrl.getRefluxPumpSpeed());
@@ -72,9 +72,9 @@
 //     const uint8_t freq = 1;
 //     const ctrlParams_t ctrlParams = {0.0, 0.0, 0.0, 1.0};
 //     const ctrlSettings_t ctrlSettings = {};
-//     PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-//     PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+//     PumpConfig refluxPumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+//     PumpConfig prodPumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpConfig,  prodPumpConfig, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
 //     Ctrl.updatePumpSpeed(50.0);
 //     TEST_ASSERT_EQUAL_INT16(50, Ctrl.getRefluxPumpSpeed());
@@ -92,9 +92,9 @@
 //     const uint8_t freq = 1;
 //     const ctrlParams_t ctrlParams = {0.0, 1.0, 1.0, 1.0};
 //     const ctrlSettings_t ctrlSettings = {};
-//     PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-//     PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+//     PumpConfig refluxPumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+//     PumpConfig prodPumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpConfig,  prodPumpConfig, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
 //     // Proportional is 25, integral is 25, derivative is 25
 //     Ctrl.updatePumpSpeed(25.0);
@@ -143,9 +143,9 @@
 //     const uint8_t freq = 1;
 //     const ctrlParams_t ctrlParams = {0.0, 1.0, 0.0, 0.0};
 //     const ctrlSettings_t ctrlSettings = {};
-//     PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-//     PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+//     PumpConfig refluxPumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+//     PumpConfig prodPumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpConfig,  prodPumpConfig, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
 //     // Check minimum speed
 //     Ctrl.updatePumpSpeed(0);
@@ -165,9 +165,9 @@
 //     const uint8_t freq = 1;
 //     const ctrlParams_t ctrlParams = {0.0, 1.0, 0.0, 0.0};
 //     const ctrlSettings_t ctrlSettings = {};
-//     PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-//     PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+//     PumpConfig refluxPumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+//     PumpConfig prodPumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpConfig,  prodPumpConfig, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
 //     TEST_ASSERT_EQUAL_INT16(Pump::PUMP_MIN_OUTPUT, Ctrl.getProductPumpSpeed());
 
@@ -182,9 +182,9 @@
 //     const ctrlParams_t ctrlParams = {1.0, 1.0, 1.0, 1.0};
 //     ctrlSettings_t ctrlSettingsIn = {};
 //     ctrlSettings_t ctrlSettingsOut = {};
-//     PumpCfg refluxPumpCfg(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-//     PumpCfg prodPumpCfg(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettingsIn, refluxPumpCfg,  prodPumpCfg, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+//     PumpConfig refluxPumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
+//     PumpConfig prodPumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
+//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettingsIn, refluxPumpConfig,  prodPumpConfig, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
 
 //     // Check all settings as defaults
 //     ctrlSettingsOut = Ctrl.getControllerSettings();

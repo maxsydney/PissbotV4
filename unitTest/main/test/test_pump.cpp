@@ -11,9 +11,9 @@ void includePumpTests(void)
     // Dummy function to force discovery of unit tests by main test runner
 }
 
-static PumpCfg validConfig(void)
+static PumpConfig validConfig(void)
 {
-    PumpCfg cfg {};
+    PumpConfig cfg {};
     cfg.pumpGPIO = GPIO_NUM_0;
     cfg.PWMChannel = LEDC_CHANNEL_0;
     cfg.timerChannel = LEDC_TIMER_0;
@@ -25,14 +25,14 @@ TEST_CASE("Constructor", "[Pump]")
 {
     // Sucessful initialization
     {
-        PumpCfg cfg(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
+        PumpConfig cfg(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
         Pump testPump(cfg);
         TEST_ASSERT_TRUE(testPump.isConfigured());
     }
 
     // Invalid config doesn't configure
     {
-        PumpCfg cfg {};
+        PumpConfig cfg {};
         cfg.pumpGPIO = static_cast<gpio_num_t>(-1);
         Pump testPump(cfg);
         TEST_ASSERT_FALSE(testPump.isConfigured());
@@ -41,7 +41,7 @@ TEST_CASE("Constructor", "[Pump]")
 
 TEST_CASE("Set Speed", "[Pump]")
 {
-    PumpCfg cfg(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    PumpConfig cfg(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
     Pump testPump(cfg);
     TEST_ASSERT_TRUE(testPump.isConfigured());
 
@@ -74,33 +74,33 @@ TEST_CASE("checkInputs", "[Pump]")
 {
     // Default configuration invalid
     {
-        PumpCfg cfg {};
+        PumpConfig cfg {};
         TEST_ASSERT_EQUAL(PBRet::FAILURE, Pump::checkInputs(cfg));
     }
 
     // Valid config
     {
-        PumpCfg cfg = validConfig();
+        PumpConfig cfg = validConfig();
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, Pump::checkInputs(cfg));
     }
 
     // Invalid pump GPIO
     {
-        PumpCfg cfg = validConfig();
+        PumpConfig cfg = validConfig();
         cfg.pumpGPIO = static_cast<gpio_num_t>(-1);
         TEST_ASSERT_EQUAL(PBRet::FAILURE, Pump::checkInputs(cfg));
     }
 
     // Invalid PWM channe;
     {
-        PumpCfg cfg = validConfig();
+        PumpConfig cfg = validConfig();
         cfg.PWMChannel = static_cast<ledc_channel_t>(-1);
         TEST_ASSERT_EQUAL(PBRet::FAILURE, Pump::checkInputs(cfg));
     }
 
     // Invalid timer channe;
     {
-        PumpCfg cfg = validConfig();
+        PumpConfig cfg = validConfig();
         cfg.timerChannel = static_cast<ledc_timer_t>(-1);
         TEST_ASSERT_EQUAL(PBRet::FAILURE, Pump::checkInputs(cfg));
     }
@@ -108,7 +108,7 @@ TEST_CASE("checkInputs", "[Pump]")
 
 TEST_CASE("loadFromJSON Valid", "[Pump]")
 {
-    PumpCfg testConfig {};
+    PumpConfig testConfig {};
     cJSON* root = cJSON_Parse(pumpConfig);
     TEST_ASSERT_NOT_EQUAL(root, nullptr);
  
@@ -121,7 +121,7 @@ TEST_CASE("loadFromJSON Valid", "[Pump]")
 
 TEST_CASE("loadFromJSON Invalid", "[Pump]")
 {
-    PumpCfg testConfig {};
+    PumpConfig testConfig {};
     cJSON* root = cJSON_Parse(pumpConfig);
     TEST_ASSERT_NOT_EQUAL(root, nullptr);
  

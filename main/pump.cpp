@@ -9,7 +9,7 @@
 
 static char tag[] = "Pump";
 
-Pump::Pump(const PumpCfg& cfg):
+Pump::Pump(const PumpConfig& cfg):
     _cfg(cfg)
 {
     esp_err_t err = _initPump();
@@ -80,7 +80,7 @@ void Pump::setSpeed(int16_t speed)
     } 
 }
 
-PBRet Pump::checkInputs(const PumpCfg& cfg)
+PBRet Pump::checkInputs(const PumpConfig& cfg)
 {
     // Check output pin is valid GPIO
     if ((cfg.pumpGPIO <= GPIO_NUM_NC) || (cfg.pumpGPIO > GPIO_NUM_MAX)) {
@@ -103,7 +103,7 @@ PBRet Pump::checkInputs(const PumpCfg& cfg)
     return PBRet::SUCCESS;
 }
 
-PBRet Pump::loadFromJSON(PumpCfg& cfg, const cJSON* cfgRoot)
+PBRet Pump::loadFromJSON(PumpConfig& cfg, const cJSON* cfgRoot)
 {
     // Load PumpConfig struct from JSON
 
