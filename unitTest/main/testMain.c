@@ -14,6 +14,7 @@ static void includeAllTests(void)
     includeConnectionManagerTests();
     includeSensorManagerTests();
     includeOneWireBusTests();
+    includeWebserverTests();
 }
 
 void app_main(void)

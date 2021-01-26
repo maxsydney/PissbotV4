@@ -37,6 +37,7 @@ class Webserver : public Task
 
         // Utility methods
         static PBRet checkInputs(const WebserverConfig& cfg);
+        static PBRet loadFromJSON(WebserverConfig& cfg, const cJSON* cfgRoot);
         bool isConfigured(void) const { return _configured; }
 
     private:

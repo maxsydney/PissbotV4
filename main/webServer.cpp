@@ -88,6 +88,35 @@ PBRet Webserver::checkInputs(const WebserverConfig& cfg)
     return PBRet::SUCCESS;
 }
 
+PBRet Webserver::loadFromJSON(WebserverConfig& cfg, const cJSON* cfgRoot)
+{
+    // Load WebserverConfig struct from JSON
+    if (cfgRoot == nullptr) {
+        ESP_LOGW(Webserver::Name, "cfgRoot was null");
+        return PBRet::FAILURE;
+    }
+
+    // Get maxConnections
+    cJSON* maxConNode = cJSON_GetObjectItem(cfgRoot, "maxConnections");
+    if (cJSON_IsNumber(maxConNode)) {
+        cfg.maxConnections = maxConNode->valueint;
+    } else {
+        ESP_LOGI(Webserver::Name, "Unable to read maxConnections from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get maxBroadcastFreq
+    cJSON* maxCastFreqNode = cJSON_GetObjectItem(cfgRoot, "maxBroadcastFreq");
+    if (cJSON_IsNumber(maxCastFreqNode)) {
+        cfg.maxBroadcastFreq = maxCastFreqNode->valueint;
+    } else {
+        ESP_LOGI(Webserver::Name, "Unable to read maxBroadcastFreq from JSON");
+        return PBRet::FAILURE;
+    }    
+
+    return PBRet::SUCCESS;
+}
+
 void Webserver::openConnection(Websock *ws) 
 {
 	ESP_LOGI("Webserver", "Got connection request");
