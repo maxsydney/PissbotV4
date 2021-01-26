@@ -10,5 +10,6 @@ void includeConnectionManagerTests(void);
 void includeSensorManagerTests(void);
 void includeOneWireBusTests(void);
 void includeWebserverTests(void);
+void includePumpTests(void);
 
 #endif // INCLUDE_TEST_FILES

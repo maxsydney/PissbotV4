@@ -5,13 +5,9 @@ static const char* testConfig = "{              \
     \"DistillerConfig\": {                      \
         \"ControllerConfig\": {                 \
             \"dt\": 0.2,                        \
-            \"ControlSettings\": {              \
-                \"fanState\": false,            \
-                \"elementLow\": false,          \
-                \"elementHigh\": false,         \
-                \"prodCondensorPump\": false,   \
-                \"refluxCondensorPump\": false  \
-            },                                  \
+            \"GPIO_fan\": 21,                   \
+            \"GPIO_element1\": 13,              \
+            \"GPIO_element2\": 32,              \
             \"RefluxPump\": {                   \
                 \"GPIO\": 23,                   \
                 \"PWMChannel\": 0,              \
@@ -21,10 +17,7 @@ static const char* testConfig = "{              \
                 \"GPIO\": 22,                   \
                 \"PWMChannel\": 1,              \
                 \"timerChannel\": 1             \
-            },                                  \
-            \"GPIO_fan\": 21,                   \
-            \"GPIO_element1\": 13,              \
-            \"GPIO_element2\": 32               \
+            }                                   \
         },                                      \
         \"SensorManagerConfig\": {              \
             \"dt\": 0.2,                        \

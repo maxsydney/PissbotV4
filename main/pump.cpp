@@ -35,7 +35,7 @@ esp_err_t Pump::_initPump() const
     ledc_channel_config_t channelConfig;
     channelConfig.channel    = _cfg.PWMChannel;
     channelConfig.duty       = 0;
-    channelConfig.gpio_num   = (int) _cfg.pin;
+    channelConfig.gpio_num   = (int) _cfg.pumpGPIO;
     channelConfig.speed_mode = LEDC_HIGH_SPEED_MODE;
     channelConfig.timer_sel  = _cfg.timerChannel;
     channelConfig.hpoint = 0xff;
@@ -80,8 +80,64 @@ void Pump::setSpeed(int16_t speed)
     } 
 }
 
-PumpCfg::PumpCfg(gpio_num_t pin, ledc_channel_t PWMChannel, ledc_timer_t timerChannel)
-    : pin(pin), PWMChannel(PWMChannel), timerChannel(timerChannel)
+PBRet Pump::checkInputs(const PumpCfg& cfg)
 {
-    _configured = true;
+    // Check output pin is valid GPIO
+    if ((cfg.pumpGPIO <= GPIO_NUM_NC) || (cfg.pumpGPIO > GPIO_NUM_MAX)) {
+        ESP_LOGE(Pump::Name, "PUMP GPIO %d is invalid", cfg.pumpGPIO);
+        return PBRet::FAILURE;
+    }
+
+    // Check PWM channel is valid
+    if ((cfg.PWMChannel < LEDC_CHANNEL_0) || (cfg.PWMChannel > LEDC_CHANNEL_MAX)) {
+        ESP_LOGE(Pump::Name, "PUMP PWM channel %d is invalid", cfg.PWMChannel);
+        return PBRet::FAILURE;
+    }
+
+    // Check timer channel is valid
+    if ((cfg.timerChannel < LEDC_TIMER_0) || (cfg.timerChannel > LEDC_TIMER_MAX)) {
+        ESP_LOGE(Pump::Name, "PUMP timer channel %d is invalid", cfg.timerChannel);
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet Pump::loadFromJSON(PumpCfg& cfg, const cJSON* cfgRoot)
+{
+    // Load PumpConfig struct from JSON
+
+    if (cfgRoot == nullptr) {
+        ESP_LOGW(Pump::Name, "cfg was null");
+        return PBRet::FAILURE;
+    }
+
+    // Get pump GPIO
+    cJSON* GPIOPumpeNode = cJSON_GetObjectItem(cfgRoot, "GPIO");
+    if (cJSON_IsNumber(GPIOPumpeNode)) {
+        cfg.pumpGPIO = static_cast<gpio_num_t>(GPIOPumpeNode->valueint);
+    } else {
+        ESP_LOGI(Pump::Name, "Unable to read pump GPIO from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get PWM channel
+    cJSON* PWMNode = cJSON_GetObjectItem(cfgRoot, "PWMChannel");
+    if (cJSON_IsNumber(PWMNode)) {
+        cfg.PWMChannel = static_cast<ledc_channel_t>(PWMNode->valueint);
+    } else {
+        ESP_LOGI(Pump::Name, "Unable to read pump PWM channel from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get timer channel
+    cJSON* timerNode = cJSON_GetObjectItem(cfgRoot, "timerChannel");
+    if (cJSON_IsNumber(timerNode)) {
+        cfg.timerChannel = static_cast<ledc_timer_t>(timerNode->valueint);
+    } else {
+        ESP_LOGI(Pump::Name, "Unable to read pump timer channel from JSON");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
 }

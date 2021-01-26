@@ -1,5 +1,7 @@
 #pragma once
 
+#include "PBCommon.h"
+#include "cJSON.h"
 #include <driver/ledc.h>
 
 enum class PumpMode {
@@ -11,27 +13,33 @@ class PumpCfg
 {
     public:
         PumpCfg() = default;
-        PumpCfg(gpio_num_t pin, ledc_channel_t PWMChannel, ledc_timer_t timerChannel);
+        PumpCfg(gpio_num_t pumpGPIO, ledc_channel_t PWMChannel, ledc_timer_t timerChannel)
+            : pumpGPIO(pumpGPIO), PWMChannel(PWMChannel), timerChannel(timerChannel) {}
 
-        bool isConfigured(void) const { return _configured; }
-        gpio_num_t pin = GPIO_NUM_0;
+        gpio_num_t pumpGPIO = (gpio_num_t) GPIO_NUM_NC;
         ledc_channel_t PWMChannel = LEDC_CHANNEL_0;
         ledc_timer_t timerChannel = LEDC_TIMER_0;
-    
-    private:
-        bool _configured = false;
 };
 
 class Pump
 {
+    static constexpr const char* Name = "Pump";
+
     public:
+        // Constructors
         Pump() = default;
         Pump(const PumpCfg& cfg);
 
+        // Update
         void commandPump();
         void setSpeed(int16_t speed);
         void setMode(PumpMode pumpMode) {_pumpMode = pumpMode;};
 
+        // Utility
+        static PBRet checkInputs(const PumpCfg& cfg);
+        static PBRet loadFromJSON(PumpCfg& cfg, const cJSON* cfgRoot);
+
+        // Getters
         uint16_t getSpeed() const {return _pumpSpeed;}
         const PumpMode& getMode() const {return _pumpMode;}
         bool isConfigured(void) const {return _configured;}
