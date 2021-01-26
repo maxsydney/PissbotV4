@@ -1,12 +1,14 @@
-#pragma once
+#ifndef PUMP_H
+#define PUMP_H
 
 #include "PBCommon.h"
 #include "cJSON.h"
 #include <driver/ledc.h>
 
 enum class PumpMode {
-    ACTIVE,
-    FIXED
+    Off,
+    ActiveControl,
+    ManualControl
 };
 
 class PumpConfig
@@ -28,31 +30,42 @@ class Pump
     public:
         // Constructors
         Pump() = default;
-        Pump(const PumpConfig& cfg);
+        explicit Pump(const PumpConfig& cfg);
 
         // Update
-        void commandPump();
-        void setSpeed(int16_t speed);
-        void setMode(PumpMode pumpMode) {_pumpMode = pumpMode;};
+        PBRet updatePumpActiveControl(uint16_t pumpSpeed) { return _updatePump(pumpSpeed, PumpMode::ActiveControl); }
+        PBRet updatePumpManualControl(uint16_t pumpSpeed)  { return _updatePump(pumpSpeed, PumpMode::ManualControl); }
+        void setPumpMode(PumpMode pumpMode) { _pumpMode = pumpMode; }
 
         // Utility
         static PBRet checkInputs(const PumpConfig& cfg);
         static PBRet loadFromJSON(PumpConfig& cfg, const cJSON* cfgRoot);
 
         // Getters
-        uint16_t getSpeed() const {return _pumpSpeed;}
-        const PumpMode& getMode() const {return _pumpMode;}
-        bool isConfigured(void) const {return _configured;}
+        uint16_t getPumpSpeed(void) const;
+        PumpMode getPumpMode(void) const { return _pumpMode; }
+        bool isConfigured(void) const { return _configured; }
 
         static constexpr uint16_t PUMP_MIN_OUTPUT = 25;
         static constexpr uint16_t PUMP_MAX_OUTPUT = 512;
         static constexpr uint16_t FLUSH_SPEED = 256;
 
+        // Friend class for unit testing
+        friend class PumpUT;
+
     private:
-        esp_err_t _initPump() const;
+        PBRet _initFromParams(const PumpConfig& cfg) const;
+
+        // Update
+        PBRet _updatePump(double pumpSpeed, PumpMode pumpMode);
+        PBRet _drivePump(void) const;
+        PBRet _setSpeed(int16_t pumpSpeed, PumpMode pumpMode);
 
         bool _configured = false;
-        uint16_t _pumpSpeed = 0;;
-        PumpMode _pumpMode = PumpMode::ACTIVE;
+        uint16_t _pumpSpeedActive = 0;
+        uint16_t _pumpSpeedManual = 0;
+        PumpMode _pumpMode = PumpMode::Off;
         PumpConfig _cfg;
 };
+
+#endif // PUMP_H

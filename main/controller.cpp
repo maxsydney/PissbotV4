@@ -215,10 +215,6 @@ PBRet Controller::_initPumps(const PumpConfig& refluxPumpConfig, const PumpConfi
 
     _refluxPump = Pump(refluxPumpConfig);
     _prodPump = Pump(prodPumpConfig);
-    _refluxPump.setMode(PumpMode::ACTIVE);
-    _prodPump.setMode(PumpMode::ACTIVE);
-    _refluxPump.setSpeed(Pump::PUMP_MIN_OUTPUT);
-    _prodPump.setSpeed(Pump::PUMP_MIN_OUTPUT);
 
     if (_refluxPump.isConfigured() == false) {
         ESP_LOGW(Controller::Name, "Unable to configure reflux pump driver");
@@ -277,18 +273,15 @@ PBRet Controller::_doControl(double headTemp)
     // Compute limited output
     double output = proportional + _integral + _derivative;
 
-    if (output > Pump::PUMP_MAX_OUTPUT) {
-        output = Pump::PUMP_MAX_OUTPUT;
-    } else if (output < Pump::PUMP_MIN_OUTPUT) {
-        output = Pump::PUMP_MIN_OUTPUT;
-    }
-
     _prevError = err;
     _prevTemp = headTemp;
+
     _handleProductPump(headTemp);
-    _refluxPump.setSpeed(output);
-    _refluxPump.commandPump();
-    _prodPump.commandPump();
+
+    if (_refluxPump.updatePumpActiveControl(output) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Controller updated successfully but failed to set pump speed");
+        return PBRet::FAILURE;
+    }
 
     return PBRet::SUCCESS;
 }
@@ -297,9 +290,9 @@ PBRet Controller::_doControl(double headTemp)
 PBRet Controller::_handleProductPump(double temp)
 {
     if (temp > 60) {
-        _prodPump.setSpeed(Pump::FLUSH_SPEED);
-    } else if (temp < 50) {
-        _prodPump.setSpeed(Pump::PUMP_MIN_OUTPUT);
+        _prodPump.updatePumpActiveControl(Pump::FLUSH_SPEED);
+    } else if (temp < 58) {
+        _prodPump.updatePumpActiveControl(Pump::PUMP_MIN_OUTPUT);
     }
 
     return PBRet::SUCCESS;
@@ -364,7 +357,11 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
         return PBRet::FAILURE;
     }
 
+    // Set pumps to active control
+    _refluxPump.setPumpMode(PumpMode::ActiveControl);
+    _prodPump.setPumpMode(PumpMode::ActiveControl);
     _cfg = cfg;
+
     return PBRet::SUCCESS;
 }
 

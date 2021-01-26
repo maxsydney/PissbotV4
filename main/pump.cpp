@@ -5,79 +5,167 @@
 #include "pinDefs.h"
 #include "pump.h"
 #include "controller.h"
+#include "Utilities.h"
 #include <stdint.h>
 
-static char tag[] = "Pump";
-
-Pump::Pump(const PumpConfig& cfg):
-    _cfg(cfg)
+Pump::Pump(const PumpConfig& cfg)
 {
-    esp_err_t err = _initPump();
-
-    if (err == ESP_OK) {
+    if (_initFromParams(cfg) != PBRet::FAILURE) {
+        _cfg = cfg;
         _configured = true;
+        ESP_LOGI(Pump::Name, "Pump configured on channel %d", _cfg.PWMChannel);
     } else {
-        _configured = false;
+        ESP_LOGW(Pump::Name, "Pump was not configured on channel %d", _cfg.PWMChannel);
     }
 }
 
-esp_err_t Pump::_initPump() const
+PBRet Pump::_initFromParams(const PumpConfig& cfg) const
 {
+    // Check inputs are valid
+    if (checkInputs(cfg) == PBRet::FAILURE) {
+        return PBRet::FAILURE;
+    }
+
     // Configure timer for PWM drivers
-    ledc_timer_config_t PWM_timer;
-    PWM_timer.duty_resolution = LEDC_TIMER_9_BIT;
-    PWM_timer.freq_hz = 5000;
-    PWM_timer.speed_mode = LEDC_HIGH_SPEED_MODE;
-    PWM_timer.timer_num = _cfg.timerChannel;
-    PWM_timer.clk_cfg = LEDC_AUTO_CLK;
+    // TODO: Move this to JSON config
+    const ledc_timer_config_t PWM_timer = {
+        .speed_mode = LEDC_HIGH_SPEED_MODE,
+        .duty_resolution = LEDC_TIMER_9_BIT,
+        .timer_num = cfg.timerChannel,
+        .freq_hz = 5000,
+        .clk_cfg = LEDC_AUTO_CLK
+    };
 
     // Configure pump channels
-    ledc_channel_config_t channelConfig;
-    channelConfig.channel    = _cfg.PWMChannel;
-    channelConfig.duty       = 0;
-    channelConfig.gpio_num   = (int) _cfg.pumpGPIO;
-    channelConfig.speed_mode = LEDC_HIGH_SPEED_MODE;
-    channelConfig.timer_sel  = _cfg.timerChannel;
-    channelConfig.hpoint = 0xff;
+    const ledc_channel_config_t channelConfig = {
+        .gpio_num   = cfg.pumpGPIO,
+        .speed_mode = LEDC_HIGH_SPEED_MODE,
+        .channel    = cfg.PWMChannel,
+        .intr_type  = LEDC_INTR_DISABLE,
+        .timer_sel  = cfg.timerChannel,
+        .duty       = 0,
+        .hpoint     = 0xff
+    };
 
     esp_err_t err = ledc_timer_config(&PWM_timer);
     if (err == ESP_ERR_INVALID_ARG) {
-        ESP_LOGE(tag, "Invalid parameter passed to timer configuration. Unable to configure pump on channel %d", _cfg.PWMChannel);
-        return err;
+        ESP_LOGE(Pump::Name, "Invalid parameter passed to timer configuration. Unable to configure pump on channel %d", cfg.PWMChannel);
+        return PBRet::FAILURE;
     } else if (err == ESP_FAIL) {
-        ESP_LOGE(tag, "Can not find a proper pre-divider number base on the given frequency and the current duty_resolution. Pump configured on channel %d", _cfg.PWMChannel);
-        return err;
+        ESP_LOGE(Pump::Name, "Can not find a proper pre-divider number base on the given frequency and the current duty_resolution. Pump configured on channel %d", cfg.PWMChannel);
+        return PBRet::FAILURE;
     }
 
     err = ledc_channel_config(&channelConfig);
-    if (err == ESP_OK) {
-        ESP_LOGI(tag, "Pump configured on channel %d", _cfg.PWMChannel);
-    } else {
-        ESP_LOGW(tag, "Invalid argument supplied to channel config. Unable to configure pump on channel %d", _cfg.PWMChannel);
+    if (err != ESP_OK) {
+        ESP_LOGW(Pump::Name, "Invalid argument supplied to channel config. Unable to configure pump on channel %d", cfg.PWMChannel);
+        return PBRet::FAILURE;
+    }
+
+    // Success by here
+    return PBRet::SUCCESS;
+}
+
+PBRet Pump::_updatePump(double pumpSpeed, PumpMode pumpMode)
+{
+    if (isConfigured() == false) {
+        ESP_LOGW(Pump::Name, "Pump was not configured");
+        return PBRet::FAILURE;
+    }
+
+    if (_setSpeed(pumpSpeed, pumpMode) == PBRet::FAILURE) {
+        ESP_LOGW(Pump::Name, "Failed to update pump speed");
+        return PBRet::FAILURE;
+    }
+
+    return _drivePump();
+}
+
+PBRet Pump::_drivePump(void) const
+{
+    const uint16_t pumpSpeed = getPumpSpeed();
+
+    if (ledc_set_duty(LEDC_HIGH_SPEED_MODE, _cfg.PWMChannel, pumpSpeed) != ESP_OK) {
+        ESP_LOGW(Pump::Name, "ledc_set_duty failed with invalid parameter error. Likely pumpSpeed (%d)", pumpSpeed);
+        return PBRet::FAILURE;
     }
     
-    return err;
+    if (ledc_update_duty(LEDC_HIGH_SPEED_MODE, _cfg.PWMChannel) != ESP_OK) {
+        ESP_LOGW(Pump::Name, "ledc_update_duty failed with invalid parameter error");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
 }
 
-void Pump::commandPump()
+uint16_t Pump::getPumpSpeed(void) const
 {
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, _cfg.PWMChannel, _pumpSpeed);
-	ledc_update_duty(LEDC_HIGH_SPEED_MODE, _cfg.PWMChannel);
+    // Return the current speed of the pump
+
+    if (isConfigured() == false) {
+        ESP_LOGW(Pump::Name, "Pump was not configured. Can not get pump speed");
+        return 0;
+    }
+
+    switch (_pumpMode)
+    {
+        case (PumpMode::ActiveControl):
+        {
+            return _pumpSpeedActive;
+        }
+        case (PumpMode::ManualControl):
+        {
+            return _pumpSpeedManual;
+        }
+        case (PumpMode::Off):
+        {
+            return 0;
+        }
+        default:
+        {
+            ESP_LOGW(Pump::Name, "Unknown PumpMode");
+            return 0;
+        }
+    }
 }
 
-void Pump::setSpeed(int16_t speed)
+PBRet Pump::_setSpeed(int16_t pumpSpeed, PumpMode pumpMode)
 {
+    // Sets the current pump drive speed for the associated mode.
+    // The pumps physical speed will only change if the current
+    // pump mode matches the mode passed here. If not, the speed
+    // will be updated to the input speed when the pump is switched
+    // back into the input mode
+
     // Saturate output command
-    if (speed < PUMP_MIN_OUTPUT) {
-        speed = PUMP_MIN_OUTPUT;
-    } else if (speed > PUMP_MAX_OUTPUT) {
-        speed = PUMP_MAX_OUTPUT;
-    }
+    pumpSpeed = Utilities::bound(pumpSpeed, Pump::PUMP_MIN_OUTPUT, Pump::PUMP_MAX_OUTPUT);
     
-    // Only command pump if in active control mode
-    if (_pumpMode == PumpMode::ACTIVE) {
-        _pumpSpeed = speed;
-    } 
+    // Set the appropriate pump speed
+    switch (_pumpMode)
+    {
+        case (PumpMode::ActiveControl):
+        {
+            _pumpSpeedActive = pumpSpeed;
+            break;
+        }
+        case (PumpMode::ManualControl):
+        {
+            _pumpSpeedManual = pumpSpeed;
+            break;
+        }
+        case (PumpMode::Off):
+        {
+            ESP_LOGW(Pump::Name, "Cannot update pump speed for PumpMode Off");
+            return PBRet::FAILURE;
+        }
+        default:
+        {
+            ESP_LOGW(Pump::Name, "Unknown PumpMode");
+            return PBRet::FAILURE;
+        }
+    }
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Pump::checkInputs(const PumpConfig& cfg)

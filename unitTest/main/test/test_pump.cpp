@@ -6,6 +6,15 @@
 extern "C" {
 #endif
 
+class PumpUT
+{
+    public:
+        static PBRet setSpeed(Pump& pump, uint16_t pumpSpeed, PumpMode pumpMode) { return pump._setSpeed(pumpSpeed, pumpMode); }
+        static PBRet drivePump(Pump& pump) { return pump._drivePump(); }
+        static void setPumpSpeedActive(Pump& pump, uint16_t pumpSpeed) { pump._pumpSpeedActive = pumpSpeed; }
+        static void setPumpSpeedManual(Pump& pump, uint16_t pumpSpeed) { pump._pumpSpeedManual = pumpSpeed; }
+};
+
 void includePumpTests(void)
 {
     // Dummy function to force discovery of unit tests by main test runner
@@ -39,34 +48,99 @@ TEST_CASE("Constructor", "[Pump]")
     }
 }
 
-TEST_CASE("Set Speed", "[Pump]")
+TEST_CASE("Set Speed Active Mode", "[Pump]")
 {
     PumpConfig cfg(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
     Pump testPump(cfg);
+    testPump.setPumpMode(PumpMode::ActiveControl);      // Carry out tests in active mode
     TEST_ASSERT_TRUE(testPump.isConfigured());
 
     // Valid speed
     {
-        testPump.setSpeed(256);
-        TEST_ASSERT_EQUAL_UINT16(256, testPump.getSpeed());
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::setSpeed(testPump, 256, PumpMode::ActiveControl));
+        TEST_ASSERT_EQUAL_UINT16(256, testPump.getPumpSpeed());
     }
 
     // Above maximum speed
     {
-        testPump.setSpeed(1000);
-        TEST_ASSERT_EQUAL_UINT16(Pump::PUMP_MAX_OUTPUT, testPump.getSpeed());
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::setSpeed(testPump, 1000, PumpMode::ActiveControl));
+        TEST_ASSERT_EQUAL_UINT16(Pump::PUMP_MAX_OUTPUT, testPump.getPumpSpeed());
     }
     
     // Below miniumum speed
     {
-        testPump.setSpeed(0);
-        TEST_ASSERT_EQUAL_UINT16(Pump::PUMP_MIN_OUTPUT, testPump.getSpeed());
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::setSpeed(testPump, 0, PumpMode::ActiveControl));
+        TEST_ASSERT_EQUAL_UINT16(Pump::PUMP_MIN_OUTPUT, testPump.getPumpSpeed());
     }
 
     // Negative speec
     {
-        testPump.setSpeed(-100);
-        TEST_ASSERT_EQUAL_UINT16(Pump::PUMP_MIN_OUTPUT, testPump.getSpeed());
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::setSpeed(testPump, -100, PumpMode::ActiveControl));
+        TEST_ASSERT_EQUAL_UINT16(Pump::PUMP_MIN_OUTPUT, testPump.getPumpSpeed());
+    }   
+}
+
+TEST_CASE("Set Speed Manual Mode", "[Pump]")
+{
+    PumpConfig cfg(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    Pump testPump(cfg);
+    testPump.setPumpMode(PumpMode::ManualControl);
+    TEST_ASSERT_TRUE(testPump.isConfigured());
+
+    // Valid speed
+    {
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::setSpeed(testPump, 256, PumpMode::ManualControl));
+        TEST_ASSERT_EQUAL_UINT16(256, testPump.getPumpSpeed());
+    }
+
+    // Above maximum speed
+    {
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::setSpeed(testPump, 1000, PumpMode::ManualControl));
+        TEST_ASSERT_EQUAL_UINT16(Pump::PUMP_MAX_OUTPUT, testPump.getPumpSpeed());
+    }
+    
+    // Below miniumum speed
+    {
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::setSpeed(testPump, 0, PumpMode::ManualControl));
+        TEST_ASSERT_EQUAL_UINT16(Pump::PUMP_MIN_OUTPUT, testPump.getPumpSpeed());
+    }
+
+    // Negative speec
+    {
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::setSpeed(testPump, -100, PumpMode::ManualControl));
+        TEST_ASSERT_EQUAL_UINT16(Pump::PUMP_MIN_OUTPUT, testPump.getPumpSpeed());
+    }   
+}
+
+TEST_CASE("Set Speed Off", "[Pump]")
+{
+    PumpConfig cfg(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    Pump testPump(cfg);
+    testPump.setPumpMode(PumpMode::Off);
+    TEST_ASSERT_TRUE(testPump.isConfigured());
+
+    // Valid speed
+    {
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, PumpUT::setSpeed(testPump, 256, PumpMode::ManualControl));
+        TEST_ASSERT_EQUAL_UINT16(0, testPump.getPumpSpeed());
+    }
+
+    // Above maximum speed
+    {
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, PumpUT::setSpeed(testPump, 1000, PumpMode::ManualControl));
+        TEST_ASSERT_EQUAL_UINT16(0, testPump.getPumpSpeed());
+    }
+    
+    // Below miniumum speed
+    {
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, PumpUT::setSpeed(testPump, 0, PumpMode::ManualControl));
+        TEST_ASSERT_EQUAL_UINT16(0, testPump.getPumpSpeed());
+    }
+
+    // Negative speec
+    {
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, PumpUT::setSpeed(testPump, -100, PumpMode::ManualControl));
+        TEST_ASSERT_EQUAL_UINT16(0, testPump.getPumpSpeed());
     }   
 }
 
@@ -103,6 +177,109 @@ TEST_CASE("checkInputs", "[Pump]")
         PumpConfig cfg = validConfig();
         cfg.timerChannel = static_cast<ledc_timer_t>(-1);
         TEST_ASSERT_EQUAL(PBRet::FAILURE, Pump::checkInputs(cfg));
+    }
+}
+
+TEST_CASE("drivePump", "[Pump]")
+{
+    const PumpConfig cfg(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
+
+    // Valid speed active
+    {
+        Pump testPump(cfg);
+        TEST_ASSERT_TRUE(testPump.isConfigured());
+        testPump.setPumpMode(PumpMode::ActiveControl);
+        PumpUT::setPumpSpeedActive(testPump, 256);
+        
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
+        TEST_ASSERT_EQUAL(256, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
+    }
+
+    // Valid speed manual
+    {
+        Pump testPump(cfg);
+        TEST_ASSERT_TRUE(testPump.isConfigured());
+        testPump.setPumpMode(PumpMode::ManualControl);
+        PumpUT::setPumpSpeedManual(testPump, 256);
+        
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
+        TEST_ASSERT_EQUAL(256, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
+    }
+
+    // Above maximum speed active
+    {
+        Pump testPump(cfg);
+        TEST_ASSERT_TRUE(testPump.isConfigured());
+        testPump.setPumpMode(PumpMode::ActiveControl);
+        PumpUT::setPumpSpeedActive(testPump, 1000);
+        
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
+        TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
+    }
+
+    // Above maximum speed manual
+    {
+        Pump testPump(cfg);
+        TEST_ASSERT_TRUE(testPump.isConfigured());
+        testPump.setPumpMode(PumpMode::ManualControl);
+        PumpUT::setPumpSpeedManual(testPump, 1000);
+        
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
+        TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
+    }
+
+    // Below minimum speed active
+    {
+        Pump testPump(cfg);
+        TEST_ASSERT_TRUE(testPump.isConfigured());
+        testPump.setPumpMode(PumpMode::ActiveControl);
+        PumpUT::setPumpSpeedActive(testPump, 0);
+        
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
+        TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
+    }
+
+    // Below minimum speed manual
+    {
+        Pump testPump(cfg);
+        TEST_ASSERT_TRUE(testPump.isConfigured());
+        testPump.setPumpMode(PumpMode::ManualControl);
+        PumpUT::setPumpSpeedManual(testPump, 0);
+        
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
+        TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
+    }
+    
+    // Negative speed active
+    {
+        Pump testPump(cfg);
+        TEST_ASSERT_TRUE(testPump.isConfigured());
+        testPump.setPumpMode(PumpMode::ActiveControl);
+        PumpUT::setPumpSpeedActive(testPump, -100);
+        
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
+        TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
+    }
+
+    // Negative speed manual
+    {
+        Pump testPump(cfg);
+        TEST_ASSERT_TRUE(testPump.isConfigured());
+        testPump.setPumpMode(PumpMode::ManualControl);
+        PumpUT::setPumpSpeedManual(testPump, -100);
+        
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
+        TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
+    }
+
+    // Pump off
+    {
+        Pump testPump(cfg);
+        TEST_ASSERT_TRUE(testPump.isConfigured());
+        testPump.setPumpMode(PumpMode::Off);
+        
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
+        TEST_ASSERT_EQUAL(0, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
 }
 
