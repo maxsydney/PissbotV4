@@ -11,15 +11,13 @@
 Pump::Pump(const PumpConfig& cfg)
 {
     if (_initFromParams(cfg) != PBRet::FAILURE) {
-        _cfg = cfg;
-        _configured = true;
         ESP_LOGI(Pump::Name, "Pump configured on channel %d", _cfg.PWMChannel);
     } else {
         ESP_LOGW(Pump::Name, "Pump was not configured on channel %d", _cfg.PWMChannel);
     }
 }
 
-PBRet Pump::_initFromParams(const PumpConfig& cfg) const
+PBRet Pump::_initFromParams(const PumpConfig& cfg)
 {
     // Check inputs are valid
     if (checkInputs(cfg) == PBRet::FAILURE) {
@@ -63,6 +61,8 @@ PBRet Pump::_initFromParams(const PumpConfig& cfg) const
     }
 
     // Success by here
+    _cfg = cfg;
+    _configured = true;
     return PBRet::SUCCESS;
 }
 
@@ -83,7 +83,7 @@ PBRet Pump::_updatePump(double pumpSpeed, PumpMode pumpMode)
 
 PBRet Pump::_drivePump(void) const
 {
-    const uint16_t pumpSpeed = getPumpSpeed();
+    const uint32_t pumpSpeed = getPumpSpeed();
 
     if (ledc_set_duty(LEDC_HIGH_SPEED_MODE, _cfg.PWMChannel, pumpSpeed) != ESP_OK) {
         ESP_LOGW(Pump::Name, "ledc_set_duty failed with invalid parameter error. Likely pumpSpeed (%d)", pumpSpeed);
@@ -98,7 +98,7 @@ PBRet Pump::_drivePump(void) const
     return PBRet::SUCCESS;
 }
 
-uint16_t Pump::getPumpSpeed(void) const
+uint32_t Pump::getPumpSpeed(void) const
 {
     // Return the current speed of the pump
 
