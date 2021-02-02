@@ -41,6 +41,10 @@ class ControlSettings : public MessageBase
             : MessageBase(ControlSettings::messageType, ControlSettings::Name), _fanState(fanState), 
               _elementLow(elementLow), _elementHigh(elementHigh), _prodCondensorPump(prodCondensorPump), 
               _refluxCondensorPump(refluxCondensorPump) {}
+        ControlSettings(const ControlSettings& other)
+            : MessageBase(ControlSettings::messageType, ControlSettings::Name), _fanState(other._fanState), 
+              _elementLow(other._elementLow), _elementHigh(other._elementHigh), _prodCondensorPump(other._prodCondensorPump), 
+              _refluxCondensorPump(other._refluxCondensorPump) {}
 
         bool getFanState(void) const { return _fanState; }
         bool getElementLow(void) const { return _elementLow; }
@@ -62,17 +66,29 @@ class ControlTuning : public MessageBase
     static constexpr MessageType messageType = MessageType::ControlTuning;
     static constexpr const char* Name = "Controller tuning";
 
+    static constexpr const char* SetpointStr = "Setpoint";
+    static constexpr const char* PGainStr = "PGain";
+    static constexpr const char* IGainStr = "IGain";
+    static constexpr const char* DGainStr = "DGain";
+    static constexpr const char* LPFCutoffStr = "LPFCutoff";
+
     public:
         ControlTuning(void) = default;
         ControlTuning(double setpoint, double PGain, double IGain, double DGain, double LPFCutoff)
             : MessageBase(ControlTuning::messageType, ControlTuning::Name), _setpoint(setpoint),
               _PGain(PGain), _IGain(IGain), _DGain(DGain), _LPFCutoff(LPFCutoff) {}
+        ControlTuning(const ControlTuning& other)
+            : MessageBase(ControlTuning::messageType, ControlTuning::Name), _setpoint(other._setpoint),
+              _PGain(other._PGain), _IGain(other._IGain), _DGain(other._DGain), _LPFCutoff(other._LPFCutoff) {}
 
         double getSetpoint(void) const { return _setpoint; }
         double getPGain(void) const { return _PGain; }
         double getIGain(void) const { return _IGain; }
         double getDGain(void) const { return _DGain; }
         double getLPFCutoff(void) const { return _LPFCutoff; }
+
+        PBRet serialize(std::string& JSONstr) const;
+        PBRet deserialize(const cJSON* root);
 
     private:
 
@@ -166,6 +182,10 @@ class Controller: public Task
 
         // FreeRTOS hook method
         void taskMain(void) override;
+
+        // Config
+        PBRet saveTuningToFile(void);
+        PBRet loadTuningFromFile(void);
 
         // Queue callbacks
         PBRet _generalMessageCB(std::shared_ptr<MessageBase> msg);

@@ -1,7 +1,3 @@
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
-
 #include "controller.h"
 #include "MessageDefs.h"        // Phase this out. Bad design
 
@@ -98,7 +94,7 @@ PBRet Controller::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
     ESP_LOGI(Controller::Name, "Controller settings were updated");
 
     if (_updateAuxOutputs(_outputState) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary componenst did not update successfully");
+        ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary components did not update successfully");
         return PBRet::FAILURE;
     }
 
@@ -425,6 +421,96 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
     return PBRet::SUCCESS;
 }
 
-// #ifdef __cplusplus
-// }
-// #endif
+PBRet ControlTuning::serialize(std::string& JSONstr) const
+{
+    // Write the ControlTuning object to JSON
+
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    // Add setpoint
+    cJSON* setpoint = cJSON_CreateNumber(_setpoint);
+    if (setpoint == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Error creating setpoint JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlTuning::SetpointStr, setpoint);
+
+    // Add P gain
+    cJSON* PGain = cJSON_CreateNumber(_PGain);
+    if (PGain == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Error creating PGain JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlTuning::PGainStr, PGain);
+
+    // Add I gain
+    cJSON* IGain = cJSON_CreateNumber(_IGain);
+    if (IGain == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Error creating IGain JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlTuning::IGainStr, IGain);
+
+    // Add D gain
+    cJSON* DGain = cJSON_CreateNumber(_DGain);
+    if (DGain == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Error creating IGain JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlTuning::DGainStr, DGain);
+
+    // Add LPF cutoff
+    cJSON* LPFCutoff = cJSON_CreateNumber(_LPFCutoff);
+    if (LPFCutoff == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Error creating LPF cutoff JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlTuning::LPFCutoffStr, LPFCutoff);
+
+    // Copy JSON to string. cJSON requires printing to a char* pointer. Copy into
+    // std::string and free memory to avoid memory leak
+    char* stringPtr = cJSON_Print(root);
+    JSONstr = std::string(stringPtr);
+    cJSON_Delete(root);
+    free(stringPtr);
+
+    return PBRet::SUCCESS;
+}
+
+PBRet ControlTuning::deserialize(const cJSON* root)
+{
+    // Load the ControlTuning object from JSON
+
+    // TODO: Implement me
+
+    return PBRet::SUCCESS;
+}
+
+PBRet Controller::saveTuningToFile(void)
+{
+    // Save the current controller tuning to a JSON file and store
+    // in flash
+
+    // TODO: Implement me
+
+    return PBRet::SUCCESS;
+}
+
+PBRet Controller::loadTuningFromFile(void)
+{
+    // Load a saved controller tuning from a JSON file and configure
+    // controller. Returns Failure if no file can be found
+
+    // TODO: Implement me
+
+    return PBRet::SUCCESS;
+}
