@@ -147,6 +147,7 @@ class Controller: public Task
 
         // Utility
         static PBRet checkInputs(const ControllerConfig& cfg);
+        static PBRet loadFromJSON(ControllerConfig& cfg, const cJSON* cfgRoot);
         bool isConfigured(void) const { return _configured; }
 
     private:

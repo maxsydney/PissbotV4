@@ -340,6 +340,54 @@ PBRet Controller::checkInputs(const ControllerConfig& cfg)
     return PBRet::SUCCESS;
 }
 
+PBRet Controller::loadFromJSON(ControllerConfig& cfg, const cJSON* cfgRoot)
+{
+    // Load ControllerConfig struct from JSON
+
+    if (cfgRoot == nullptr) {
+        ESP_LOGW(Controller::Name, "cfg was null");
+        return PBRet::FAILURE;
+    }
+
+    // Get controller dt
+    cJSON* dtNode = cJSON_GetObjectItem(cfgRoot, "dt");
+    if (cJSON_IsNumber(dtNode)) {
+        cfg.dt = dtNode->valuedouble;
+    } else {
+        ESP_LOGI(Controller::Name, "Unable to read controller dt from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get fan GPIO
+    cJSON* GPIOFanNode = cJSON_GetObjectItem(cfgRoot, "GPIO_fan");
+    if (cJSON_IsNumber(GPIOFanNode)) {
+        cfg.fanPin = static_cast<gpio_num_t>(GPIOFanNode->valueint);
+    } else {
+        ESP_LOGI(Controller::Name, "Unable to read fan GPIO from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get element 1 GPIO
+    cJSON* GPIOElement1Node = cJSON_GetObjectItem(cfgRoot, "GPIO_element1");
+    if (cJSON_IsNumber(GPIOElement1Node)) {
+        cfg.element1Pin = static_cast<gpio_num_t>(GPIOElement1Node->valueint);
+    } else {
+        ESP_LOGI(Controller::Name, "Unable to read element 1 GPIO from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get element 2 GPIO
+    cJSON* GPIOElement2Node = cJSON_GetObjectItem(cfgRoot, "GPIO_element2");
+    if (cJSON_IsNumber(GPIOElement2Node)) {
+        cfg.element2Pin = static_cast<gpio_num_t>(GPIOElement2Node->valueint);
+    } else {
+        ESP_LOGI(Controller::Name, "Unable to read element 2 GPIO from JSON");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}
+
 PBRet Controller::_initFromParams(const ControllerConfig& cfg)
 {
     if (Controller::checkInputs(cfg) != PBRet::SUCCESS) {;
