@@ -1,7 +1,17 @@
 #include "unity.h"
 #include "main/controller.h"
-#include "main/pump.h"
 #include "main/pinDefs.h"
+#include "testPumpConfig.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void includeControllerTests(void)
+{
+    // Dummy function to force discovery of unit tests by main test runner
+}
+
 
 // TEST_CASE("Constructor", "[Controller]")
 // {
@@ -26,7 +36,7 @@
 TEST_CASE("loadFromJSONValid", "[Controller]")
 {
     ControllerConfig testConfig {};
-    cJSON* root = cJSON_Parse(ctrlConfig);
+    cJSON* root = cJSON_Parse(ControllerConfig);
     TEST_ASSERT_NOT_EQUAL(root, nullptr);
  
     // Get config node
@@ -243,3 +253,6 @@ TEST_CASE("loadFromJSONValid", "[Controller]")
 //     TEST_ASSERT_TRUE(Ctrl.getProductPumpMode() == PumpMode::FIXED);
 // }
 
+#ifdef __cplusplus
+}
+#endif
