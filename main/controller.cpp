@@ -385,6 +385,18 @@ PBRet Controller::loadFromJSON(ControllerConfig& cfg, const cJSON* cfgRoot)
         return PBRet::FAILURE;
     }
 
+    // Load reflux pump configuration
+    cJSON* refluxPumpNode = cJSON_GetObjectItem(cfgRoot, "RefluxPump");
+    if (Pump::loadFromJSON(cfg.refluxPumpConfig, refluxPumpNode) != PBRet::SUCCESS) {
+        return PBRet::FAILURE;
+    }
+
+    // Load product pump configuration
+    cJSON* productPumpNode = cJSON_GetObjectItem(cfgRoot, "ProductPump");
+    if (Pump::loadFromJSON(cfg.prodPumpConfig, productPumpNode) != PBRet::SUCCESS) {
+        return PBRet::FAILURE;
+    }
+
     return PBRet::SUCCESS;
 }
 

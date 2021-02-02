@@ -1,10 +1,7 @@
-// #include "unity.h"
-// #include <stdio.h>
-// #include "main/controller.h"
-// #include "main/pump.h"
-// #include "main/pinDefs.h"
-// #include "/Users/maxsydney/esp/esp-idf/components/soc/include/hal/ledc_types.h"
-
+#include "unity.h"
+#include "main/controller.h"
+#include "main/pump.h"
+#include "main/pinDefs.h"
 
 // TEST_CASE("Constructor", "[Controller]")
 // {
@@ -25,6 +22,19 @@
 //     TEST_ASSERT_EQUAL_UINT16(Ctrl.getRefluxPumpSpeed(), Pump::PUMP_MIN_OUTPUT);
 //     TEST_ASSERT_EQUAL_UINT16(Ctrl.getProductPumpSpeed(), Pump::PUMP_MIN_OUTPUT);
 // }
+
+TEST_CASE("loadFromJSONValid", "[Controller]")
+{
+    ControllerConfig testConfig {};
+    cJSON* root = cJSON_Parse(ctrlConfig);
+    TEST_ASSERT_NOT_EQUAL(root, nullptr);
+ 
+    // Get config node
+    cJSON* cfg = cJSON_GetObjectItem(root, "ValidController");
+    TEST_ASSERT_NOT_EQUAL(cfg, nullptr);
+
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, Controller::loadFromJSON(testConfig, cfg));
+}
 
 // TEST_CASE("Proportional Control Response", "[Controller]")
 // {
