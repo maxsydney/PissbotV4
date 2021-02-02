@@ -1,7 +1,7 @@
 #include "unity.h"
 #include "main/controller.h"
 #include "main/pinDefs.h"
-#include "testPumpConfig.h"
+#include "testControllerConfig.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,11 +36,12 @@ void includeControllerTests(void)
 TEST_CASE("loadFromJSONValid", "[Controller]")
 {
     ControllerConfig testConfig {};
-    cJSON* root = cJSON_Parse(ControllerConfig);
+    cJSON* root = cJSON_Parse(ctrlConfig);
     TEST_ASSERT_NOT_EQUAL(root, nullptr);
  
     // Get config node
-    cJSON* cfg = cJSON_GetObjectItem(root, "ValidController");
+    cJSON* cfg = cJSON_GetObjectItem(root, "ControllerConfigValid");
+    printf("%s\n", cJSON_Print(root));
     TEST_ASSERT_NOT_EQUAL(cfg, nullptr);
 
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, Controller::loadFromJSON(testConfig, cfg));
