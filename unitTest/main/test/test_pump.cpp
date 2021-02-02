@@ -193,7 +193,7 @@ TEST_CASE("drivePump", "[Pump]")
         PumpUT::setPumpSpeedActive(testPump, 200);
 
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(200, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
 
@@ -205,7 +205,7 @@ TEST_CASE("drivePump", "[Pump]")
         PumpUT::setPumpSpeedManual(testPump, 200);
         
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(200, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
 
@@ -217,7 +217,7 @@ TEST_CASE("drivePump", "[Pump]")
         PumpUT::setPumpSpeedActive(testPump, 1000);
         
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
 
@@ -229,7 +229,7 @@ TEST_CASE("drivePump", "[Pump]")
         PumpUT::setPumpSpeedManual(testPump, 1000);
         
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
 
@@ -241,7 +241,7 @@ TEST_CASE("drivePump", "[Pump]")
         PumpUT::setPumpSpeedActive(testPump, 0);
         
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
 
@@ -253,7 +253,7 @@ TEST_CASE("drivePump", "[Pump]")
         PumpUT::setPumpSpeedManual(testPump, 0);
         
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
     
@@ -265,7 +265,7 @@ TEST_CASE("drivePump", "[Pump]")
         PumpUT::setPumpSpeedActive(testPump, -100);
         
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
 
@@ -277,7 +277,7 @@ TEST_CASE("drivePump", "[Pump]")
         PumpUT::setPumpSpeedManual(testPump, -100);
         
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
 
@@ -288,7 +288,7 @@ TEST_CASE("drivePump", "[Pump]")
         testPump.setPumpMode(PumpMode::Off);
         
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, PumpUT::drivePump(testPump));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         TEST_ASSERT_EQUAL(0, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
 }
@@ -304,7 +304,7 @@ TEST_CASE("updatePumpActiveControl", "[Pump]")
         TEST_ASSERT_TRUE(testPump.isConfigured());
         testPump.setPumpMode(PumpMode::ActiveControl);
         testPump.updatePumpActiveControl(200);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
 
         TEST_ASSERT_EQUAL(200, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
@@ -315,7 +315,7 @@ TEST_CASE("updatePumpActiveControl", "[Pump]")
         TEST_ASSERT_TRUE(testPump.isConfigured());
         testPump.setPumpMode(PumpMode::ActiveControl);
         testPump.updatePumpActiveControl(1000);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         
         TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
@@ -326,7 +326,7 @@ TEST_CASE("updatePumpActiveControl", "[Pump]")
         TEST_ASSERT_TRUE(testPump.isConfigured());
         testPump.setPumpMode(PumpMode::ActiveControl);
         testPump.updatePumpActiveControl(0);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         
         TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
@@ -343,7 +343,7 @@ TEST_CASE("updatePumpManualControl", "[Pump]")
         TEST_ASSERT_TRUE(testPump.isConfigured());
         testPump.setPumpMode(PumpMode::ManualControl);
         testPump.updatePumpManualControl(256);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         
         TEST_ASSERT_EQUAL(256, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
@@ -354,7 +354,7 @@ TEST_CASE("updatePumpManualControl", "[Pump]")
         TEST_ASSERT_TRUE(testPump.isConfigured());
         testPump.setPumpMode(PumpMode::ManualControl);
         testPump.updatePumpManualControl(1000);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         
         TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
@@ -365,7 +365,7 @@ TEST_CASE("updatePumpManualControl", "[Pump]")
         TEST_ASSERT_TRUE(testPump.isConfigured());
         testPump.setPumpMode(PumpMode::ManualControl);
         testPump.updatePumpManualControl(0);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(25 / portTICK_PERIOD_MS);
         
         TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
     }
