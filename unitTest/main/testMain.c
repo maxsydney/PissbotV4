@@ -17,6 +17,7 @@ static void includeAllTests(void)
     includeWebserverTests();
     includePumpTests();
     includeControllerTests();
+    includeDistillerManagerTests();
 }
 
 void app_main(void)

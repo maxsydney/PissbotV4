@@ -12,5 +12,6 @@ void includeOneWireBusTests(void);
 void includeWebserverTests(void);
 void includePumpTests(void);
 void includeControllerTests(void);
+void includeDistillerManagerTests(void);
 
 #endif // INCLUDE_TEST_FILES

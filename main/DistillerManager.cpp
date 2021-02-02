@@ -116,3 +116,33 @@ PBRet DistillerManager::checkInputs(const DistillerConfig& cfg)
 
     return PBRet::SUCCESS;
 }
+
+PBRet DistillerManager::loadFromJSON(DistillerConfig& cfg, const cJSON* cfgRoot)
+{
+    // Load DistillerConfig struct from JSON
+
+    if (cfgRoot == nullptr) {
+        ESP_LOGW(DistillerManager::Name, "cfg was null");
+        return PBRet::FAILURE;
+    }
+
+    // Load controller configuration
+    cJSON* controllerNode = cJSON_GetObjectItem(cfgRoot, "ControllerConfig");
+    if (Controller::loadFromJSON(cfg.ctrlConfig, controllerNode) != PBRet::SUCCESS) {
+        return PBRet::FAILURE;
+    }
+
+    // Load SensorManager configuration
+    cJSON* sensorManagerNode = cJSON_GetObjectItem(cfgRoot, "SensorManagerConfig");
+    if (SensorManager::loadFromJSON(cfg.sensorManagerConfig, sensorManagerNode) != PBRet::SUCCESS) {
+        return PBRet::FAILURE;
+    }
+
+    // Load Webserver configuration
+    cJSON* webserverNode = cJSON_GetObjectItem(cfgRoot, "WebserverConfig");
+    if (Webserver::loadFromJSON(cfg.webserverConfig, webserverNode) != PBRet::SUCCESS) {
+        return PBRet::FAILURE;
+    }
+    
+    return PBRet::SUCCESS;
+}

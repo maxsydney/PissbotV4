@@ -37,6 +37,7 @@ class DistillerManager : public Task
         static DistillerManager* getInstance(void);
 
         static PBRet checkInputs(const DistillerConfig& cfg);
+        static PBRet loadFromJSON(DistillerConfig& cfg, const cJSON* cfgRoot);
 
         // Getters
         bool isConfigured(void) const { return _configured; }
