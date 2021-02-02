@@ -20,7 +20,13 @@ PBRet ConfigManager::loadConfig(const std::string& cfgPath, DistillerConfig& cfg
     std::stringstream JSONBuffer;
     JSONBuffer << configIn.rdbuf();
 
-    printf("%s\n", JSONBuffer.str().c_str());
+    cJSON* root = cJSON_Parse(JSONBuffer.str().c_str());
+    if (root == nullptr) {
+        ESP_LOGE(ConfigManager::Name, "Failed to load distiller config from JSON. Root JSON pointer was null");
+        ESP_LOGE(ConfigManager::Name, "Quitting");
+        return PBRet::FAILURE;
+    }
 
-    return PBRet::SUCCESS;
+    cJSON* configNode = cJSON_GetObjectItem(root, "DistillerConfig");
+    return DistillerManager::loadFromJSON(cfg, configNode);
 }

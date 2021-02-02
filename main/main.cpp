@@ -1,19 +1,5 @@
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
-
-#include <stdio.h>
 #include <esp_log.h>
-#include <esp_event.h>
-#include <esp_timer.h>
-#include <string.h>
 #include "nvs_flash.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "main.h"
-#include "sdkconfig.h"
-#include "pinDefs.h"
-#include "webServer.h"
 #include "DistillerManager.h"
 #include "ConfigManager.h"
 
@@ -26,30 +12,8 @@ void app_main()
     // ESP_LOGI(tag, "Redirecting log messages to websocket connection");
     // esp_log_set_vprintf(&_log_vprintf);
 
-    DistillerConfig cfg {};
-
-    ConfigManager::loadConfig("/spiffs/PissbotConfig.json", cfg);
-    
-    
-    cfg.ctrlConfig.ctrlTuning = ControlTuning(70.0, 1.0, 1.0, 1.0, 1.0);
-    cfg.ctrlConfig.ctrlSettings = ControlSettings(false, false, false, false, false);
-    cfg.ctrlConfig.dt = 1.0 / CONTROL_LOOP_FREQUENCY;
-    cfg.ctrlConfig.refluxPumpConfig = PumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-    cfg.ctrlConfig.prodPumpConfig = PumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-    cfg.ctrlConfig.fanPin = FAN_SWITCH;
-    cfg.ctrlConfig.element1Pin = ELEMENT_1;
-    cfg.ctrlConfig.element2Pin = ELEMENT_2;
-
-    cfg.sensorManagerConfig.dt = 1.0 / CONTROL_LOOP_FREQUENCY;
-    cfg.sensorManagerConfig.oneWireConfig.oneWirePin = ONEWIRE_BUS;
-    cfg.sensorManagerConfig.oneWireConfig.refluxFlowPin = REFLUX_FLOW;
-    cfg.sensorManagerConfig.oneWireConfig.productFlowPin = PROD_FLOW;
-    cfg.sensorManagerConfig.oneWireConfig.tempSensorResolution = DS18B20_RESOLUTION_11_BIT;
-
-    cfg.webserverConfig.maxConnections = 12;
-    cfg.webserverConfig.maxBroadcastFreq = 10.0; // [Hz]
-
     //Initialize NVS
+    // TODO: Tidy this up
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
       ESP_ERROR_CHECK(nvs_flash_erase());
@@ -57,8 +21,14 @@ void app_main()
     }
     ESP_ERROR_CHECK(ret);
 
-    DistillerManager* manager = DistillerManager::getInstance(5, 16384, 1, cfg);
-    manager->begin();
+    DistillerConfig cfg {};
+
+    if (ConfigManager::loadConfig("/spiffs/PissbotConfig.json", cfg) != PBRet::SUCCESS) {
+        ESP_LOGE("Main", "Failed to configure system");
+    } else {
+        DistillerManager* manager = DistillerManager::getInstance(5, 16384, 1, cfg);
+        manager->begin();
+    }
 }
 
 #ifdef __cplusplus
