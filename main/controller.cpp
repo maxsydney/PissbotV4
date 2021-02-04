@@ -109,6 +109,11 @@ PBRet Controller::_controlTuningCB(std::shared_ptr<MessageBase> msg)
     std::shared_ptr<ControlTuning> cmd = std::static_pointer_cast<ControlTuning>(msg);
     _ctrlTuning = ControlTuning(*cmd);
 
+    // Write controller tuning to file
+    if (saveTuningToFile() != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
+    }
+
     ESP_LOGI(Controller::Name, "Controller tuning was updated");
 
     return PBRet::SUCCESS;
@@ -414,6 +419,11 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
     if (_initIO(cfg) != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Unable to configure controller I/O");
         return PBRet::FAILURE;
+    }
+
+    // Load controller tuning from file (if it exists)
+    if (loadTuningFromFile() != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Unable to load controller tuning from file");
     }
 
     // Set pumps to active control
