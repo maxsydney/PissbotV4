@@ -201,9 +201,9 @@ PBRet Pump::loadFromJSON(PumpConfig& cfg, const cJSON* cfgRoot)
     }
 
     // Get pump GPIO
-    cJSON* GPIOPumpeNode = cJSON_GetObjectItem(cfgRoot, "GPIO");
-    if (cJSON_IsNumber(GPIOPumpeNode)) {
-        cfg.pumpGPIO = static_cast<gpio_num_t>(GPIOPumpeNode->valueint);
+    cJSON* GPIOPumpNode = cJSON_GetObjectItem(cfgRoot, "GPIO");
+    if (cJSON_IsNumber(GPIOPumpNode)) {
+        cfg.pumpGPIO = static_cast<gpio_num_t>(GPIOPumpNode->valueint);
     } else {
         ESP_LOGI(Pump::Name, "Unable to read pump GPIO from JSON");
         return PBRet::FAILURE;

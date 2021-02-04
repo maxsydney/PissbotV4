@@ -1,4 +1,7 @@
 #include "controller.h"
+#include "Filesystem.h"
+#include <fstream>
+#include <sstream>
 #include "MessageDefs.h"        // Phase this out. Bad design
 
 Controller::Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const ControllerConfig& cfg)
@@ -104,7 +107,7 @@ PBRet Controller::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
 PBRet Controller::_controlTuningCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<ControlTuning> cmd = std::static_pointer_cast<ControlTuning>(msg);
-    _cfg.ctrlTuning = ControlTuning(*cmd);
+    _ctrlTuning = ControlTuning(*cmd);
 
     ESP_LOGI(Controller::Name, "Controller tuning was updated");
 
@@ -163,7 +166,7 @@ PBRet Controller::_setupCBTable(void)
 PBRet Controller::_broadcastControllerTuning(void) const
 {
     // Send a temperature data message to the queue
-    std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (_cfg.ctrlTuning);
+    std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (_ctrlTuning);
 
     ESP_LOGI(Controller::Name, "Broadcasting controller tuning");
     return MessageServer::broadcastMessage(msg);
@@ -230,13 +233,13 @@ PBRet Controller::_doControl(double headTemp)
     // Implements a basic PID controller with anti-integral windup
     // and filtering on derivative
 
-    double err = headTemp - _cfg.ctrlTuning.getSetpoint();
+    double err = headTemp - _ctrlTuning.getSetpoint();
 
     // Proportional term
-    double proportional = _cfg.ctrlTuning.getPGain() * err;
+    double proportional = _ctrlTuning.getPGain() * err;
 
     // Integral term (discretized via bilinear transform)
-    _integral += 0.5 * _cfg.ctrlTuning.getIGain() * _cfg.dt * (err + _prevError);
+    _integral += 0.5 * _ctrlTuning.getIGain() * _cfg.dt * (err + _prevError);
 
     // Dynamic integral clamping
     double intLimMin = 0.0;
@@ -264,7 +267,7 @@ PBRet Controller::_doControl(double headTemp)
     // Derivative term (discretized via backwards temperature differentiation)
     // TODO: Filtering on D term? Quite tricky due to low temp sensor sample rate
     const double alpha = 0.15;      // TODO: Improve hacky dterm filter
-    _derivative = (1 - alpha) * _derivative + alpha * (_cfg.ctrlTuning.getDGain() * (headTemp - _prevTemp) / _cfg.dt);
+    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlTuning.getDGain() * (headTemp - _prevTemp) / _cfg.dt);
 
     // Compute limited output
     double output = proportional + _integral + _derivative;
@@ -490,7 +493,55 @@ PBRet ControlTuning::deserialize(const cJSON* root)
 {
     // Load the ControlTuning object from JSON
 
-    // TODO: Implement me
+    if (root == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "root JSON object was null");
+        return PBRet::FAILURE;
+    }
+
+    // Read setpoint
+    cJSON* setpointNode = cJSON_GetObjectItem(root, ControlTuning::SetpointStr);
+    if (cJSON_IsNumber(setpointNode)) {
+        _setpoint = setpointNode->valuedouble;
+    } else {
+        ESP_LOGI(ControlTuning::Name, "Unable to read setpint from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read P gain
+    cJSON* PGainNode = cJSON_GetObjectItem(root, ControlTuning::PGainStr);
+    if (cJSON_IsNumber(PGainNode)) {
+        _PGain = PGainNode->valuedouble;
+    } else {
+        ESP_LOGI(ControlTuning::Name, "Unable to read P gain from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read I gain
+    cJSON* IGainNode = cJSON_GetObjectItem(root, ControlTuning::IGainStr);
+    if (cJSON_IsNumber(IGainNode)) {
+        _IGain = IGainNode->valuedouble;
+    } else {
+        ESP_LOGI(ControlTuning::Name, "Unable to read I gain from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read D gain
+    cJSON* DGainNode = cJSON_GetObjectItem(root, ControlTuning::DGainStr);
+    if (cJSON_IsNumber(DGainNode)) {
+        _DGain = DGainNode->valuedouble;
+    } else {
+        ESP_LOGI(ControlTuning::Name, "Unable to read D gain from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read LPF cutoff
+    cJSON* LPFCutoffNode = cJSON_GetObjectItem(root, ControlTuning::LPFCutoffStr);
+    if (cJSON_IsNumber(LPFCutoffNode)) {
+        _LPFCutoff = LPFCutoffNode->valuedouble;
+    } else {
+        ESP_LOGI(ControlTuning::Name, "Unable to read LPF cutoff from JSON");
+        return PBRet::FAILURE;
+    }
 
     return PBRet::SUCCESS;
 }
@@ -500,8 +551,28 @@ PBRet Controller::saveTuningToFile(void)
     // Save the current controller tuning to a JSON file and store
     // in flash
 
-    // TODO: Implement me
+    std::string JSONStr {};
+    if (_ctrlTuning.serialize(JSONStr) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
+        return PBRet::FAILURE;
+    }
 
+    // Mount filesystem
+    Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
+    if (F.isOpen() == false) {
+        ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not written to file");
+        return PBRet::FAILURE;
+    }
+
+    std::ofstream outFile(Controller::ctrlTuningFile);
+    if (outFile.is_open() == false) {
+        ESP_LOGE(Controller::Name, "Failed to open file for writing. Controller config was not written to file");
+        return PBRet::FAILURE;
+    }
+
+    // Write JSON string out to file
+    outFile << JSONStr;
+    ESP_LOGI(Controller::Name, "Controller tuning successfully written to file");
     return PBRet::SUCCESS;
 }
 
@@ -510,7 +581,28 @@ PBRet Controller::loadTuningFromFile(void)
     // Load a saved controller tuning from a JSON file and configure
     // controller. Returns Failure if no file can be found
 
-    // TODO: Implement me
+    // Mount filesystem
+    Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
+    if (F.isOpen() == false) {
+        ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not read from file");
+        return PBRet::FAILURE;
+    }
 
-    return PBRet::SUCCESS;
+    // Read JSON string from file
+    std::ifstream ctrlTuningIn(Controller::ctrlTuningFile);
+    if (ctrlTuningIn.good() == false) {
+        ESP_LOGW(Controller::Name, "Controller tuning file %s could not be opened", Controller::ctrlTuningFile);
+        return PBRet::FAILURE;
+    }
+
+    std::stringstream JSONBuffer;
+    JSONBuffer << ctrlTuningIn.rdbuf();
+
+    cJSON* root = cJSON_Parse(JSONBuffer.str().c_str());
+    if (root == nullptr) {
+        ESP_LOGE(Controller::Name, "Failed to load controller tuning from JSON. Root JSON pointer was null");
+        return PBRet::FAILURE;
+    }
+    
+    return _ctrlTuning.deserialize(root);
 }

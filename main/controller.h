@@ -102,7 +102,6 @@ class ControlTuning : public MessageBase
 struct ControllerConfig
 {
     double dt = 0.0;
-    ControlTuning ctrlTuning {};
     ControlSettings ctrlSettings {};
     PumpConfig refluxPumpConfig {};
     PumpConfig prodPumpConfig {};
@@ -153,6 +152,9 @@ class ControlCommand : public MessageBase
 class Controller: public Task
 {
     static constexpr const char* Name = "Controller";
+    static constexpr const char* FSBasePath = "/spiffs";
+    static constexpr const char* FSPartitionLabel = "PBData";
+    static constexpr const char* ctrlTuningFile = "/spiffs/ctrlTuning.json";
 
     public:
         // Constructors
@@ -203,6 +205,7 @@ class Controller: public Task
         ControllerConfig _cfg {};
         ControlCommand _outputState {};
         TemperatureData _currentTemp {};
+        ControlTuning _ctrlTuning {};
 
         Pump _refluxPump {};
         Pump _prodPump {};
