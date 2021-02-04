@@ -266,6 +266,27 @@ TEST_CASE("loadFromJSONInvlid", "[Controller]")
 //     TEST_ASSERT_TRUE(Ctrl.getProductPumpMode() == PumpMode::FIXED);
 // }
 
+TEST_CASE("Serialization/Deserialization", "[Controller]")
+{
+    ControlTuning ctrlTuningIn(50.0, 25.0, 10.0, 75.0, 5.0);
+    ControlTuning ctrlTuningOut {};
+
+    // Test serialization
+    std::string JSONStr {};
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ctrlTuningIn.serialize(JSONStr));
+
+    // Test deserialization
+    cJSON* root = cJSON_Parse(JSONStr.c_str());
+    TEST_ASSERT_NOT_EQUAL(root, nullptr);
+    ctrlTuningOut.deserialize(root);
+
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getSetpoint(), ctrlTuningOut.getSetpoint());
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getPGain(), ctrlTuningOut.getPGain());
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getIGain(), ctrlTuningOut.getIGain());
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getDGain(), ctrlTuningOut.getDGain());
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getLPFCutoff(), ctrlTuningOut.getLPFCutoff());
+}
+
 #ifdef __cplusplus
 }
 #endif
