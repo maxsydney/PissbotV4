@@ -37,20 +37,21 @@ enum class MessageType {
 
 // Base class for all messages to be passed over network
 class MessageBase
-{
-    // TODO: How to make sure this data will be deleted?
+{   
     public:
         MessageBase(void) = default;
-        MessageBase(MessageType msgType, const std::string& name)
-            : _type(msgType), _name(name), _valid(true) {}
+        MessageBase(MessageType msgType, const std::string& name, int64_t timeStamp)
+            : _type(msgType), _name(name), _timeStamp(timeStamp), _valid(true) {}
 
         MessageType getType(void) const { return _type; }
         bool isValid(void) const { return _valid; }
         const std::string& getName(void) const { return _name; }
 
     protected:
+        static constexpr const char* TimeStampStr = "timestamp";
         MessageType _type = MessageType::Unknown;
         std::string _name {};
+        int64_t _timeStamp = 0;             // [uS]
         bool _valid = false;
 };
 

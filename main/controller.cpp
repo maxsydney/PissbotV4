@@ -293,9 +293,9 @@ PBRet Controller::_doControl(double headTemp)
 // TODO: Improve this implementation
 PBRet Controller::_handleProductPump(double temp)
 {
-    if (temp > 60) {
+    if (temp > Controller::HYSTERESIS_BOUND_UPPER) {
         _prodPump.updatePumpActiveControl(Pump::FLUSH_SPEED);
-    } else if (temp < 58) {
+    } else if (temp < Controller::HYSTERESIS_BOUND_LOWER) {
         _prodPump.updatePumpActiveControl(Pump::PUMP_MIN_OUTPUT);
     }
 

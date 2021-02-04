@@ -52,6 +52,7 @@ class Webserver : public Task
         PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
         PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
         PBRet _deviceDataCB(std::shared_ptr<MessageBase> msg);
+        PBRet _flowrateDataCB(std::shared_ptr<MessageBase> msg);
 
         // Message serialization
         static PBRet serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr);
@@ -74,6 +75,7 @@ class Webserver : public Task
         // Queued messages to broadcast
         // TODO: Replace these with actual data objects
         std::string _temperatureMessage {};
+        std::string _flowrateMessage {};
         std::string _ctrlTuningMessage {};
         std::string _ctrlSettingsMessage {};
 

@@ -49,9 +49,12 @@ void SensorManager::taskMain(void)
         }
 
         // Read flowmeters
+        FlowrateData flowData(0.0, 0.0);
+        // TODO: Process flowmeter data
 
         // Broadcast data
         _broadcastTemps(Tdata);
+        _broadcastFlowrates(flowData);
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -155,6 +158,14 @@ PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
 {
     // Send a temperature data message to the queue
     std::shared_ptr<TemperatureData> msg = std::make_shared<TemperatureData> (Tdata);
+
+    return MessageServer::broadcastMessage(msg);
+}
+
+PBRet SensorManager::_broadcastFlowrates(const FlowrateData& flowData) const
+{
+    // Send a temperature data message to the queue
+    std::shared_ptr<FlowrateData> msg = std::make_shared<FlowrateData> (flowData);
 
     return MessageServer::broadcastMessage(msg);
 }
@@ -386,4 +397,50 @@ PBRet SensorManager::_broadcastSensors(void)
     // Scan OneWire bus for available sensors and advertise
     // addresses
     return _OWBus.broadcastAvailableDevices();
+}
+
+PBRet FlowrateData::serialize(std::string& JSONStr) const
+{
+    // Serialize the FlowrateDate object into a JSON string
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(FlowrateData::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    // Add reflux flowrate
+    cJSON* refluxNode = cJSON_CreateNumber(_refluxFlowrate);
+    if (refluxNode == nullptr) {
+        ESP_LOGW(FlowrateData::Name, "Error creating reflux flowrate JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, FlowrateData::RefluxFlowrateStr, refluxNode);
+
+    // Add product flowrate
+    cJSON* productNode = cJSON_CreateNumber(_productFlowrate);
+    if (productNode == nullptr) {
+        ESP_LOGW(FlowrateData::Name, "Error creating product flowrate JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, FlowrateData::ProductFlowrateStr, productNode);
+
+    // Add timestamp
+    cJSON* timestampNode = cJSON_CreateNumber(_timeStamp);
+    if (timestampNode == nullptr) {
+        ESP_LOGW(FlowrateData::Name, "Error creating timestamp JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, MessageBase::TimeStampStr, timestampNode);
+
+    // Copy JSON to string. cJSON requires printing to a char* pointer. Copy into
+    // std::string and free memory to avoid memory leak
+    char* stringPtr = cJSON_Print(root);
+    JSONStr = std::string(stringPtr);
+    cJSON_Delete(root);
+    free(stringPtr);
+
+    return PBRet::SUCCESS;
 }

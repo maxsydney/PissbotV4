@@ -12,7 +12,7 @@ class GeneralMessage : public MessageBase
     public:
         GeneralMessage(void) = default;
         GeneralMessage(const std::string& message)
-            : MessageBase(GeneralMessage::messageType, GeneralMessage::Name), _message(message) {}
+            : MessageBase(GeneralMessage::messageType, GeneralMessage::Name, esp_timer_get_time()), _message(message) {}
 
         const std::string& getMessage(void) const { return _message; }
         

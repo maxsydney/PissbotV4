@@ -1,6 +1,8 @@
 
 #include "Webserver.h"
 #include "connectionManager.h"
+#include "SensorManager.h"
+#include "SensorManager.h"
 #include "controller.h"
 #include "espfs.h"
 #include "espfs_image.h"
@@ -32,7 +34,8 @@ void Webserver::taskMain(void)
         MessageType::ControlTuning,
         MessageType::ControlCommand,
         MessageType::ControlSettings,
-        MessageType::DeviceData
+        MessageType::DeviceData,
+        MessageType::FlowrateData
     };
     Subscriber sub(Webserver::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -49,11 +52,13 @@ void Webserver::taskMain(void)
         _sendToAll(_temperatureMessage);
         _sendToAll(_ctrlTuningMessage);
         _sendToAll(_ctrlSettingsMessage);
+        _sendToAll(_flowrateMessage);
 
         // Clear sent messages
         _temperatureMessage.clear();
         _ctrlTuningMessage.clear();
         _ctrlSettingsMessage.clear();
+        _flowrateMessage.clear();
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -224,7 +229,8 @@ PBRet Webserver::_setupCBTable(void)
         {MessageType::TemperatureData, std::bind(&Webserver::_temperatureDataCB, this, std::placeholders::_1)},
         {MessageType::ControlSettings, std::bind(&Webserver::_controlSettingsCB, this, std::placeholders::_1)},
         {MessageType::ControlTuning, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)},
-        {MessageType::DeviceData, std::bind(&Webserver::_deviceDataCB, this, std::placeholders::_1)}        
+        {MessageType::DeviceData, std::bind(&Webserver::_deviceDataCB, this, std::placeholders::_1)},
+        {MessageType::FlowrateData, std::bind(&Webserver::_flowrateDataCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -252,6 +258,30 @@ PBRet Webserver::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
     }
 
     return PBRet::SUCCESS;   
+}
+
+PBRet Webserver::_flowrateDataCB(std::shared_ptr<MessageBase> msg)
+{
+    // Take the flowrate data and broadcast it to all available
+    // websocket connections. To avoid spamming the network, if several
+    // temperature data messages are in the queue, only the most recent
+    // is sent. 
+    //
+    // Flowrate data is serialized to JSON and broadcast over websockets
+    // to the browser client
+
+    // Get FlowrateData object
+    FlowrateData flowrateData = *std::static_pointer_cast<FlowrateData>(msg);
+
+    // Serialize to TemperatureData JSON string memory
+    if (flowrateData.serialize(_flowrateMessage) != PBRet::SUCCESS)
+    {
+        ESP_LOGW(Webserver::Name, "Error writing FlowrateData object to JSON string. Deleting");
+        _flowrateMessage.clear();
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;  
 }
 
 PBRet Webserver::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
@@ -733,7 +763,6 @@ PBRet Webserver::_sendToAll(const std::string& msg)
 {
     // Send a message to all open websocket connections
     for (Websock* ws : ConnectionManager::getActiveWebsockets()) {
-
         if (msg.length() > 0) {
             int ret = cgiWebsocketSend(&_httpdFreertosInstance.httpdInstance, ws, msg.c_str(), strlen(msg.c_str()), WEBSOCK_FLAG_NONE);
             if (ret != 1) {
