@@ -61,8 +61,6 @@ struct PBOneWireConfig
 {
     gpio_num_t oneWirePin = (gpio_num_t)GPIO_NUM_NC;
     DS18B20_RESOLUTION tempSensorResolution = DS18B20_RESOLUTION_INVALID;
-    gpio_num_t refluxFlowPin = (gpio_num_t)GPIO_NUM_NC;
-    gpio_num_t productFlowPin = (gpio_num_t)GPIO_NUM_NC;
 };
 
 enum class SensorType

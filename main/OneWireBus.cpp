@@ -27,16 +27,6 @@ PBRet PBOneWire::checkInputs(const PBOneWireConfig& cfg)
         return PBRet::FAILURE;
     }
 
-    if ((cfg.refluxFlowPin <= GPIO_NUM_NC) || (cfg.refluxFlowPin > GPIO_NUM_MAX)) {
-        ESP_LOGE(PBOneWire::Name, "Reflux flowmeter GPIO %d is invalid. SensorManager was not configured", cfg.refluxFlowPin);
-        return PBRet::FAILURE;
-    }
-
-    if ((cfg.productFlowPin <= GPIO_NUM_NC) || (cfg.productFlowPin > GPIO_NUM_MAX)) {
-        ESP_LOGE(PBOneWire::Name, "Product flowmeter GPIO %d is invalid. SensorManager was not configured", cfg.productFlowPin);
-        return PBRet::FAILURE;
-    }
-
     if (cfg.tempSensorResolution == DS18B20_RESOLUTION_INVALID) {
         ESP_LOGE(PBOneWire::Name, "Temperature sensor resolution was invalid");
         return PBRet::FAILURE;
@@ -71,25 +61,7 @@ PBRet PBOneWire::loadFromJSON(PBOneWireConfig& cfg, const cJSON* cfgRoot)
         ESP_LOGI(PBOneWire::Name, "Unable to read DS18B20 resolution from JSON");
         return PBRet::FAILURE;
     }
-
-    // Get reflux flowmeter GPIO
-    cJSON* refluxFlowNode = cJSON_GetObjectItem(cfgRoot, "GPIO_refluxFlow");
-    if (cJSON_IsNumber(refluxFlowNode)) {
-        cfg.refluxFlowPin = static_cast<gpio_num_t>(refluxFlowNode->valueint);
-    } else {
-        ESP_LOGI(PBOneWire::Name, "Unable to read reflux flowmeter pin from JSON");
-        return PBRet::FAILURE;
-    }
-
-    // Get product flowmeter GPIO
-    cJSON* prodFlowNode = cJSON_GetObjectItem(cfgRoot, "GPIO_prodFlow");
-    if (cJSON_IsNumber(prodFlowNode)) {
-        cfg.productFlowPin = static_cast<gpio_num_t>(prodFlowNode->valueint);
-    } else {
-        ESP_LOGI(PBOneWire::Name, "Unable to read product flowmeter pin from JSON");
-        return PBRet::FAILURE;
-    }
-
+    
     // Success by here
     return PBRet::SUCCESS;
 }

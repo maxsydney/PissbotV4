@@ -7,7 +7,7 @@
 #include <iostream>
 
 SensorManager::SensorManager(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const SensorManagerConfig& cfg)
-    : Task(SensorManager::Name, priority, stackDepth, coreID)
+    : Task(SensorManager::Name, priority, stackDepth, coreID), _refluxFlowmeter(cfg.refluxFlowConfig), _productFlowmeter(cfg.productFlowConfig)
 {
     // Setup callback table
     _setupCBTable();
@@ -50,7 +50,11 @@ void SensorManager::taskMain(void)
 
         // Read flowmeters
         FlowrateData flowData(0.0, 0.0);
-        // TODO: Process flowmeter data
+        if (_refluxFlowmeter.readFlowrate(esp_timer_get_time(), flowData.refluxFlowrate) != PBRet::SUCCESS) {
+            ESP_LOGW(SensorManager::Name, "Unable to read reflux flowmeter");
+        }
+        ESP_LOGI(SensorManager::Name, "Flowrate: %f (L/s)", flowData.refluxFlowrate);
+        ESP_LOGI(SensorManager::Name, "Count: %d", _refluxFlowmeter.getFreqCounter());
 
         // Broadcast data
         _broadcastTemps(Tdata);
@@ -138,10 +142,9 @@ PBRet SensorManager::_initFromParams(const SensorManagerConfig& cfg)
     _cfg = cfg;
 
     // Initialize PBOneWire bus
-    _OWBus = PBOneWire(cfg.oneWireConfig);
-    if (_OWBus.isConfigured() == false) {
-        ESP_LOGE(SensorManager::Name, "OneWire bus is not configured");
-        err = ESP_FAIL;
+    if (_initOneWireBus(cfg) != PBRet::SUCCESS) {
+        // Err message printed in _initOneWireBus
+        err += ESP_FAIL;
     }
 
     // Load saved devices
@@ -149,9 +152,29 @@ PBRet SensorManager::_initFromParams(const SensorManagerConfig& cfg)
         ESP_LOGW(SensorManager::Name, "No saved devices were found");
     }
     
-    // Initialize flowrate sensors
+    // Check flowrate sensors are configured
+    if (_refluxFlowmeter.isConfigured() == false) {
+        ESP_LOGW(SensorManager::Name, "Reflux flowmeter was not configured");
+        err += ESP_FAIL;
+    }
 
+    if (_productFlowmeter.isConfigured() == false) {
+        ESP_LOGW(SensorManager::Name, "Product flowmeter was not configured");
+        err += ESP_FAIL;
+    }
+    
     return err == ESP_OK ? PBRet::SUCCESS : PBRet::FAILURE;
+}
+
+PBRet SensorManager::_initOneWireBus(const SensorManagerConfig &cfg)
+{
+    _OWBus = PBOneWire(cfg.oneWireConfig);
+    if (_OWBus.isConfigured() == false) {
+        ESP_LOGE(SensorManager::Name, "OneWire bus is not configured");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
 }
 
 PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
@@ -335,7 +358,26 @@ PBRet SensorManager::loadFromJSON(SensorManagerConfig& cfg, const cJSON* cfgRoot
 
     // Get OneWireBus configuration
     cJSON* OWBNode = cJSON_GetObjectItem(cfgRoot, "oneWireConfig");
-    return PBOneWire::loadFromJSON(cfg.oneWireConfig, OWBNode);
+    if (PBOneWire::loadFromJSON(cfg.oneWireConfig, OWBNode) != PBRet::SUCCESS) {
+        ESP_LOGI(SensorManager::Name, "Unable to read OneWire bus config from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get reflux flowmeter configuration
+    cJSON* refluxFlowNode = cJSON_GetObjectItem(cfgRoot, "refluxFlowmeterConfig");
+    if (Flowmeter::loadFromJSON(cfg.refluxFlowConfig, refluxFlowNode) != PBRet::SUCCESS) {
+        ESP_LOGI(SensorManager::Name, "Unable to read reflux flowmeter config from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get product flowmeter configuration
+    cJSON* prodFlowNode = cJSON_GetObjectItem(cfgRoot, "productFlowmeterConfig");
+    if (Flowmeter::loadFromJSON(cfg.productFlowConfig, prodFlowNode) != PBRet::SUCCESS) {
+        ESP_LOGI(SensorManager::Name, "Unable to read product flowmeter config from JSON");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
 }
 
 PBRet SensorManager::_writeSensorConfigToFile(void) const
@@ -409,7 +451,7 @@ PBRet FlowrateData::serialize(std::string& JSONStr) const
     }
 
     // Add reflux flowrate
-    cJSON* refluxNode = cJSON_CreateNumber(_refluxFlowrate);
+    cJSON* refluxNode = cJSON_CreateNumber(refluxFlowrate);
     if (refluxNode == nullptr) {
         ESP_LOGW(FlowrateData::Name, "Error creating reflux flowrate JSON object");
         cJSON_Delete(root);
@@ -418,7 +460,7 @@ PBRet FlowrateData::serialize(std::string& JSONStr) const
     cJSON_AddItemToObject(root, FlowrateData::RefluxFlowrateStr, refluxNode);
 
     // Add product flowrate
-    cJSON* productNode = cJSON_CreateNumber(_productFlowrate);
+    cJSON* productNode = cJSON_CreateNumber(productFlowrate);
     if (productNode == nullptr) {
         ESP_LOGW(FlowrateData::Name, "Error creating product flowrate JSON object");
         cJSON_Delete(root);

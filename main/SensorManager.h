@@ -4,6 +4,7 @@
 #include "PBCommon.h"
 #include "CppTask.h"
 #include "OneWireBus.h"
+#include "Flowmeter.h"
 
 // Forward declarations
 class PBOneWire;
@@ -12,6 +13,8 @@ struct SensorManagerConfig
 {
     double dt = 0.0;
     PBOneWireConfig oneWireConfig{};
+    FlowmeterConfig refluxFlowConfig {};
+    FlowmeterConfig productFlowConfig {};
 };
 
 enum class SensorManagerCmdType
@@ -49,18 +52,12 @@ class FlowrateData : public MessageBase
 public:
     FlowrateData(void) = default;
     FlowrateData(double refluxFlowrate, double productFlowrate)
-        : MessageBase(FlowrateData::messageType, FlowrateData::Name, esp_timer_get_time()), _refluxFlowrate(refluxFlowrate),
-          _productFlowrate(productFlowrate) {}
-
-    double getRefluxFlowrate(void) const { return _refluxFlowrate; }
-    double getProductFlowrate(void) const { return _productFlowrate; }
-    int64_t getTimeStamp(void) const { return _timeStamp; }
+        : MessageBase(FlowrateData::messageType, FlowrateData::Name, esp_timer_get_time()), refluxFlowrate(refluxFlowrate),
+          productFlowrate(productFlowrate) {}
 
     PBRet serialize(std::string &JSONStr) const;
-
-private:
-    double _refluxFlowrate = 0.0;  // [kg / s]
-    double _productFlowrate = 0.0; // [kg / s]
+    double refluxFlowrate = 0.0;  // [kg / s]
+    double productFlowrate = 0.0; // [kg / s]
 };
 
 class AssignSensorCommand : public MessageBase
@@ -107,8 +104,7 @@ public:
 
 private:
     // Initialization
-    PBRet _initOneWireBus(const SensorManagerConfig &cfg) const;
-    PBRet _initFlowmeters(const SensorManagerConfig &cfg) const;
+    PBRet _initOneWireBus(const SensorManagerConfig &cfg);
     PBRet _initFromParams(const SensorManagerConfig &cfg);
     PBRet _setupCBTable(void) override;
     PBRet _loadKnownDevices(const char *basePath, const char *partitionLabel);
@@ -136,8 +132,10 @@ private:
     // SensorManager data
     SensorManagerConfig _cfg{};
 
-    // TODO: Sensor ID table
+    // Connected sensors
     PBOneWire _OWBus{};
+    Flowmeter _refluxFlowmeter {};
+    Flowmeter _productFlowmeter {};
 
     // Class data
     bool _configured = false;
