@@ -53,6 +53,7 @@ class Webserver : public Task
         PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
         PBRet _deviceDataCB(std::shared_ptr<MessageBase> msg);
         PBRet _flowrateDataCB(std::shared_ptr<MessageBase> msg);
+        PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
 
         // Message serialization
         static PBRet serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr);
@@ -67,6 +68,7 @@ class Webserver : public Task
         // Utility methods
         static PBRet _requestControllerTuning(void);
         static PBRet _requestControllerSettings(void);
+        static PBRet _requestControllerPeripheralState(void);
         static PBRet _processAssignSensorMessage(cJSON* root);
 
         // Websocket methods
@@ -78,6 +80,7 @@ class Webserver : public Task
         std::string _flowrateMessage {};
         std::string _ctrlTuningMessage {};
         std::string _ctrlSettingsMessage {};
+        std::string _ctrlCommandMessage {};
 
         // FreeRTOS hook method
         void taskMain(void) override;

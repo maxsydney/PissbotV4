@@ -37,7 +37,8 @@ enum class ControllerDataRequestType
 {
     None,
     Tuning,
-    Settings
+    Settings,
+    PeripheralState
 };
 
 class ControlSettings : public MessageBase
@@ -47,26 +48,17 @@ class ControlSettings : public MessageBase
 
 public:
     ControlSettings(void) = default;
-    ControlSettings(bool fanState, bool elementLow, bool elementHigh,
-                    bool prodCondensorPump, bool refluxCondensorPump)
-        : MessageBase(ControlSettings::messageType, ControlSettings::Name, esp_timer_get_time()), _fanState(fanState),
-          _elementLow(elementLow), _elementHigh(elementHigh), _prodCondensorPump(prodCondensorPump),
-          _refluxCondensorPump(refluxCondensorPump) {}
+    ControlSettings(bool prodCondensorPump, bool refluxCondensorPump)
+        : MessageBase(ControlSettings::messageType, ControlSettings::Name, esp_timer_get_time()), 
+        _prodCondensorPump(prodCondensorPump), _refluxCondensorPump(refluxCondensorPump) {}
     ControlSettings(const ControlSettings &other)
-        : MessageBase(ControlSettings::messageType, ControlSettings::Name, esp_timer_get_time()), _fanState(other._fanState),
-          _elementLow(other._elementLow), _elementHigh(other._elementHigh), _prodCondensorPump(other._prodCondensorPump),
-          _refluxCondensorPump(other._refluxCondensorPump) {}
+        : MessageBase(ControlSettings::messageType, ControlSettings::Name, esp_timer_get_time()), 
+        _prodCondensorPump(other._prodCondensorPump), _refluxCondensorPump(other._refluxCondensorPump) {}
 
-    bool getFanState(void) const { return _fanState; }
-    bool getElementLow(void) const { return _elementLow; }
-    bool getElementHigh(void) const { return _elementHigh; }
     bool getProdCondensorPump(void) const { return _prodCondensorPump; }
     bool getRefluxCondensorPump(void) const { return _refluxCondensorPump; }
 
 private:
-    bool _fanState = false;
-    bool _elementLow = false;
-    bool _elementHigh = false;
     bool _prodCondensorPump = false;
     bool _refluxCondensorPump = false;
 };
@@ -141,20 +133,25 @@ class ControlCommand : public MessageBase
     static constexpr MessageType messageType = MessageType::ControlCommand;
     static constexpr const char *Name = "Controller command";
 
+    static constexpr const char *FanStateStr = "fanState";
+    static constexpr const char *LPElementStr = "LPElelement";
+    static constexpr const char *HPElementStr = "HPElement";
+
 public:
     ControlCommand(void) = default;
     ControlCommand(ControllerState fanState, ControllerState LPElementState, ControllerState HPElementState)
         : MessageBase(ControlCommand::messageType, ControlCommand::Name, esp_timer_get_time()),
-          _fanState(fanState), _LPElementState(LPElementState), _HPElementState(HPElementState) {}
+          fanState(fanState), LPElementState(LPElementState), HPElementState(HPElementState) {}
+    ControlCommand(const ControlCommand& other)
+        : MessageBase(ControlCommand::messageType, ControlCommand::Name, esp_timer_get_time()), fanState(other.fanState),
+          LPElementState(other.LPElementState), HPElementState(other.HPElementState) {}
 
-    ControllerState getFanState(void) const { return _fanState; }
-    ControllerState getLPElementState(void) const { return _LPElementState; }
-    ControllerState getHPElementState(void) const { return _HPElementState; }
+    PBRet serialize(std::string &JSONStr) const;
+    PBRet deserialize(const cJSON *root);
 
-private:
-    ControllerState _fanState = ControllerState::OFF;
-    ControllerState _LPElementState = ControllerState::OFF;
-    ControllerState _HPElementState = ControllerState::OFF;
+    ControllerState fanState = ControllerState::OFF;
+    ControllerState LPElementState = ControllerState::OFF;
+    ControllerState HPElementState = ControllerState::OFF;
 };
 
 class Controller : public Task
@@ -185,7 +182,7 @@ private:
 
     // Updates
     PBRet _doControl(double temp);
-    PBRet _updateAuxOutputs(const ControlCommand &cmd);
+    PBRet _updatePeripheralState(const ControlCommand &cmd);
     PBRet _handleProductPump(double temp);
 
     // Setup methods
@@ -210,10 +207,11 @@ private:
     // Data broadcast
     PBRet _broadcastControllerTuning(void) const;
     PBRet _broadcastControllerSettings(void) const;
+    PBRet _broadcastControllerPeripheralState(void) const;
 
     // Controller data
     ControllerConfig _cfg{};
-    ControlCommand _outputState{};
+    ControlCommand _peripheralState{};
     TemperatureData _currentTemp{};
     ControlTuning _ctrlTuning{};
 

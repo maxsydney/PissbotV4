@@ -53,12 +53,14 @@ void Webserver::taskMain(void)
         _sendToAll(_ctrlTuningMessage);
         _sendToAll(_ctrlSettingsMessage);
         _sendToAll(_flowrateMessage);
+        _sendToAll(_ctrlCommandMessage);
 
         // Clear sent messages
         _temperatureMessage.clear();
         _ctrlTuningMessage.clear();
         _ctrlSettingsMessage.clear();
         _flowrateMessage.clear();
+        _ctrlCommandMessage.clear();
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -129,6 +131,7 @@ void Webserver::openConnection(Websock *ws)
     ws->closeCb = Webserver::closeConnection;
     _requestControllerTuning();
     _requestControllerSettings();
+    _requestControllerPeripheralState();
     ConnectionManager::addConnection(ws);
     ConnectionManager::printConnections();
 }
@@ -230,7 +233,8 @@ PBRet Webserver::_setupCBTable(void)
         {MessageType::ControlSettings, std::bind(&Webserver::_controlSettingsCB, this, std::placeholders::_1)},
         {MessageType::ControlTuning, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)},
         {MessageType::DeviceData, std::bind(&Webserver::_deviceDataCB, this, std::placeholders::_1)},
-        {MessageType::FlowrateData, std::bind(&Webserver::_flowrateDataCB, this, std::placeholders::_1)}
+        {MessageType::FlowrateData, std::bind(&Webserver::_flowrateDataCB, this, std::placeholders::_1)},
+        {MessageType::ControlCommand, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -312,10 +316,29 @@ PBRet Webserver::_controlTuningCB(std::shared_ptr<MessageBase> msg)
     ControlTuning ctrlTuning = *std::static_pointer_cast<ControlTuning>(msg);
 
     // Serialize to ControlTuning JSON string memory
-    if (serializeControlTuningMsg(ctrlTuning, _ctrlTuningMessage) != PBRet::SUCCESS)
+    if (serializeControlTuningMsg(ctrlTuning, _ctrlCommandMessage) != PBRet::SUCCESS)
+    {
+        ESP_LOGW(Webserver::Name, "Error writing ControlCommand object to JSON string. Deleting");
+        _ctrlCommandMessage.clear();
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet Webserver::_controlCommandCB(std::shared_ptr<MessageBase> msg)
+{
+    // Serialize the controller command data and broadcast to all 
+    // connected websockets
+
+    // Get ControlCommand object
+    ControlCommand ctrlCmd = *std::static_pointer_cast<ControlCommand>(msg);
+
+    // Serialize to ControlTuning JSON string memory
+    if (ctrlCmd.serialize(_ctrlCommandMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing ControlTuning object to JSON string. Deleting");
-        _ctrlTuningMessage.clear();
+        _ctrlCommandMessage.clear();
         return PBRet::FAILURE;
     }
 
@@ -437,6 +460,8 @@ PBRet Webserver::serializeControlTuningMsg(const ControlTuning& ctrlTuning, std:
     // Convert a ControlTuning message into a JSON representation
     //
 
+    // TODO: Move this to serialize on ControlTuning
+
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
@@ -499,6 +524,8 @@ PBRet Webserver::serializeControlSettingsMessage(const ControlSettings& ctrlSett
     // Convert a ControlTuning message into a JSON representation
     //
 
+    // TODO: Move this to serialize on ControlSettings
+
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
@@ -511,24 +538,6 @@ PBRet Webserver::serializeControlSettingsMessage(const ControlSettings& ctrlSett
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-
-    if (cJSON_AddNumberToObject(root, "FanState", ctrlSettings.getFanState()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add fanstate to control settings JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "ElementLow", ctrlSettings.getElementLow()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add low power element to settings tuning JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    } 
-
-    if (cJSON_AddNumberToObject(root, "ElementHigh", ctrlSettings.getElementHigh()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add high power element to control settings JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    } 
 
     if (cJSON_AddNumberToObject(root, "ProdPump", ctrlSettings.getProdCondensorPump()) == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to add product condensor pump state to control settings JSON string");
@@ -623,7 +632,9 @@ PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
 PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
 {
     ControlTuning ctrlTuning {};
-    bool fanState, elementLow, elementHigh, prodPump, refluxPump;
+    bool prodPump, refluxPump;
+
+    // TODO: Move this to deserialize on ControlTuning
 
     if (msgRoot == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to parse control settings message. cJSON object was null");
@@ -633,30 +644,6 @@ PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
     cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
     if (msgData == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to parse data from control settings message");
-        return PBRet::FAILURE;
-    }
-    
-    cJSON* fanStateJSON = cJSON_GetObjectItemCaseSensitive(msgData, "fanState");
-    if (cJSON_IsNumber(fanStateJSON)) {
-        fanState = fanStateJSON->valueint;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read fanState from control settings message");
-        return PBRet::FAILURE;
-    }
-
-    cJSON* elementLowJSON = cJSON_GetObjectItemCaseSensitive(msgData, "elementLow");
-    if (cJSON_IsNumber(elementLowJSON)) {
-        elementLow = elementLowJSON->valueint;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read low power element state from control settings message");
-        return PBRet::FAILURE;
-    }
-
-    cJSON* elementHighJSON = cJSON_GetObjectItemCaseSensitive(msgData, "elementHigh");
-    if (cJSON_IsNumber(elementHighJSON)) {
-        elementHigh = elementHighJSON->valueint;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read high power element state from control settings message");
         return PBRet::FAILURE;
     }
 
@@ -676,7 +663,7 @@ PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
         return PBRet::FAILURE;
     }
 
-    std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (fanState, elementLow, elementHigh, prodPump, refluxPump);
+    std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (prodPump, refluxPump);
 
     ESP_LOGI(Webserver::Name, "Broadcasting controller settings");
     return MessageServer::broadcastMessage(msg);
@@ -790,6 +777,16 @@ PBRet Webserver::_requestControllerSettings(void)
     // 
 
     std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::Settings);
+
+    return MessageServer::broadcastMessage(msg);
+}
+
+PBRet Webserver::_requestControllerPeripheralState(void)
+{
+    // Request controller settings
+    // 
+
+    std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::PeripheralState);
 
     return MessageServer::broadcastMessage(msg);
 }

@@ -66,6 +66,7 @@ PBRet Controller::_generalMessageCB(std::shared_ptr<MessageBase> msg)
 }
 PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
 {
+    // TODO: Implement this
     // std::shared_ptr<TemperatureData> TData = std::static_pointer_cast<TemperatureData>(msg);
 
     // ESP_LOGI(Controller::Name, "Received temperature message:\nHead: %.3lf\nReflux condensor: %.3f\nProduct condensor: %.3lf\n"
@@ -79,9 +80,11 @@ PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
 PBRet Controller::_controlCommandCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<ControlCommand> cmd = std::static_pointer_cast<ControlCommand>(msg);
-    _outputState = ControlCommand(*cmd);
+    _peripheralState = ControlCommand(*cmd);
 
-    if (_updateAuxOutputs(_outputState) != PBRet::SUCCESS) {
+    ESP_LOGI(Controller::Name, "Controller peripheral states were updated");
+
+    if (_updatePeripheralState(_peripheralState) != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary componenst did not update successfully");
         return PBRet::FAILURE;
     }
@@ -96,10 +99,11 @@ PBRet Controller::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
 
     ESP_LOGI(Controller::Name, "Controller settings were updated");
 
-    if (_updateAuxOutputs(_outputState) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary components did not update successfully");
-        return PBRet::FAILURE;
-    }
+    // TODO: Update pump modes here instead of aux outputs
+    // if (_updatePeripheralState(_outputState) != PBRet::SUCCESS) {
+    //     ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary components did not update successfully");
+    //     return PBRet::FAILURE;
+    // }
 
     return PBRet::SUCCESS;
 }
@@ -137,6 +141,10 @@ PBRet Controller::_controlDataRequestCB(std::shared_ptr<MessageBase> msg)
         case (ControllerDataRequestType::Settings):
         {
             return _broadcastControllerSettings();
+        }
+        case (ControllerDataRequestType::PeripheralState):
+        {
+            return _broadcastControllerPeripheralState();
         }
         case (ControllerDataRequestType::None):
         {
@@ -186,14 +194,33 @@ PBRet Controller::_broadcastControllerSettings(void) const
     return MessageServer::broadcastMessage(msg);
 }
 
+PBRet Controller::_broadcastControllerPeripheralState(void) const
+{
+    // Send a Control command message to the queue
+    // TODO: Does this loopback?
+
+    std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (_peripheralState);
+
+    ESP_LOGI(Controller::Name, "Broadcasting peripheral state");
+    return MessageServer::broadcastMessage(msg);
+}
+
 PBRet Controller::_initIO(const ControllerConfig& cfg) const
 {
     esp_err_t err = ESP_OK;
 
     // Initialize fan pin
-    gpio_pad_select_gpio(cfg.fanPin);
-    err |= gpio_set_direction(cfg.fanPin, GPIO_MODE_OUTPUT);
-    err |= gpio_set_level(cfg.fanPin, 0);    
+    const gpio_config_t fanGPIOConf {
+        .pin_bit_mask = (1ULL << cfg.fanPin),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    if (gpio_config(&fanGPIOConf) != ESP_OK) {
+        ESP_LOGE(Controller::Name, "Failed to configure fan GPIO");
+        err += ESP_FAIL;
+    }  
     
     // Initialize 2.4kW element control pin
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[cfg.element1Pin], PIN_FUNC_GPIO);        // Element 1 pin is set to JTAG by default. Reassign to GPIO
@@ -302,13 +329,13 @@ PBRet Controller::_handleProductPump(double temp)
     return PBRet::SUCCESS;
 }
 
-PBRet Controller::_updateAuxOutputs(const ControlCommand& cmd)
+PBRet Controller::_updatePeripheralState(const ControlCommand& cmd)
 {
     esp_err_t err = ESP_OK;
 
-    err |= gpio_set_level(_cfg.fanPin, uint32_t(cmd.getFanState()));
-    err |= gpio_set_level(_cfg.element1Pin, uint32_t(cmd.getLPElementState()));
-    err |= gpio_set_level(_cfg.element2Pin, uint32_t(cmd.getHPElementState()));
+    err |= gpio_set_level(_cfg.fanPin, uint32_t(cmd.fanState));
+    err |= gpio_set_level(_cfg.element1Pin, uint32_t(cmd.LPElementState));
+    err |= gpio_set_level(_cfg.element2Pin, uint32_t(cmd.HPElementState));
 
     if (err != ESP_OK) {
         ESP_LOGW(Controller::Name, "One or more of the auxilliary states were not updated");
@@ -615,4 +642,88 @@ PBRet Controller::loadTuningFromFile(void)
     }
     
     return _ctrlTuning.deserialize(root);
+}
+
+PBRet ControlCommand::serialize(std::string &JSONStr) const
+{
+    // Write the ControlCommand object to JSON
+
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(ControlCommand::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    // Add fanstate
+    cJSON* fanStateNode = cJSON_CreateNumber(static_cast<int>(fanState));
+    if (fanStateNode == nullptr) {
+        ESP_LOGW(ControlCommand::Name, "Error creating fanState JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlCommand::FanStateStr, fanStateNode);
+
+    // Add low power element
+    cJSON* LPElementNode = cJSON_CreateNumber(static_cast<int>(LPElementState));
+    if (LPElementNode == nullptr) {
+        ESP_LOGW(ControlCommand::Name, "Error creating low power element JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlCommand::LPElementStr, LPElementNode);
+
+    // Add high power element
+    cJSON* HPElementNode = cJSON_CreateNumber(static_cast<int>(HPElementState));
+    if (HPElementNode == nullptr) {
+        ESP_LOGW(ControlCommand::Name, "Error creating high power element JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlCommand::HPElementStr, HPElementNode);
+
+    char* stringPtr = cJSON_Print(root);
+    JSONStr = std::string(stringPtr);
+    cJSON_Delete(root);
+    free(stringPtr);
+
+    return PBRet::SUCCESS;
+}
+
+PBRet ControlCommand::deserialize(const cJSON *root)
+{
+    // Load the ControlCommand object from JSON
+
+    if (root == nullptr) {
+        ESP_LOGW(ControlCommand::Name, "root JSON object was null");
+        return PBRet::FAILURE;
+    }
+
+    // Read fanState
+    const cJSON* fanStateNode = cJSON_GetObjectItem(root, ControlCommand::FanStateStr);
+    if (cJSON_IsNumber(fanStateNode)) {
+        fanState = static_cast<ControllerState>(fanStateNode->valueint);
+    } else {
+        ESP_LOGI(ControlCommand::Name, "Unable to read fanState from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read LPElement
+    const cJSON* LPElementNode = cJSON_GetObjectItem(root, ControlCommand::LPElementStr);
+    if (cJSON_IsNumber(LPElementNode)) {
+        LPElementState = static_cast<ControllerState>(LPElementNode->valueint);
+    } else {
+        ESP_LOGI(ControlCommand::Name, "Unable to read LP Element state from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read HPElement
+    const cJSON* HPElementNode = cJSON_GetObjectItem(root, ControlCommand::HPElementStr);
+    if (cJSON_IsNumber(HPElementNode)) {
+        HPElementState = static_cast<ControllerState>(HPElementNode->valueint);
+    } else {
+        ESP_LOGI(ControlCommand::Name, "Unable to read HP Element state from JSON");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
 }
