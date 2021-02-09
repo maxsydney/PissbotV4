@@ -53,7 +53,6 @@ void SensorManager::taskMain(void)
         if (_refluxFlowmeter.readMassFlowrate(esp_timer_get_time(), flowData.refluxFlowrate) != PBRet::SUCCESS) {
             ESP_LOGW(SensorManager::Name, "Unable to read reflux flowmeter");
         }
-        ESP_LOGI(SensorManager::Name, "Flowrate: %f (L/s)", flowData.refluxFlowrate);
 
         // Broadcast data
         _broadcastTemps(Tdata);
@@ -445,6 +444,13 @@ PBRet FlowrateData::serialize(std::string& JSONStr) const
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         ESP_LOGW(FlowrateData::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddStringToObject(root, "MessageType", FlowrateData::Name) == nullptr)
+    {
+        ESP_LOGW(FlowrateData::Name, "Unable to add MessageType to flowrate data JSON string");
+        cJSON_Delete(root);
         return PBRet::FAILURE;
     }
 
