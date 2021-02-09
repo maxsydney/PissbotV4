@@ -20,6 +20,34 @@ static FlowmeterConfig validConfig(void)
     return cfg;
 }
 
+class FlowmeterUT
+{
+    public:
+        static void setFreqCounter(Flowmeter& flow, uint16_t freqCount) { flow._freqCounter = freqCount; }
+};
+
+TEST_CASE("Constructor", "[Flowmeter]")
+{
+    // Default object not configured
+    {
+        Flowmeter flow {};
+        TEST_ASSERT_FALSE(flow.isConfigured());
+    }
+
+    // Valid params
+    {
+        Flowmeter flow(validConfig());
+        TEST_ASSERT_TRUE(flow.isConfigured());
+    }
+
+    // Invalid params
+    {
+        FlowmeterConfig cfg {};
+        Flowmeter flow(cfg);
+        TEST_ASSERT_FALSE(flow.isConfigured());
+    }
+}
+
 TEST_CASE("checkInputs", "[Flowmeter]")
 {
     // Default config invalid
@@ -73,6 +101,30 @@ TEST_CASE("loadFromJSON invalid", "[Flowmeter]")
     TEST_ASSERT_NOT_EQUAL(cfg, nullptr);
 
     TEST_ASSERT_EQUAL(PBRet::FAILURE, Flowmeter::loadFromJSON(testConfig, cfg));
+}
+
+TEST_CASE("readMassFlowrate", "[Flowmeter]")
+{
+    FlowmeterConfig cfg = validConfig();
+    Flowmeter flow(cfg);
+    TEST_ASSERT_TRUE(flow.isConfigured());
+    double flowrate = 0.0;
+
+    // Going back in time fails
+    TEST_ASSERT_EQUAL(PBRet::FAILURE, flow.readMassFlowrate(-1, flowrate));
+
+    // Valid flowmeter update
+    FlowmeterUT::setFreqCounter(flow, 1);
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, flow.readMassFlowrate(1e6, flowrate));
+    TEST_ASSERT_EQUAL(1.0, flowrate);
+
+    // Check internal time is updated
+    FlowmeterUT::setFreqCounter(flow, 1);
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, flow.readMassFlowrate(2e6, flowrate));
+    TEST_ASSERT_EQUAL(1.0, flowrate);
+
+    // Check internal flowrate is set
+    TEST_ASSERT_EQUAL(1.0, flow.getFlowrate());
 }
 
 #ifdef __cplusplus

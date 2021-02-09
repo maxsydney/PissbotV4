@@ -50,11 +50,10 @@ void SensorManager::taskMain(void)
 
         // Read flowmeters
         FlowrateData flowData(0.0, 0.0);
-        if (_refluxFlowmeter.readFlowrate(esp_timer_get_time(), flowData.refluxFlowrate) != PBRet::SUCCESS) {
+        if (_refluxFlowmeter.readMassFlowrate(esp_timer_get_time(), flowData.refluxFlowrate) != PBRet::SUCCESS) {
             ESP_LOGW(SensorManager::Name, "Unable to read reflux flowmeter");
         }
         ESP_LOGI(SensorManager::Name, "Flowrate: %f (L/s)", flowData.refluxFlowrate);
-        ESP_LOGI(SensorManager::Name, "Count: %d", _refluxFlowmeter.getFreqCounter());
 
         // Broadcast data
         _broadcastTemps(Tdata);

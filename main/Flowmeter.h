@@ -20,7 +20,7 @@ class Flowmeter
         explicit Flowmeter(const FlowmeterConfig& cfg);
 
         // Update
-        PBRet readFlowrate(int64_t t, double& flowrate);
+        PBRet readMassFlowrate(int64_t t, double& flowrate);
 
         // Utility
         static PBRet checkInputs(const FlowmeterConfig& cfg);
@@ -28,7 +28,6 @@ class Flowmeter
 
         // Getters
         double getFlowrate(void) const { return _flowrate; }
-        uint16_t getFreqCounter(void) const { return _freqCounter; }        // TODO: Used for testing. Remove this
         bool isConfigured(void) const { return _configured; }
 
         // Increment frequency counter
@@ -37,12 +36,14 @@ class Flowmeter
         // Flowmeter ISR
         static void IRAM_ATTR flowmeterISR(void* arg);
 
+        friend class FlowmeterUT;
+
     private:
         PBRet _initFromParams(const FlowmeterConfig& cfg);
         FlowmeterConfig _cfg {};
-        int64_t _lastUpdateTime = 0;
-        uint16_t _freqCounter = 0;
-        double _flowrate = 0;
+        int64_t _lastUpdateTime = 0;        // Time of last update [uS]
+        uint16_t _freqCounter = 0;          // Internal pulse counter
+        double _flowrate = 0;               // Current flowrate [kg/s]
         bool _configured = false;
 };
 

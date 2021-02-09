@@ -57,7 +57,7 @@ PBRet Flowmeter::_initFromParams(const FlowmeterConfig& cfg)
     return PBRet::SUCCESS;
 }
 
-PBRet Flowmeter::readFlowrate(int64_t t, double& flowrate)
+PBRet Flowmeter::readMassFlowrate(int64_t t, double& flowrate)
 {
     // Compute the flowrate from accumulated pulses
     // Ref: https://www.trigasdm.com/files/doc/UVC%20Principles%20EN.pdf
@@ -70,6 +70,7 @@ PBRet Flowmeter::readFlowrate(int64_t t, double& flowrate)
 
     // Note: Currently assumes density of coolant is 1kg / L
     flowrate = _freqCounter * _cfg.kFactor / dt;        // Compute flowrate [L / s]
+    _flowrate = flowrate;
     _lastUpdateTime = t;               
     _freqCounter = 0;                                   // Reset counter
 
