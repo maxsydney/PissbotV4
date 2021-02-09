@@ -15,8 +15,6 @@ static PBOneWireConfig validConfig(void)
 {
     PBOneWireConfig cfg {};
     cfg.oneWirePin = GPIO_NUM_0;
-    cfg.productFlowPin = GPIO_NUM_0;
-    cfg.refluxFlowPin = GPIO_NUM_0;
     cfg.tempSensorResolution = DS18B20_RESOLUTION_12_BIT;
 
     return cfg;
@@ -47,20 +45,6 @@ TEST_CASE("checkInputs", "[OneWireBus]")
     {
         PBOneWireConfig cfg = validConfig();
         cfg.tempSensorResolution = DS18B20_RESOLUTION_INVALID;
-        TEST_ASSERT_EQUAL(PBRet::FAILURE, PBOneWire::checkInputs(cfg));
-    }
-
-    // Invalid reflux flowmeter pin
-    {
-        PBOneWireConfig cfg = validConfig();
-        cfg.refluxFlowPin = static_cast<gpio_num_t>(-1);
-        TEST_ASSERT_EQUAL(PBRet::FAILURE, PBOneWire::checkInputs(cfg));
-    }
-
-    // Invalid product flowmeter pin
-    {
-        PBOneWireConfig cfg = validConfig();
-        cfg.productFlowPin = static_cast<gpio_num_t>(-1);;
         TEST_ASSERT_EQUAL(PBRet::FAILURE, PBOneWire::checkInputs(cfg));
     }
 }

@@ -206,6 +206,22 @@ PBRet SensorManager::checkInputs(const SensorManagerConfig& cfg)
         return PBRet::FAILURE;
     }
 
+    // Check reflux flowmeter config
+    {
+        if (Flowmeter::checkInputs(cfg.refluxFlowConfig) != PBRet::SUCCESS) {
+            ESP_LOGE(SensorManager::Name, "Reflux flowmeter config was invalid. SensorManager was not configured");
+            return PBRet::FAILURE;
+        }
+    }
+
+    // Check product flowmeter config
+    {
+        if (Flowmeter::checkInputs(cfg.productFlowConfig) != PBRet::SUCCESS) {
+            ESP_LOGE(SensorManager::Name, "Reflux flowmeter config was invalid. SensorManager was not configured");
+            return PBRet::FAILURE;
+        }
+    }
+
     return PBRet::SUCCESS;
 }
 
@@ -245,12 +261,6 @@ PBRet SensorManager::_loadKnownDevices(const char* basePath, const char* partiti
     const cJSON* tempSensors = cJSON_GetObjectItemCaseSensitive(configRoot, "TempSensors");
     if (_loadTempSensorsFromJSON(tempSensors) != PBRet::SUCCESS) {
         ESP_LOGW(SensorManager::Name, "No temperature sensor config data was available");
-    }
-
-    // Load saved flowmeters
-    const cJSON* flowmeters = cJSON_GetObjectItemCaseSensitive(configRoot, "Flowmeters");
-    if (_loadFlowmetersFromJSON(flowmeters) != PBRet::SUCCESS) {
-        ESP_LOGW(SensorManager::Name, "No flowmeter sensor config data was available");
     }
 
     cJSON_Delete(configRoot);
@@ -324,17 +334,6 @@ PBRet SensorManager::_loadTempSensorsFromJSON(const cJSON* JSONTempSensors)
             ESP_LOGW(SensorManager::Name, "Unable to boiler temp sensor object from file");
         }
     }
-
-    return PBRet::SUCCESS;
-}
-
-PBRet SensorManager::_loadFlowmetersFromJSON(const cJSON* JSONFlowmeters)
-{
-    if (JSONFlowmeters == nullptr) {
-        return PBRet::FAILURE;
-    }
-
-    // TODO: Implement
 
     return PBRet::SUCCESS;
 }

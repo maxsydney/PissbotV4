@@ -60,13 +60,18 @@ PBRet Flowmeter::_initFromParams(const FlowmeterConfig& cfg)
 PBRet Flowmeter::readFlowrate(int64_t t, double& flowrate)
 {
     // Compute the flowrate from accumulated pulses
-    // TODO: Check for going back in time and -ve pulses
-    const double dt = (t - _lastUpdateTime) * 1e-6;      // Convert to seconds
-    flowrate = _freqCounter * _cfg.kFactor / dt;        // Compute flowrate
+    // Ref: https://www.trigasdm.com/files/doc/UVC%20Principles%20EN.pdf
+    // TODO: Account for temperature of coolant
+    const double dt = (t - _lastUpdateTime) * 1e-6;     // Convert to seconds
+    if (dt < 0) {
+        ESP_LOGW(Flowmeter::Name, "dt was negative");
+        return PBRet::FAILURE;
+    }
+
+    // Note: Currently assumes density of coolant is 1kg / L
+    flowrate = _freqCounter * _cfg.kFactor / dt;        // Compute flowrate [L / s]
     _lastUpdateTime = t;               
     _freqCounter = 0;                                   // Reset counter
-
-    ESP_LOGI(Flowmeter::Name, "Pulses: %d - Dt: %f - K Factor: %f", _freqCounter, dt, _cfg.kFactor);
 
     return PBRet::SUCCESS;
 }

@@ -13,5 +13,6 @@ void includeWebserverTests(void);
 void includePumpTests(void);
 void includeControllerTests(void);
 void includeDistillerManagerTests(void);
+void includeFlowmeterTests(void);
 
 #endif // INCLUDE_TEST_FILES

@@ -6,6 +6,6 @@
 #include <esp_log.h>
 #include "hal/gpio_types.h"
 
-enum class PBRet { SUCCESS, FAILURE };
+enum class PBRet { FAILURE, SUCCESS };
 
 #endif // MAIN_PBCOMMON_H

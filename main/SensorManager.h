@@ -109,7 +109,6 @@ private:
     PBRet _setupCBTable(void) override;
     PBRet _loadKnownDevices(const char *basePath, const char *partitionLabel);
     PBRet _loadTempSensorsFromJSON(const cJSON *JSONTempSensors);
-    PBRet _loadFlowmetersFromJSON(const cJSON *JSONFlowmeters);
 
     // Updates
     PBRet _readFlowmeters(const FlowrateData &F) const;

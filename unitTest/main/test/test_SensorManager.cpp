@@ -22,9 +22,11 @@ static SensorManagerConfig validConfig(void)
     SensorManagerConfig cfg {};
     cfg.dt = 0.1;
     cfg.oneWireConfig.oneWirePin = GPIO_NUM_0;
-    cfg.oneWireConfig.productFlowPin = GPIO_NUM_0;
-    cfg.oneWireConfig.refluxFlowPin = GPIO_NUM_0;
     cfg.oneWireConfig.tempSensorResolution = DS18B20_RESOLUTION_12_BIT;
+    cfg.refluxFlowConfig.flowmeterPin = GPIO_NUM_0;
+    cfg.refluxFlowConfig.kFactor = 1.0;
+    cfg.productFlowConfig.flowmeterPin = GPIO_NUM_0;
+    cfg.productFlowConfig.kFactor = 1.0;
 
     return cfg;
 }
@@ -54,6 +56,20 @@ TEST_CASE("checkInputs", "[SensorManager]")
     {
         SensorManagerConfig cfg = validConfig();
         cfg.oneWireConfig.oneWirePin = static_cast<gpio_num_t>(-1);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, SensorManager::checkInputs(cfg));
+    }
+
+    // Invalid reflux flowmeter
+    {
+        SensorManagerConfig cfg = validConfig();
+        cfg.refluxFlowConfig.flowmeterPin = static_cast<gpio_num_t>(-1);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, SensorManager::checkInputs(cfg));
+    }
+
+    // Invalid product flowmeter
+    {
+        SensorManagerConfig cfg = validConfig();
+        cfg.productFlowConfig.flowmeterPin = static_cast<gpio_num_t>(-1);
         TEST_ASSERT_EQUAL(PBRet::FAILURE, SensorManager::checkInputs(cfg));
     }
 }

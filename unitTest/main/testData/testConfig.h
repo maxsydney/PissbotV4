@@ -24,8 +24,14 @@ static const char* testConfig = "{              \
             \"oneWireConfig\": {                \
                 \"GPIO_onewire\": 15,           \
                 \"DS18B20Resolution\": 11,      \
-                \"GPIO_refluxFlow\": 35,        \
-                \"GPIO_prodFlow\": 34           \
+            },                                  \
+            \"refluxFlowmeterConfig\": {        \
+                \"GPIO\": 35,                   \
+                \"kFactor\": 1                  \
+            },                                  \
+            \"productFlowmeterConfig\": {       \
+                \"GPIO\": 34,                   \
+                \"kFactor\": 1                  \
             }                                   \
         },                                      \
         \"WebserverConfig\": {                  \

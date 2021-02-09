@@ -18,6 +18,7 @@ static void includeAllTests(void)
     includePumpTests();
     includeControllerTests();
     includeDistillerManagerTests();
+    includeFlowmeterTests();
 }
 
 void app_main(void)
