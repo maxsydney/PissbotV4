@@ -134,7 +134,7 @@ class ControlCommand : public MessageBase
     static constexpr const char *Name = "Controller command";
 
     static constexpr const char *FanStateStr = "fanState";
-    static constexpr const char *LPElementStr = "LPElelement";
+    static constexpr const char *LPElementStr = "LPElement";
     static constexpr const char *HPElementStr = "HPElement";
 
 public:

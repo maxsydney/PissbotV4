@@ -471,6 +471,13 @@ PBRet ControlTuning::serialize(std::string& JSONstr) const
         return PBRet::FAILURE;
     }
 
+    if (cJSON_AddStringToObject(root, "MessageType", ControlTuning::Name) == nullptr)
+    {
+        ESP_LOGW(ControlTuning::Name, "Unable to add MessageType to ControlTuning JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
     // Add setpoint
     cJSON* setpoint = cJSON_CreateNumber(_setpoint);
     if (setpoint == nullptr) {
@@ -651,6 +658,13 @@ PBRet ControlCommand::serialize(std::string &JSONStr) const
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         ESP_LOGW(ControlCommand::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddStringToObject(root, "MessageType", ControlCommand::Name) == nullptr)
+    {
+        ESP_LOGW(ControlCommand::Name, "Unable to add MessageType to control command JSON string");
+        cJSON_Delete(root);
         return PBRet::FAILURE;
     }
 

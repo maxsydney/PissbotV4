@@ -171,11 +171,13 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
 
     // Parse string
     if (msgTypeStr == Webserver::CtrlTuningStr) {
-        _parseControlTuningMessage(root);
+        _processControlTuningMessage(root);
     } else if (msgTypeStr == Webserver::CtrlSettingsStr) {
-        _parseControlSettingsMessage(root);
-    } else if (msgTypeStr == Webserver::CommandStr) {
-        _parseCommandMessage(root);
+        _processControlSettingsMessage(root);
+    } else if (msgTypeStr == Webserver::PeripheralState) {
+        _processPeripheralStateMessage(root);
+    }else if (msgTypeStr == Webserver::CommandStr) {
+        _processCommandMessage(root);
     } else {
         ESP_LOGI(Webserver::Name, "Unable to process %s message", msgTypeStr.c_str());
     }
@@ -234,7 +236,7 @@ PBRet Webserver::_setupCBTable(void)
         {MessageType::ControlTuning, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)},
         {MessageType::DeviceData, std::bind(&Webserver::_deviceDataCB, this, std::placeholders::_1)},
         {MessageType::FlowrateData, std::bind(&Webserver::_flowrateDataCB, this, std::placeholders::_1)},
-        {MessageType::ControlCommand, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)}
+        {MessageType::ControlCommand, std::bind(&Webserver::_controlCommandCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -318,9 +320,9 @@ PBRet Webserver::_controlTuningCB(std::shared_ptr<MessageBase> msg)
     ControlTuning ctrlTuning = *std::static_pointer_cast<ControlTuning>(msg);
 
     // Serialize to ControlTuning JSON string memory
-    if (serializeControlTuningMsg(ctrlTuning, _ctrlTuningMessage) != PBRet::SUCCESS)
+    if (ctrlTuning.serialize(_ctrlTuningMessage) != PBRet::SUCCESS)
     {
-        ESP_LOGW(Webserver::Name, "Error writing ControlCommand object to JSON string. Deleting");
+        ESP_LOGW(Webserver::Name, "Error writing ControlTuning object to JSON string. Deleting");
         _ctrlTuningMessage.clear();
         return PBRet::FAILURE;
     }
@@ -336,10 +338,10 @@ PBRet Webserver::_controlCommandCB(std::shared_ptr<MessageBase> msg)
     // Get ControlCommand object
     ControlCommand ctrlCmd = *std::static_pointer_cast<ControlCommand>(msg);
 
-    // Serialize to ControlTuning JSON string memory
+    // Serialize to ControlCommand JSON string memory
     if (ctrlCmd.serialize(_ctrlCommandMessage) != PBRet::SUCCESS)
     {
-        ESP_LOGW(Webserver::Name, "Error writing ControlTuning object to JSON string. Deleting");
+        ESP_LOGW(Webserver::Name, "Error writing ControlCommand object to JSON string. Deleting");
         _ctrlCommandMessage.clear();
         return PBRet::FAILURE;
     }
@@ -457,73 +459,9 @@ PBRet Webserver::serializeTemperatureDataMsg(const TemperatureData& TData, std::
     return PBRet::SUCCESS;
 }
 
-PBRet Webserver::serializeControlTuningMsg(const ControlTuning& ctrlTuning, std::string& outStr)
-{
-    // Convert a ControlTuning message into a JSON representation
-    //
-
-    // TODO: Move this to serialize on ControlTuning
-
-    cJSON* root = cJSON_CreateObject();
-    if (root == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddStringToObject(root, "MessageType", "ControlTuning") == nullptr)
-    {
-        ESP_LOGW(Webserver::Name, "Unable to add MessageType to ControlTuning JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "Setpoint", ctrlTuning.getSetpoint()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add setpoint to control tuning JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "PGain", ctrlTuning.getPGain()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add P gain to control tuning JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "IGain", ctrlTuning.getIGain()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add I gain to control tuning JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "DGain", ctrlTuning.getDGain()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add D gain to control tuning JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "LPFCutoff", ctrlTuning.getLPFCutoff()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add LPF cutoff to control tuning JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    char* tuningMsgJson = cJSON_Print(root);
-    cJSON_Delete(root);
-
-    if (tuningMsgJson == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to allocate memory for control tuning data JSON string");
-        return PBRet::FAILURE;
-    }
-
-    outStr = tuningMsgJson;
-    free(tuningMsgJson);
-
-    return PBRet::SUCCESS;
-}
-
 PBRet Webserver::serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr)
 {
-    // Convert a ControlTuning message into a JSON representation
+    // Convert a ControlSettings message into a JSON representation
     //
 
     // TODO: Move this to serialize on ControlSettings
@@ -567,11 +505,9 @@ PBRet Webserver::serializeControlSettingsMessage(const ControlSettings& ctrlSett
     return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
+PBRet Webserver::_processControlTuningMessage(cJSON* msgRoot)
 {
     ControlTuning ctrlTuning {};
-    double PGain, IGain, DGain, setpoint, LPFCutoff;
-
     if (msgRoot == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to parse control tuning message. cJSON object was null");
         return PBRet::FAILURE;
@@ -582,58 +518,20 @@ PBRet Webserver::_parseControlTuningMessage(cJSON* msgRoot)
         ESP_LOGW(Webserver::Name, "Unable to parse data from control tuning message");
         return PBRet::FAILURE;
     }
-    
-    cJSON* PGainJSON = cJSON_GetObjectItemCaseSensitive(msgData, "PGain");
-    if (cJSON_IsNumber(PGainJSON)) {
-        PGain = PGainJSON->valuedouble;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read PGain from control tuning message");
+
+    if (ctrlTuning.deserialize(msgData) != PBRet::SUCCESS) {
+        ESP_LOGW(Webserver::Name, "Unable to parse control tuning message");
         return PBRet::FAILURE;
     }
 
-    cJSON* IGainJSON = cJSON_GetObjectItemCaseSensitive(msgData, "IGain");
-    if (cJSON_IsNumber(IGainJSON)) {
-        IGain = IGainJSON->valuedouble;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read IGain from control tuning message");
-        return PBRet::FAILURE;
-    }
-
-    cJSON* DGainJSON = cJSON_GetObjectItemCaseSensitive(msgData, "DGain");
-    if (cJSON_IsNumber(DGainJSON)) {
-        DGain = DGainJSON->valuedouble;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read DGain from control tuning message");
-        return PBRet::FAILURE;
-    }
-
-    cJSON* setpointJSON = cJSON_GetObjectItemCaseSensitive(msgData, "Setpoint");
-    if (cJSON_IsNumber(setpointJSON)) {
-        setpoint = setpointJSON->valuedouble;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read setpoint from control tuning message");
-        return PBRet::FAILURE;
-    }
-
-    cJSON* LPFCutoffJSON = cJSON_GetObjectItemCaseSensitive(msgData, "LPFCutoff");
-    if (cJSON_IsNumber(LPFCutoffJSON)) {
-        LPFCutoff = LPFCutoffJSON->valuedouble;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read lowpass filter cutoff from control tuning message");
-        return PBRet::FAILURE;
-    }
-
-    std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (setpoint, PGain, IGain, DGain, LPFCutoff);
+    std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (ctrlTuning);
 
     ESP_LOGI(Webserver::Name, "Broadcasting controller tuning");
     return MessageServer::broadcastMessage(msg);
-    
-    return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
+PBRet Webserver::_processControlSettingsMessage(cJSON* msgRoot)
 {
-    ControlTuning ctrlTuning {};
     bool prodPump, refluxPump;
 
     // TODO: Move this to deserialize on ControlTuning
@@ -671,16 +569,16 @@ PBRet Webserver::_parseControlSettingsMessage(cJSON* msgRoot)
     return MessageServer::broadcastMessage(msg);
 }
 
-PBRet Webserver::_parseCommandMessage(cJSON* root)
+PBRet Webserver::_processCommandMessage(cJSON* msgRoot)
 {
-    if (root == nullptr) {
+    if (msgRoot == nullptr) {
         ESP_LOGW(Webserver::Name, "Unable to parse command message. cJSON object was null");
         return PBRet::FAILURE;
     }
 
     std::string subtypeStr {};
 
-    cJSON* subtype = cJSON_GetObjectItemCaseSensitive(root, "subtype");
+    cJSON* subtype = cJSON_GetObjectItemCaseSensitive(msgRoot, "subtype");
     if (subtype != nullptr) {
         subtypeStr = std::string(subtype->valuestring);
     } else {
@@ -694,11 +592,36 @@ PBRet Webserver::_parseCommandMessage(cJSON* root)
         ESP_LOGI(Webserver::Name, "Sending message to start sensor assign task");
         return MessageServer::broadcastMessage(msg);
     } else if (subtypeStr == Webserver::AssignSensor) {
-        return _processAssignSensorMessage(root);
+        return _processAssignSensorMessage(msgRoot);
     } else {
         ESP_LOGW(Webserver::Name, "Unable to parse command message with subtype %s", subtypeStr.c_str());
         return PBRet::FAILURE;
     }
+}
+
+PBRet Webserver::_processPeripheralStateMessage(cJSON* msgRoot)
+{
+    ControlCommand ctrlCommand {};
+    if (msgRoot == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse control command message. cJSON object was null");
+        return PBRet::FAILURE;
+    }
+
+    cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
+    if (msgData == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse data from control command message");
+        return PBRet::FAILURE;
+    }
+
+    if (ctrlCommand.deserialize(msgData) != PBRet::SUCCESS) {
+        ESP_LOGW(Webserver::Name, "Unable to parse control command message");
+        return PBRet::FAILURE;
+    }
+
+    std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (ctrlCommand);
+
+    ESP_LOGI(Webserver::Name, "Broadcasting controller command");
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet Webserver::_processAssignSensorMessage(cJSON* root)

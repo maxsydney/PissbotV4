@@ -26,6 +26,7 @@ class Webserver : public Task
     static constexpr const char* CommandStr = "Command";
     static constexpr const char* BroadcastDevices = "BroadcastDevices";
     static constexpr const char* AssignSensor = "AssignSensor";
+    static constexpr const char* PeripheralState = "PeripheralState";
 
     public:
         Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg);
@@ -57,13 +58,13 @@ class Webserver : public Task
 
         // Message serialization
         static PBRet serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr);
-        static PBRet serializeControlTuningMsg(const ControlTuning& ctrlTuning, std::string& outStr);
         static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);
 
         // Message parsing
-        static PBRet _parseControlTuningMessage(cJSON* msgRoot);
-        static PBRet _parseControlSettingsMessage(cJSON* msgRoot);
-        static PBRet _parseCommandMessage(cJSON* root);
+        static PBRet _processControlTuningMessage(cJSON* msgRoot);
+        static PBRet _processControlSettingsMessage(cJSON* msgRoot);
+        static PBRet _processCommandMessage(cJSON* msgRoot);
+        static PBRet _processPeripheralStateMessage(cJSON* msgRoot);
 
         // Utility methods
         static PBRet _requestControllerTuning(void);
