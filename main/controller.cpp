@@ -46,7 +46,7 @@ void Controller::taskMain(void)
         // Check status of connected components
 
         // Update control
-        if (_doControl(0) != PBRet::SUCCESS) {
+        if (_doControl(_currentTemp.headTemp) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Controller update failed");
             // Send warning message to distiller controller
         }
@@ -66,12 +66,8 @@ PBRet Controller::_generalMessageCB(std::shared_ptr<MessageBase> msg)
 }
 PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
 {
-    // TODO: Implement this
-    // std::shared_ptr<TemperatureData> TData = std::static_pointer_cast<TemperatureData>(msg);
-
-    // ESP_LOGI(Controller::Name, "Received temperature message:\nHead: %.3lf\nReflux condensor: %.3f\nProduct condensor: %.3lf\n"
-    //                            "Radiator: %.3f\nBoiler: %.3lf\nUptime: %ld", TData->getHeadTemp(), TData->getRefluxCondensorTemp(),
-    //                             TData->getProdCondensorTemp(), TData->getRadiatorTemp(), TData->getBoilerTemp(), (long int) TData->getTimeStamp());
+    std::shared_ptr<TemperatureData> TData = std::static_pointer_cast<TemperatureData>(msg);
+    _currentTemp = TemperatureData(*TData);
 
     return PBRet::SUCCESS;
 }
@@ -222,15 +218,32 @@ PBRet Controller::_initIO(const ControllerConfig& cfg) const
         err += ESP_FAIL;
     }  
     
-    // Initialize 2.4kW element control pin
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[cfg.element1Pin], PIN_FUNC_GPIO);        // Element 1 pin is set to JTAG by default. Reassign to GPIO
-    err |= gpio_set_direction(cfg.element1Pin, GPIO_MODE_OUTPUT);
-    err |= gpio_set_level(cfg.element1Pin, 0);  
+    // Initialize LP element pin
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[cfg.element1Pin], PIN_FUNC_GPIO);        // LP element pin is set to JTAG by default. Reassign to GPIO
+    const gpio_config_t LPElementGPIOConf {
+        .pin_bit_mask = (1ULL << cfg.element1Pin),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    if (gpio_config(&LPElementGPIOConf) != ESP_OK) {
+        ESP_LOGE(Controller::Name, "Failed to configure low power element GPIO");
+        err += ESP_FAIL;
+    }
 
     // Initialize 3kW element control pin
-    gpio_pad_select_gpio(cfg.element2Pin);
-    err |= gpio_set_direction(cfg.element2Pin, GPIO_MODE_OUTPUT);
-    err |= gpio_set_level(cfg.element2Pin, 0); 
+    const gpio_config_t HPElementGPIOConf {
+        .pin_bit_mask = (1ULL << cfg.element2Pin),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    if (gpio_config(&HPElementGPIOConf) != ESP_OK) {
+        ESP_LOGE(Controller::Name, "Failed to configure high power element GPIO");
+        err += ESP_FAIL;
+    }
 
     if (err != ESP_OK) {
         ESP_LOGW(Controller::Name, "Failed to configure one or more IO");

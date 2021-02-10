@@ -15,27 +15,29 @@ class TemperatureData : public MessageBase
 {
     static constexpr MessageType messageType = MessageType::TemperatureData;
     static constexpr const char *Name = "Temperature Data";
+    static constexpr const char *HeadTempStr = "HeadTemp";
+    static constexpr const char *RefluxCondensorTempStr = "RefluxTemp";
+    static constexpr const char *ProdCondensorTempStr = "ProdTemp";
+    static constexpr const char *RadiatorTempStr = "RadiatorTemp";
+    static constexpr const char *BoilerTempStr = "BoilerTemp";
+    static constexpr const char *UptimeStr = "Uptime";
 
 public:
     TemperatureData(void) = default;
     TemperatureData(double headTemp, double refluxCondensorTemp, double prodCondensorTemp,
                     double radiatorTemp, double boilerTemp)
-        : MessageBase(TemperatureData::messageType, TemperatureData::Name, esp_timer_get_time()), _headTemp(headTemp),
-          _refluxCondensorTemp(refluxCondensorTemp), _prodCondensorTemp(prodCondensorTemp),
-          _radiatorTemp(radiatorTemp), _boilerTemp(boilerTemp) {}
+        : MessageBase(TemperatureData::messageType, TemperatureData::Name, esp_timer_get_time()), headTemp(headTemp),
+          refluxCondensorTemp(refluxCondensorTemp), prodCondensorTemp(prodCondensorTemp),
+          radiatorTemp(radiatorTemp), boilerTemp(boilerTemp) {}
 
-    double getHeadTemp(void) const { return _headTemp; }
-    double getRefluxCondensorTemp(void) const { return _refluxCondensorTemp; }
-    double getProdCondensorTemp(void) const { return _prodCondensorTemp; }
-    double getRadiatorTemp(void) const { return _radiatorTemp; }
-    double getBoilerTemp(void) const { return _boilerTemp; }
-    int64_t getTimeStamp(void) const { return _timeStamp; }
+    PBRet serialize(std::string &JSONStr) const;
+    PBRet deserialize(const cJSON *root) { return PBRet::SUCCESS; }
 
-    double _headTemp = 0.0;
-    double _refluxCondensorTemp = 0.0;
-    double _prodCondensorTemp = 0.0;
-    double _radiatorTemp = 0.0;
-    double _boilerTemp = 0.0;
+    double headTemp = 0.0;
+    double refluxCondensorTemp = 0.0;
+    double prodCondensorTemp = 0.0;
+    double radiatorTemp = 0.0;
+    double boilerTemp = 0.0;
 };
 
 class DeviceData : public MessageBase

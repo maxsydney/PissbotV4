@@ -256,7 +256,7 @@ PBRet Webserver::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
     TemperatureData TData = *std::static_pointer_cast<TemperatureData>(msg);
 
     // Serialize to TemperatureData JSON string memory
-    if (serializeTemperatureDataMsg(TData, _temperatureMessage) != PBRet::SUCCESS)
+    if (TData.serialize(_temperatureMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing TemperatureData object to JSON string. Deleting");
         _temperatureMessage.clear();
@@ -388,73 +388,6 @@ PBRet Webserver::_deviceDataCB(std::shared_ptr<MessageBase> msg)
 
     _sendToAll(deviceDataJSON);
     free(deviceDataJSON);
-
-    return PBRet::SUCCESS;
-}
-
-PBRet Webserver::serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr)
-{
-    // Convert a TemperatureData message into a JSON representation to send
-    // to browser client
-    cJSON* root = cJSON_CreateObject();
-    if (root == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddStringToObject(root, "MessageType", "Temperature") == nullptr)
-    {
-        ESP_LOGW(Webserver::Name, "Unable to add MessageType to temperature JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "HeadTemp", TData.getHeadTemp()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add head temp to temperature JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "RefluxTemp", TData.getRefluxCondensorTemp()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add reflux condensor temp to temperature JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "ProdTemp", TData.getProdCondensorTemp()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add product condensor temp to temperature JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "RadiatorTemp", TData.getRadiatorTemp()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add radiator temp to temperature JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "BoilerTemp", TData.getBoilerTemp()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add boiler temp to temperature JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "uptime", TData.getTimeStamp()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add timestamp to temperature JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    char* tempMessageJSON = cJSON_Print(root);
-    cJSON_Delete(root);
-
-    if (tempMessageJSON == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to allocate memory for temperature data JSON string");
-        return PBRet::FAILURE;
-    }
-
-    outStr = tempMessageJSON;
-    free(tempMessageJSON);
 
     return PBRet::SUCCESS;
 }

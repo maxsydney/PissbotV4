@@ -57,7 +57,6 @@ class Webserver : public Task
         PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
 
         // Message serialization
-        static PBRet serializeTemperatureDataMsg(const TemperatureData& TData, std::string& outStr);
         static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);
 
         // Message parsing
