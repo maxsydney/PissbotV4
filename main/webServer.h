@@ -78,9 +78,9 @@ class Webserver : public Task
         // TODO: Replace these with actual data objects
         std::string _temperatureMessage {};
         std::string _flowrateMessage {};
-        std::string _ctrlTuningMessage {};
         std::string _ctrlSettingsMessage {};
         std::string _ctrlCommandMessage {};
+        std::string _ctrlTuningMessage {};
 
         // FreeRTOS hook method
         void taskMain(void) override;

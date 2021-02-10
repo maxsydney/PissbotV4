@@ -100,7 +100,7 @@ PBRet Controller::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
     ESP_LOGI(Controller::Name, "Controller settings were updated");
 
     // TODO: Update pump modes here instead of aux outputs
-    // if (_updatePeripheralState(_outputState) != PBRet::SUCCESS) {
+    // if (_updatePeripheralState(_peripheralState) != PBRet::SUCCESS) {
     //     ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary components did not update successfully");
     //     return PBRet::FAILURE;
     // }

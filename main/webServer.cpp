@@ -312,14 +312,16 @@ PBRet Webserver::_controlTuningCB(std::shared_ptr<MessageBase> msg)
     // Serialize the controller tuning parameters and broadcast to all 
     // connected websockets
 
+    ESP_LOGI(Webserver::Name, "Got ControllerTuning message");
+
     // Get controlTuning object
     ControlTuning ctrlTuning = *std::static_pointer_cast<ControlTuning>(msg);
 
     // Serialize to ControlTuning JSON string memory
-    if (serializeControlTuningMsg(ctrlTuning, _ctrlCommandMessage) != PBRet::SUCCESS)
+    if (serializeControlTuningMsg(ctrlTuning, _ctrlTuningMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing ControlCommand object to JSON string. Deleting");
-        _ctrlCommandMessage.clear();
+        _ctrlTuningMessage.clear();
         return PBRet::FAILURE;
     }
 
