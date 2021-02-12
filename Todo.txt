@@ -14,3 +14,4 @@
 - serialize/deserialize virtual methods on MessageBase
 - Telemeter controller output data
 - Pump modes
+- Telemeter concentrations
