@@ -55,6 +55,7 @@ public:
         : MessageBase(ControlSettings::messageType, ControlSettings::Name, esp_timer_get_time()), 
         _prodCondensorPump(other._prodCondensorPump), _refluxCondensorPump(other._refluxCondensorPump) {}
 
+    // TODO: Remove getters and make members public
     bool getProdCondensorPump(void) const { return _prodCondensorPump; }
     bool getRefluxCondensorPump(void) const { return _refluxCondensorPump; }
 
@@ -174,6 +175,8 @@ public:
     static PBRet checkInputs(const ControllerConfig &cfg);
     static PBRet loadFromJSON(ControllerConfig &cfg, const cJSON *cfgRoot);
     bool isConfigured(void) const { return _configured; }
+
+    friend class ControllerUT;
 
 private:
     // Initialization

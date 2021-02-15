@@ -48,7 +48,7 @@ class Pump
 
         static constexpr uint32_t PUMP_MIN_OUTPUT = 25;
         static constexpr uint32_t PUMP_MAX_OUTPUT = 512;
-        static constexpr uint32_t FLUSH_SPEED = 256;
+        static constexpr uint32_t FLUSH_SPEED = 512;
 
         // Friend class for unit testing
         friend class PumpUT;

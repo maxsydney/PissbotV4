@@ -12,26 +12,48 @@ void includeControllerTests(void)
     // Dummy function to force discovery of unit tests by main test runner
 }
 
+ControllerConfig validConfig(void)
+{
+    ControllerConfig cfg {};
+    cfg.dt = 1.0;
+    cfg.refluxPumpConfig.pumpGPIO = GPIO_NUM_0;
+    cfg.refluxPumpConfig.PWMChannel = LEDC_CHANNEL_0;
+    cfg.refluxPumpConfig.timerChannel = LEDC_TIMER_0;
+    cfg.prodPumpConfig.pumpGPIO = GPIO_NUM_0;
+    cfg.prodPumpConfig.PWMChannel = LEDC_CHANNEL_0;
+    cfg.prodPumpConfig.timerChannel = LEDC_TIMER_0;
+    cfg.element1Pin = GPIO_NUM_0;
+    cfg.element2Pin = GPIO_NUM_0;
+    cfg.fanPin = GPIO_NUM_0;
 
-// TEST_CASE("Constructor", "[Controller]")
-// {
-//     const uint8_t freq = 5;
-//     const ctrlParams_t ctrlParams = {50.0, 10.0, 1.0, 1.0};
-//     const ctrlSettings_t ctrlSettings = {};
-//     PumpConfig refluxPumpConfig(REFLUX_PUMP, LEDC_CHANNEL_0, LEDC_TIMER_0);
-//     PumpConfig prodPumpConfig(PROD_PUMP, LEDC_CHANNEL_1, LEDC_TIMER_1);
-//     Controller Ctrl = Controller(freq, ctrlParams, ctrlSettings, refluxPumpConfig,  prodPumpConfig, FAN_SWITCH, ELEMENT_2, ELEMENT_2);
+    return cfg;
+}
 
-//     TEST_ASSERT_EQUAL_DOUBLE(Ctrl.getSetpoint(), 50.0);
-//     TEST_ASSERT_EQUAL_DOUBLE(Ctrl.getPGain(), 10.0);
-//     TEST_ASSERT_EQUAL_DOUBLE(Ctrl.getIGain(), 1.0);
-//     TEST_ASSERT_EQUAL_DOUBLE(Ctrl.getDGain(), 1.0);
+class ControllerUT
+{
+    public:
+        static Pump& getProductPump(Controller& ctrl) { return ctrl._prodPump; }
+        static double getHysteresisUpperBound(Controller& ctrl) { return ctrl.HYSTERESIS_BOUND_UPPER; }
+        static double getHysteresisLowerBound(Controller& ctrl) { return ctrl.HYSTERESIS_BOUND_LOWER; }
+        static PBRet handleProductPump(Controller& ctrl, double T) { return ctrl._handleProductPump(T); }
+};
 
-//     TEST_ASSERT_TRUE(Ctrl.getRefluxPumpMode() == PumpMode::ACTIVE);
-//     TEST_ASSERT_TRUE(Ctrl.getProductPumpMode() == PumpMode::ACTIVE);
-//     TEST_ASSERT_EQUAL_UINT16(Ctrl.getRefluxPumpSpeed(), Pump::PUMP_MIN_OUTPUT);
-//     TEST_ASSERT_EQUAL_UINT16(Ctrl.getProductPumpSpeed(), Pump::PUMP_MIN_OUTPUT);
-// }
+TEST_CASE("Constructor", "[Controller]")
+{
+    // Default constructor doesn't configure
+    {
+        ControllerConfig cfg {};
+        Controller ctrl(1, 1024, 1, cfg);
+        TEST_ASSERT_FALSE(ctrl.isConfigured());
+    }
+
+    // Valid construction
+    {
+        ControllerConfig cfg = validConfig();
+        Controller ctrl(1, 1024, 1, cfg);
+        TEST_ASSERT_TRUE(ctrl.isConfigured());
+    }
+}
 
 TEST_CASE("loadFromJSONValid", "[Controller]")
 {
@@ -266,7 +288,7 @@ TEST_CASE("loadFromJSONInvlid", "[Controller]")
 //     TEST_ASSERT_TRUE(Ctrl.getProductPumpMode() == PumpMode::FIXED);
 // }
 
-TEST_CASE("Serialization/Deserialization", "[Controller]")
+TEST_CASE("ControlTuning serialization/deserialization", "[Controller]")
 {
     ControlTuning ctrlTuningIn(50.0, 25.0, 10.0, 75.0, 5.0);
     ControlTuning ctrlTuningOut {};
@@ -285,6 +307,54 @@ TEST_CASE("Serialization/Deserialization", "[Controller]")
     TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getIGain(), ctrlTuningOut.getIGain());
     TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getDGain(), ctrlTuningOut.getDGain());
     TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getLPFCutoff(), ctrlTuningOut.getLPFCutoff());
+}
+
+TEST_CASE("ControlCommand serialization/deserialization", "[Controller]")
+{
+    ControlCommand ctrlCommandIn(ControllerState::ON, ControllerState::ON, ControllerState::ON);
+    ControlCommand ctrlCommandOut {};
+
+    // Test serialization
+    std::string JSONStr {};
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ctrlCommandIn.serialize(JSONStr));
+
+    // Test deserialization
+    cJSON* root = cJSON_Parse(JSONStr.c_str());
+    TEST_ASSERT_NOT_EQUAL(root, nullptr);
+    ctrlCommandOut.deserialize(root);
+
+    TEST_ASSERT_EQUAL(ctrlCommandIn.fanState, ctrlCommandOut.fanState);
+    TEST_ASSERT_EQUAL(ctrlCommandIn.LPElementState, ctrlCommandOut.LPElementState);
+    TEST_ASSERT_EQUAL(ctrlCommandIn.HPElementState, ctrlCommandOut.HPElementState);
+}
+
+TEST_CASE("handleProductPump", "[Controller]")
+{
+    Controller ctrl(1, 1024, 1, validConfig());
+    TEST_ASSERT_TRUE(ctrl.isConfigured());
+    const double hysteresisUpperBound = ControllerUT::getHysteresisUpperBound(ctrl);
+    const double hysteresisLowerBound = ControllerUT::getHysteresisUpperBound(ctrl);
+    const Pump& productPump = ControllerUT::getProductPump(ctrl);
+
+    // Below lower bound rising
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, 0.0));
+    TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, productPump.getPumpSpeed());
+
+    // Above lower bound rising
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, hysteresisLowerBound + 1));
+    TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, productPump.getPumpSpeed());
+
+    // Above upper bound rising
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, hysteresisUpperBound + 1));
+    TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, productPump.getPumpSpeed());
+
+    // Above lower bound falling
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, hysteresisLowerBound + 1));
+    TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, productPump.getPumpSpeed());
+
+    // Below lower bound falling
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, 0.0));
+    TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, productPump.getPumpSpeed());
 }
 
 #ifdef __cplusplus
