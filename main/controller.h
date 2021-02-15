@@ -104,7 +104,7 @@ private:
 struct ControllerConfig
 {
     double dt = 0.0;
-    ControlSettings ctrlSettings{};
+    ControlSettings ctrlSettings{};     // TODO: Remove this, peripherals should always default to off
     PumpConfig refluxPumpConfig{};
     PumpConfig prodPumpConfig{};
     gpio_num_t fanPin = (gpio_num_t)GPIO_NUM_NC;

@@ -55,6 +55,57 @@ TEST_CASE("Constructor", "[Controller]")
     }
 }
 
+TEST_CASE("checkInputs", "[Controller]")
+{
+    // Valid config
+    {
+        ControllerConfig cfg = validConfig();
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, Controller::checkInputs(cfg));
+    }
+
+    // Invalid dt
+    {
+        ControllerConfig cfg = validConfig();
+        cfg.dt = -1;
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, Controller::checkInputs(cfg));
+    }
+
+    // Invalid reflux pump config
+    {
+        ControllerConfig cfg = validConfig();
+        cfg.refluxPumpConfig.pumpGPIO = static_cast<gpio_num_t> (GPIO_NUM_NC);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, Controller::checkInputs(cfg));
+    }
+
+    // Invalid product pump config
+    {
+        ControllerConfig cfg = validConfig();
+        cfg.prodPumpConfig.pumpGPIO = static_cast<gpio_num_t> (GPIO_NUM_NC);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, Controller::checkInputs(cfg));
+    }
+
+    // Invalid fan pin
+    {
+        ControllerConfig cfg = validConfig();
+        cfg.fanPin = static_cast<gpio_num_t> (GPIO_NUM_NC);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, Controller::checkInputs(cfg));    
+    }
+
+    // Invalid LPElement pin
+    {
+        ControllerConfig cfg = validConfig();
+        cfg.element1Pin = static_cast<gpio_num_t> (GPIO_NUM_NC);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, Controller::checkInputs(cfg));
+    }
+
+    // Invalid HPElement pin
+    {
+        ControllerConfig cfg = validConfig();
+        cfg.element2Pin = static_cast<gpio_num_t> (GPIO_NUM_NC);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, Controller::checkInputs(cfg));
+    }
+}
+
 TEST_CASE("loadFromJSONValid", "[Controller]")
 {
     ControllerConfig testConfig {};
@@ -333,7 +384,7 @@ TEST_CASE("handleProductPump", "[Controller]")
     Controller ctrl(1, 1024, 1, validConfig());
     TEST_ASSERT_TRUE(ctrl.isConfigured());
     const double hysteresisUpperBound = ControllerUT::getHysteresisUpperBound(ctrl);
-    const double hysteresisLowerBound = ControllerUT::getHysteresisUpperBound(ctrl);
+    const double hysteresisLowerBound = ControllerUT::getHysteresisLowerBound(ctrl);
     const Pump& productPump = ControllerUT::getProductPump(ctrl);
 
     // Below lower bound rising

@@ -365,7 +365,16 @@ PBRet Controller::checkInputs(const ControllerConfig& cfg)
         return PBRet::FAILURE;
     }
 
-    // TODO: Check if these pins are valid output pins
+    if (Pump::checkInputs(cfg.refluxPumpConfig) != PBRet::SUCCESS) {
+        ESP_LOGE(Controller::Name, "Reflux pump config was invalic");
+        return PBRet::FAILURE;
+    }
+
+    if (Pump::checkInputs(cfg.prodPumpConfig) != PBRet::SUCCESS) {
+        ESP_LOGE(Controller::Name, "Product pump config was invalic");
+        return PBRet::FAILURE;
+    }
+
     if ((cfg.fanPin <= GPIO_NUM_NC) || (cfg.fanPin > GPIO_NUM_MAX)) {
         ESP_LOGE(Controller::Name, "Fan GPIO %d is invalid. Controller was not configured", cfg.fanPin);
         return PBRet::FAILURE;
