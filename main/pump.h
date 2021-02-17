@@ -23,6 +23,16 @@ class PumpConfig
         ledc_timer_t timerChannel = LEDC_TIMER_0;
 };
 
+class PumpSpeeds
+{
+    public:
+        PumpSpeeds(void) = default;
+        PumpSpeeds(uint32_t refluxPumpSpeed, uint32_t productPumpSpeed)
+            : refluxPumpSpeed(refluxPumpSpeed), productPumpSpeed(productPumpSpeed) {}
+        uint32_t refluxPumpSpeed = 0.0;
+        uint32_t productPumpSpeed = 0.0;
+};
+
 class Pump
 {
     static constexpr const char* Name = "Pump";
@@ -33,9 +43,7 @@ class Pump
         explicit Pump(const PumpConfig& cfg);
 
         // Update
-        PBRet updatePumpActiveControl(uint32_t pumpSpeed) { return _updatePump(pumpSpeed, PumpMode::ActiveControl); }
-        PBRet updatePumpManualControl(uint32_t pumpSpeed)  { return _updatePump(pumpSpeed, PumpMode::ManualControl); }
-        void setPumpMode(PumpMode pumpMode) { _pumpMode = pumpMode; }
+        PBRet updatePumpSpeed(uint32_t pumpSpeed);      // TODO: make this function body _updatePump
 
         // Utility
         static PBRet checkInputs(const PumpConfig& cfg);
@@ -43,11 +51,11 @@ class Pump
 
         // Getters
         uint32_t getPumpSpeed(void) const;
-        PumpMode getPumpMode(void) const { return _pumpMode; }
         bool isConfigured(void) const { return _configured; }
 
-        static constexpr uint32_t PUMP_MIN_OUTPUT = 25;
-        static constexpr uint32_t PUMP_MAX_OUTPUT = 512;
+        static constexpr uint32_t PUMP_OFF = 0;
+        static constexpr uint32_t PUMP_IDLE_SPEED = 50;
+        static constexpr uint32_t PUMP_MAX_SPEED = 512;        // Based on 9 bit PWM
         static constexpr uint32_t FLUSH_SPEED = 512;
 
         // Friend class for unit testing
@@ -57,14 +65,10 @@ class Pump
         PBRet _initFromParams(const PumpConfig& cfg);
 
         // Update
-        PBRet _updatePump(double pumpSpeed, PumpMode pumpMode);
-        PBRet _drivePump(void) const;
-        PBRet _setSpeed(int16_t pumpSpeed, PumpMode pumpMode);
+        PBRet _drivePump(uint32_t pumpSpeed) const;
 
         bool _configured = false;
-        uint32_t _pumpSpeedActive = 0;
-        uint32_t _pumpSpeedManual = 0;
-        PumpMode _pumpMode = PumpMode::Off;
+        uint32_t _pumpSpeed = 0;
         PumpConfig _cfg;
 };
 

@@ -46,6 +46,7 @@ class MessageBase
         MessageType getType(void) const { return _type; }
         bool isValid(void) const { return _valid; }
         const std::string& getName(void) const { return _name; }
+        int64_t getTimeStamp(void) const { return _timeStamp; }
 
     protected:
         static constexpr const char* TimeStampStr = "timestamp";

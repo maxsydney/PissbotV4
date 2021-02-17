@@ -66,25 +66,8 @@ PBRet Pump::_initFromParams(const PumpConfig& cfg)
     return PBRet::SUCCESS;
 }
 
-PBRet Pump::_updatePump(double pumpSpeed, PumpMode pumpMode)
+PBRet Pump::_drivePump(uint32_t pumpSpeed) const
 {
-    if (isConfigured() == false) {
-        ESP_LOGW(Pump::Name, "Pump was not configured");
-        return PBRet::FAILURE;
-    }
-
-    if (_setSpeed(pumpSpeed, pumpMode) == PBRet::FAILURE) {
-        ESP_LOGW(Pump::Name, "Failed to update pump speed");
-        return PBRet::FAILURE;
-    }
-
-    return _drivePump();
-}
-
-PBRet Pump::_drivePump(void) const
-{
-    const uint32_t pumpSpeed = getPumpSpeed();
-
     if (ledc_set_duty(LEDC_HIGH_SPEED_MODE, _cfg.PWMChannel, pumpSpeed) != ESP_OK) {
         ESP_LOGW(Pump::Name, "ledc_set_duty failed with invalid parameter error. Likely pumpSpeed (%d)", pumpSpeed);
         return PBRet::FAILURE;
@@ -107,65 +90,16 @@ uint32_t Pump::getPumpSpeed(void) const
         return 0;
     }
 
-    switch (_pumpMode)
-    {
-        case (PumpMode::ActiveControl):
-        {
-            return _pumpSpeedActive;
-        }
-        case (PumpMode::ManualControl):
-        {
-            return _pumpSpeedManual;
-        }
-        case (PumpMode::Off):
-        {
-            return 0;
-        }
-        default:
-        {
-            ESP_LOGW(Pump::Name, "Unknown PumpMode");
-            return 0;
-        }
-    }
+    return _pumpSpeed;
 }
 
-PBRet Pump::_setSpeed(int16_t pumpSpeed, PumpMode pumpMode)
+PBRet Pump::updatePumpSpeed(uint32_t pumpSpeed)
 {
-    // Sets the current pump drive speed for the associated mode.
-    // The pumps physical speed will only change if the current
-    // pump mode matches the mode passed here. If not, the speed
-    // will be updated to the input speed when the pump is switched
-    // back into the input mode
+    // Update the current speed of the pump
 
     // Saturate output command
-    pumpSpeed = Utilities::bound(pumpSpeed, Pump::PUMP_MIN_OUTPUT, Pump::PUMP_MAX_OUTPUT);
-    
-    // Set the appropriate pump speed
-    switch (_pumpMode)
-    {
-        case (PumpMode::ActiveControl):
-        {
-            _pumpSpeedActive = pumpSpeed;
-            break;
-        }
-        case (PumpMode::ManualControl):
-        {
-            _pumpSpeedManual = pumpSpeed;
-            break;
-        }
-        case (PumpMode::Off):
-        {
-            ESP_LOGW(Pump::Name, "Cannot update pump speed for PumpMode Off");
-            return PBRet::FAILURE;
-        }
-        default:
-        {
-            ESP_LOGW(Pump::Name, "Unknown PumpMode");
-            return PBRet::FAILURE;
-        }
-    }
-
-    return PBRet::SUCCESS;
+    _pumpSpeed = Utilities::bound(pumpSpeed, Pump::PUMP_OFF, Pump::PUMP_MAX_SPEED);
+    return _drivePump(_pumpSpeed);
 }
 
 PBRet Pump::checkInputs(const PumpConfig& cfg)

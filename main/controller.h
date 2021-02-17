@@ -157,12 +157,18 @@ public:
 
 class Controller : public Task
 {
+    // Class strings
     static constexpr const char *Name = "Controller";
     static constexpr const char *FSBasePath = "/spiffs";
     static constexpr const char *FSPartitionLabel = "PBData";
     static constexpr const char *ctrlTuningFile = "/spiffs/ctrlTuning.json";
-    static constexpr double HYSTERESIS_BOUND_UPPER = 60;
-    static constexpr double HYSTERESIS_BOUND_LOWER = 58;
+
+    // Bounds
+    static constexpr double HYSTERESIS_BOUND_UPPER = 70;        // Upper hysteresis bound for product pump [deg c]
+    static constexpr double HYSTERESIS_BOUND_LOWER = 68;        // Lower hysteresis bound for product pump [deg c]
+    static constexpr double MAX_CONTROL_TEMP = 105;             // Maximum controllable temp [deg c]
+    static constexpr double MIN_CONTROL_TEMP = -5;              // Minimum controllable temp
+    static constexpr double TEMP_MESSAGE_TIMEOUT = 1e6;         // Time before temperarture message goes stale (us)
 
 public:
     // Constructors
@@ -186,7 +192,10 @@ private:
     // Updates
     PBRet _doControl(double temp);
     PBRet _updatePeripheralState(const ControlCommand &cmd);
-    PBRet _handleProductPump(double temp);
+    PBRet _updatePumps(void);
+    PBRet _updateProductPump(double temp);
+    PBRet _updateRefluxPump(void);
+    PBRet _checkTemperatures(const TemperatureData& currTemp) const;
 
     // Setup methods
     PBRet _initFromParams(const ControllerConfig &cfg);
@@ -219,13 +228,18 @@ private:
     ControlTuning _ctrlTuning{};
 
     Pump _refluxPump{};
-    Pump _prodPump{};
+    Pump _productPump{};
     bool _configured = false;
 
+    // Internal state
+    double _currentOutput = 0.0;
     double _prevError = 0.0;
     double _integral = 0.0;
     double _derivative = 0.0;
     double _prevTemp = 0.0;
+    PumpMode _refluxPumpMode = PumpMode::Off;
+    PumpMode _productPumpMode = PumpMode::Off;
+    PumpSpeeds _manualPumpSpeeds {};
 };
 
 #endif // MAIN_CONTROLLER_H

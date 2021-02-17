@@ -41,17 +41,27 @@ void Controller::taskMain(void)
         // Retrieve data from the queue
         _processQueue();
 
-        // Check temperature data
-
-        // Check status of connected components
+        // Check temperature data is valid
+        if (_checkTemperatures(_currentTemp) != PBRet::SUCCESS) {
+            ESP_LOGW(Controller::Name, "Temperatures were invalid");
+            // TODO: Implement emergency stop for cases like this
+        }
 
         // Update control
         if (_doControl(_currentTemp.headTemp) != PBRet::SUCCESS) {
-            ESP_LOGW(Controller::Name, "Controller update failed");
+            ESP_LOGW(Controller::Name, "Control law update failed");
             // Send warning message to distiller controller
         }
 
+        // Update peripheral outputs
+        if (_updatePeripheralState(_peripheralState) != PBRet::SUCCESS) {
+            ESP_LOGW(Controller::Name, "Peripheral update failed");
+        }
+
         // Command pumps
+        if (_updatePumps() != PBRet::SUCCESS) {
+            ESP_LOGW(Controller::Name, "Pump speeds were not updates");
+        }
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -72,7 +82,6 @@ PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;
 }
 
-// TODO: This can be removed
 PBRet Controller::_controlCommandCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<ControlCommand> cmd = std::static_pointer_cast<ControlCommand>(msg);
@@ -258,27 +267,31 @@ PBRet Controller::_initPumps(const PumpConfig& refluxPumpConfig, const PumpConfi
     // Initialize both pumps to active control idle
 
     _refluxPump = Pump(refluxPumpConfig);
-    _prodPump = Pump(prodPumpConfig);
+    _productPump = Pump(prodPumpConfig);
 
     if (_refluxPump.isConfigured() == false) {
         ESP_LOGW(Controller::Name, "Unable to configure reflux pump driver");
         return PBRet::FAILURE;
     }
 
-    if (_prodPump.isConfigured() == false) {
+    if (_productPump.isConfigured() == false) {
         ESP_LOGW(Controller::Name, "Unable to configure product pump driver");
         return PBRet::FAILURE;
     }
 
+    // Set pumps to off until Controller is configured
+    _refluxPumpMode = PumpMode::Off;
+    _productPumpMode = PumpMode::Off;
+
     return PBRet::SUCCESS;
 }
 
-PBRet Controller::_doControl(double headTemp)
+PBRet Controller::_doControl(double temp)
 {
     // Implements a basic PID controller with anti-integral windup
     // and filtering on derivative
 
-    double err = headTemp - _ctrlTuning.getSetpoint();
+    double err = temp - _ctrlTuning.getSetpoint();
 
     // Proportional term
     double proportional = _ctrlTuning.getPGain() * err;
@@ -290,15 +303,15 @@ PBRet Controller::_doControl(double headTemp)
     double intLimMin = 0.0;
     double intLimMax = 0.0;
 
-    if (proportional < Pump::PUMP_MAX_OUTPUT) {
-        intLimMax = Pump::PUMP_MAX_OUTPUT - proportional;
+    if (proportional < Pump::PUMP_MAX_SPEED) {
+        intLimMax = Pump::PUMP_MAX_SPEED - proportional;
     } else {
         intLimMax = 0.0;
     }
 
     // Anti integral windup
-    if (proportional > Pump::PUMP_MIN_OUTPUT) {
-        intLimMin = Pump::PUMP_MIN_OUTPUT - proportional;
+    if (proportional > Pump::PUMP_IDLE_SPEED) {
+        intLimMin = Pump::PUMP_IDLE_SPEED - proportional;
     } else {
         intLimMin = 0.0;
     }
@@ -311,32 +324,105 @@ PBRet Controller::_doControl(double headTemp)
 
     // Derivative term (discretized via backwards temperature differentiation)
     // TODO: Filtering on D term? Quite tricky due to low temp sensor sample rate
+    // TODO: Create filter object
     const double alpha = 0.15;      // TODO: Improve hacky dterm filter
-    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlTuning.getDGain() * (headTemp - _prevTemp) / _cfg.dt);
+    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlTuning.getDGain() * (temp - _prevTemp) / _cfg.dt);
 
     // Compute limited output
-    double output = proportional + _integral + _derivative;
-
+    _currentOutput = proportional + _integral + _derivative;
     _prevError = err;
-    _prevTemp = headTemp;
+    _prevTemp = temp;
 
-    _handleProductPump(headTemp);
+    return PBRet::SUCCESS;
+}
 
-    if (_refluxPump.updatePumpActiveControl(output) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "Controller updated successfully but failed to set pump speed");
+PBRet Controller::_updatePumps(void)
+{
+    // Update reflux pump
+    if (_updateRefluxPump() != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Pump update failed");
         return PBRet::FAILURE;
+    }
+
+    // Update product pump
+    if (_updateProductPump(_currentTemp.headTemp) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Pump update failed");
+        return PBRet::FAILURE;
+    }
+    
+    return PBRet::SUCCESS;
+}
+
+PBRet Controller::_updateRefluxPump(void)
+{
+    // Update the reflux pump speed
+    if (_refluxPumpMode == PumpMode::ActiveControl) {
+        if (_refluxPump.updatePumpSpeed(_currentOutput) != PBRet::SUCCESS) {
+            ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in active mode");
+            return PBRet::FAILURE;
+        }
+    } else if (_refluxPumpMode == PumpMode::ManualControl) {
+        if (_refluxPump.updatePumpSpeed(_manualPumpSpeeds.refluxPumpSpeed) != PBRet::SUCCESS) {
+            ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in manual mode");
+            return PBRet::FAILURE;
+        }
+    } else {
+        // Pump mode is OFF or unknown. Stop the pumps
+        if (_refluxPump.updatePumpSpeed(Pump::PUMP_OFF) != PBRet::SUCCESS) {
+            ESP_LOGW(Controller::Name, "Failed to stop reflux pump");
+            return PBRet::FAILURE;
+        }
     }
 
     return PBRet::SUCCESS;
 }
 
-// TODO: Improve this implementation
-PBRet Controller::_handleProductPump(double temp)
+PBRet Controller::_updateProductPump(double temp)
 {
-    if (temp > Controller::HYSTERESIS_BOUND_UPPER) {
-        _prodPump.updatePumpActiveControl(Pump::FLUSH_SPEED);
-    } else if (temp < Controller::HYSTERESIS_BOUND_LOWER) {
-        _prodPump.updatePumpActiveControl(Pump::PUMP_MIN_OUTPUT);
+    if (_productPumpMode == PumpMode::ActiveControl) {
+        // Control pump speed based on head temperature
+        if (temp >= Controller::HYSTERESIS_BOUND_UPPER) {
+            if (_productPump.updatePumpSpeed(Pump::FLUSH_SPEED) != PBRet::SUCCESS) {
+                ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in active mode");
+                return PBRet::FAILURE;
+            }
+        } else if (temp < Controller::HYSTERESIS_BOUND_LOWER) {
+            if (_productPump.updatePumpSpeed(Pump::PUMP_IDLE_SPEED) != PBRet::SUCCESS) {
+                ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in active mode");
+                return PBRet::FAILURE;
+            }
+        }
+    } else if (_productPumpMode == PumpMode::ManualControl) {
+        if (_productPump.updatePumpSpeed(_manualPumpSpeeds.productPumpSpeed) != PBRet::SUCCESS) {
+            ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in manual mode");
+            return PBRet::FAILURE;
+        }
+    } else {
+        // Pump mode is OFF or unknown. Stop the pumps
+        if (_productPump.updatePumpSpeed(Pump::PUMP_OFF) != PBRet::SUCCESS) {
+            ESP_LOGE(Controller::Name, "Failed to stop product pump");
+            return PBRet::FAILURE;
+        }
+    }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet Controller::_checkTemperatures(const TemperatureData &currTemp) const
+{
+    // Verify that the input temperatures are valid
+
+    // Check head temperature is within bounds
+    if ((currTemp.headTemp > MAX_CONTROL_TEMP) || (currTemp.headTemp < MIN_CONTROL_TEMP))
+    {
+        ESP_LOGW(Controller::Name, "Head temp (%.2f) was outside controllable bounds [%.2f, %.2f]", currTemp.headTemp, MIN_CONTROL_TEMP, MAX_CONTROL_TEMP);
+        return PBRet::FAILURE;
+    }
+
+    // Check that current temperature hasn't expired
+    if ((esp_timer_get_time() - currTemp.getTimeStamp()) > TEMP_MESSAGE_TIMEOUT) {
+        ESP_LOGW(Controller::Name, "Temperature message was stale");
+        return PBRet::FAILURE;
     }
 
     return PBRet::SUCCESS;
@@ -476,8 +562,8 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
     }
 
     // Set pumps to active control
-    _refluxPump.setPumpMode(PumpMode::ActiveControl);
-    _prodPump.setPumpMode(PumpMode::ActiveControl);
+    _refluxPumpMode = PumpMode::ActiveControl;
+    _productPumpMode = PumpMode::ActiveControl;
     _cfg = cfg;
 
     return PBRet::SUCCESS;
