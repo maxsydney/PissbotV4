@@ -32,10 +32,10 @@ ControllerConfig validConfig(void)
 class ControllerUT
 {
     public:
-        static Pump& getProductPump(Controller& ctrl) { return ctrl._prodPump; }
+        static Pump& getProductPump(Controller& ctrl) { return ctrl._productPump; }
         static double getHysteresisUpperBound(Controller& ctrl) { return ctrl.HYSTERESIS_BOUND_UPPER; }
         static double getHysteresisLowerBound(Controller& ctrl) { return ctrl.HYSTERESIS_BOUND_LOWER; }
-        static PBRet handleProductPump(Controller& ctrl, double T) { return ctrl._handleProductPump(T); }
+        static PBRet updateProductPump(Controller& ctrl, double T) { return ctrl._updateProductPump(T); }
 };
 
 TEST_CASE("Constructor", "[Controller]")
@@ -379,7 +379,7 @@ TEST_CASE("ControlCommand serialization/deserialization", "[Controller]")
     TEST_ASSERT_EQUAL(ctrlCommandIn.HPElementState, ctrlCommandOut.HPElementState);
 }
 
-TEST_CASE("handleProductPump", "[Controller]")
+TEST_CASE("updateProductPump", "[Controller]")
 {
     Controller ctrl(1, 1024, 1, validConfig());
     TEST_ASSERT_TRUE(ctrl.isConfigured());
@@ -388,24 +388,24 @@ TEST_CASE("handleProductPump", "[Controller]")
     const Pump& productPump = ControllerUT::getProductPump(ctrl);
 
     // Below lower bound rising
-    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, 0.0));
-    TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, productPump.getPumpSpeed());
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
+    TEST_ASSERT_EQUAL(Pump::PUMP_IDLE_SPEED, productPump.getPumpSpeed());
 
     // Above lower bound rising
-    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, hysteresisLowerBound + 1));
-    TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, productPump.getPumpSpeed());
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, hysteresisLowerBound + 1));
+    TEST_ASSERT_EQUAL(Pump::PUMP_IDLE_SPEED, productPump.getPumpSpeed());
 
     // Above upper bound rising
-    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, hysteresisUpperBound + 1));
-    TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, productPump.getPumpSpeed());
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, hysteresisUpperBound + 1));
+    TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, productPump.getPumpSpeed());
 
     // Above lower bound falling
-    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, hysteresisLowerBound + 1));
-    TEST_ASSERT_EQUAL(Pump::PUMP_MAX_OUTPUT, productPump.getPumpSpeed());
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, hysteresisLowerBound + 1));
+    TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, productPump.getPumpSpeed());
 
     // Below lower bound falling
-    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::handleProductPump(ctrl, 0.0));
-    TEST_ASSERT_EQUAL(Pump::PUMP_MIN_OUTPUT, productPump.getPumpSpeed());
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
+    TEST_ASSERT_EQUAL(Pump::PUMP_IDLE_SPEED, productPump.getPumpSpeed());
 }
 
 #ifdef __cplusplus
