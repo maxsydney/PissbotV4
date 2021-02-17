@@ -85,7 +85,7 @@ TEST_CASE("updatePumpSpeed", "[Pump]")
     {
         Pump testPump(cfg);
         TEST_ASSERT_TRUE(testPump.isConfigured());
-        testPump.updatePumpSpeed(256);
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, testPump.updatePumpSpeed(256));
         vTaskDelay(25 / portTICK_PERIOD_MS);
         
         TEST_ASSERT_EQUAL(256, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
@@ -96,11 +96,19 @@ TEST_CASE("updatePumpSpeed", "[Pump]")
     {
         Pump testPump(cfg);
         TEST_ASSERT_TRUE(testPump.isConfigured());
-        testPump.updatePumpSpeed(1000);
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, testPump.updatePumpSpeed(1000));
         vTaskDelay(25 / portTICK_PERIOD_MS);
         
         TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
         TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, testPump.getPumpSpeed());
+    }
+
+    // Can't update speed on unconfigured pump
+    {
+        const PumpConfig invalidCfg {};
+        Pump testPump(invalidCfg);
+        TEST_ASSERT_FALSE(testPump.isConfigured());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, testPump.updatePumpSpeed(1000));
     }
 }
 

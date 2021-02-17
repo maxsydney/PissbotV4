@@ -37,6 +37,7 @@ class ControllerUT
         static double getHysteresisLowerBound(Controller& ctrl) { return ctrl.HYSTERESIS_BOUND_LOWER; }
         static PBRet updateProductPump(Controller& ctrl, double T) { return ctrl._updateProductPump(T); }
         static PBRet initIO(Controller& ctrl, const ControllerConfig& cfg) { return ctrl._initIO(cfg); }
+        static PBRet initPumps(Controller& ctrl, const PumpConfig& refluxCfg, const PumpConfig prodCfg) { return ctrl._initPumps(refluxCfg, prodCfg); }
 };
 
 TEST_CASE("Constructor", "[Controller]")
@@ -137,6 +138,31 @@ TEST_CASE("InitIO", "[Controller]")
         ControllerConfig validCfg = validConfig();
         validCfg.element2Pin = static_cast<gpio_num_t> (GPIO_NUM_MAX);
         TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::initIO(testCtrl, validCfg));
+    }
+}
+
+TEST_CASE("InitPumps", "[Controller]")
+{
+    const PumpConfig validPumpConfig(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
+    const PumpConfig invalidPumpConfig {};
+    Controller testCtrl(1, 1024, 1, validConfig());
+    TEST_ASSERT_TRUE(testCtrl.isConfigured());
+
+    // Init valid pumps
+    {
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::initPumps(testCtrl, validPumpConfig, validPumpConfig));
+        TEST_ASSERT_EQUAL(PumpMode::Off, testCtrl.getRefluxPumpMode());
+        TEST_ASSERT_EQUAL(PumpMode::Off, testCtrl.getProductPumpMode());
+    }
+
+    // Invalid reflux pump
+    {
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::initPumps(testCtrl, invalidPumpConfig, validPumpConfig));
+    }
+
+    // Invalid product pump
+    {
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::initPumps(testCtrl, validPumpConfig, invalidPumpConfig));
     }
 }
 

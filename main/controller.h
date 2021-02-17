@@ -174,13 +174,14 @@ public:
     // Constructors
     Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const ControllerConfig &cfg);
 
-    // Update methods
-    void updateComponents();
-
     // Utility
     static PBRet checkInputs(const ControllerConfig &cfg);
     static PBRet loadFromJSON(ControllerConfig &cfg, const cJSON *cfgRoot);
     bool isConfigured(void) const { return _configured; }
+
+    // Getters
+    PumpMode getRefluxPumpMode(void) const { return _refluxPumpMode; }
+    PumpMode getProductPumpMode(void) const { return _productPumpMode; }
 
     friend class ControllerUT;
 

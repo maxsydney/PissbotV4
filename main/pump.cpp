@@ -97,6 +97,11 @@ PBRet Pump::updatePumpSpeed(uint32_t pumpSpeed)
 {
     // Update the current speed of the pump
 
+    if (isConfigured() == false) {
+        ESP_LOGW(Pump::Name, "Pump was not configured");
+        return PBRet::FAILURE;
+    }
+
     // Saturate output command
     _pumpSpeed = Utilities::bound(pumpSpeed, Pump::PUMP_OFF, Pump::PUMP_MAX_SPEED);
     return _drivePump(_pumpSpeed);
