@@ -79,6 +79,7 @@ TEST_CASE("checkInputs", "[Pump]")
 TEST_CASE("updatePumpSpeed", "[Pump]")
 {
     // Test public interface
+    // NOTE: This test fails, ledc_get_duty always reports 0
     const PumpConfig cfg(GPIO_NUM_23, LEDC_CHANNEL_0, LEDC_TIMER_0);
 
     // Valid speed active
@@ -86,7 +87,6 @@ TEST_CASE("updatePumpSpeed", "[Pump]")
         Pump testPump(cfg);
         TEST_ASSERT_TRUE(testPump.isConfigured());
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, testPump.updatePumpSpeed(256));
-        vTaskDelay(25 / portTICK_PERIOD_MS);
         
         TEST_ASSERT_EQUAL(256, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
         TEST_ASSERT_EQUAL(256, testPump.getPumpSpeed());
@@ -97,7 +97,6 @@ TEST_CASE("updatePumpSpeed", "[Pump]")
         Pump testPump(cfg);
         TEST_ASSERT_TRUE(testPump.isConfigured());
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, testPump.updatePumpSpeed(1000));
-        vTaskDelay(25 / portTICK_PERIOD_MS);
         
         TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, ledc_get_duty(LEDC_HIGH_SPEED_MODE, cfg.PWMChannel));
         TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, testPump.getPumpSpeed());

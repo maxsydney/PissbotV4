@@ -28,7 +28,7 @@ PBRet Pump::_initFromParams(const PumpConfig& cfg)
     // TODO: Move this to JSON config
     const ledc_timer_config_t PWM_timer = {
         .speed_mode = LEDC_HIGH_SPEED_MODE,
-        .duty_resolution = LEDC_TIMER_9_BIT,
+        .duty_resolution = LEDC_TIMER_10_BIT,
         .timer_num = cfg.timerChannel,
         .freq_hz = 5000,
         .clk_cfg = LEDC_AUTO_CLK

@@ -55,8 +55,8 @@ class Pump
 
         static constexpr uint32_t PUMP_OFF = 0;
         static constexpr uint32_t PUMP_IDLE_SPEED = 50;
-        static constexpr uint32_t PUMP_MAX_SPEED = 512;        // Based on 9 bit PWM
-        static constexpr uint32_t FLUSH_SPEED = 512;
+        static constexpr uint32_t PUMP_MAX_SPEED = 1024;        // Based on 9 bit PWM
+        static constexpr uint32_t FLUSH_SPEED = 1024;
 
         // Friend class for unit testing
         friend class PumpUT;

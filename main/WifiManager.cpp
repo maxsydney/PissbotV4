@@ -14,7 +14,6 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
-int WifiManager::_numRetries = 0;
 EventGroupHandle_t WifiManager::_wifiEventGroup = nullptr;
 
 void WifiManager::_eventHandler(void* arg, esp_event_base_t eventBase, int32_t eventID, void* eventData)
@@ -31,16 +30,16 @@ void WifiManager::_eventHandler(void* arg, esp_event_base_t eventBase, int32_t e
             // Lost connection to network. Attempt to reconnect
             case WIFI_EVENT_STA_DISCONNECTED:
             {
+                // Keep spamming retry attempts until we succeeds
                 ESP_LOGW(WifiManager::Name, "Failed to connect to Wifi network");
-                if (_numRetries < MAX_RETRIES) {
-                    esp_wifi_connect();
-                    _numRetries++;
-                    ESP_LOGI(WifiManager::Name, "Attempting to reconnect");
-                } else {
-                    xEventGroupSetBits(_wifiEventGroup, WIFI_FAIL_BIT);
-                    ESP_LOGE(WifiManager::Name,"The maximum number of retry attempts was reached");
-                }
+                esp_wifi_connect();
+                ESP_LOGI(WifiManager::Name, "Attempting to reconnect");
                 break;
+            }
+            case WIFI_EVENT_STA_CONNECTED:
+            {
+                ESP_LOGI(WifiManager::Name, "Successfully connected to WiFi network!");
+                break;  
             }
             default:
             {
@@ -50,7 +49,6 @@ void WifiManager::_eventHandler(void* arg, esp_event_base_t eventBase, int32_t e
     } else if (eventBase == IP_EVENT && eventID == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) eventData;
         ESP_LOGI(WifiManager::Name, "Got IP:" IPSTR, IP2STR(&event->ip_info.ip));
-        _numRetries = 0;
         xEventGroupSetBits(_wifiEventGroup, WIFI_CONNECTED_BIT);
     }   
 }
@@ -88,6 +86,7 @@ PBRet WifiManager::connect(const char* ssid, const char* password)
     }
 
     // Set static IP
+    // TODO: Implement better way to configure stating IP (from config?)
     esp_netif_dhcpc_stop(netif);
     esp_netif_ip_info_t ip_info;
     IP4_ADDR(&ip_info.ip, 192, 168, 1, 201);
@@ -115,29 +114,5 @@ PBRet WifiManager::connect(const char* ssid, const char* password)
     }
 
     ESP_LOGI(WifiManager::Name, "Wifi initialized as station");
-
-    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
-    EventBits_t bits = xEventGroupWaitBits(_wifiEventGroup,
-            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
-
-    /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
-     * happened. */
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(WifiManager::Name, "Connected to ap %s", wifiConfig.sta.ssid);
-    } else if (bits & WIFI_FAIL_BIT) {
-        ESP_LOGI(WifiManager::Name, "Failed to connect to %s", wifiConfig.sta.ssid);
-    } else {
-        ESP_LOGE(WifiManager::Name, "UNEXPECTED EVENT");
-    }
-
-    /* The event will not be processed after unregister */
-    esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &WifiManager::_eventHandler);
-    esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiManager::_eventHandler);
-    vEventGroupDelete(_wifiEventGroup);
-
     return PBRet::SUCCESS;
 }

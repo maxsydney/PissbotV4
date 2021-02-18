@@ -79,8 +79,6 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
     }
 
     // Connect to Wifi
-    // TODO: Could move this to its own task, currently blocks the rest of the 
-    //       distiller software which is not ideal
     WifiManager::connect("PBLink", "pissbot1");
 
     // Initialize Controller

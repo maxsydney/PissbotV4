@@ -291,15 +291,16 @@ PBRet Controller::_doControl(double temp)
     // Implements a basic PID controller with anti-integral windup
     // and filtering on derivative
 
-    double err = temp - _ctrlTuning.getSetpoint();
+    const double err = temp - _ctrlTuning.getSetpoint();
 
     // Proportional term
-    double proportional = _ctrlTuning.getPGain() * err;
+    const double proportional = _ctrlTuning.getPGain() * err;
 
     // Integral term (discretized via bilinear transform)
     _integral += 0.5 * _ctrlTuning.getIGain() * _cfg.dt * (err + _prevError);
 
-    // Dynamic integral clamping
+    // Dynamic integral clamping/anti windup. Limit integral signal so that
+    // PI control does not exceed pump maximum speed. 
     double intLimMin = 0.0;
     double intLimMax = 0.0;
 
@@ -309,7 +310,6 @@ PBRet Controller::_doControl(double temp)
         intLimMax = 0.0;
     }
 
-    // Anti integral windup
     if (proportional > Pump::PUMP_IDLE_SPEED) {
         intLimMin = Pump::PUMP_IDLE_SPEED - proportional;
     } else {

@@ -15,18 +15,12 @@
 class WifiManager
 {
     static constexpr const char* Name = "Wifi Manager";
-    static constexpr int MAX_RETRIES = 100;
-    static constexpr const char* STATIC_IP = "192.168.1.202";
-    static constexpr const char* SUBNET_MASK = "255.255.255.0";
-    static constexpr const char* GATE_WAY = "192.168.1.1";
-    static constexpr const char* DNS_SERVER = "8.8.8.8";
 
     public:
         static PBRet connect(const char* ssid, const char* password);
 
     private:
 
-        static int _numRetries;
         static EventGroupHandle_t _wifiEventGroup;
 
         // Event handler callback.
