@@ -32,12 +32,18 @@ ControllerConfig validConfig(void)
 class ControllerUT
 {
     public:
+        static Pump& getRefluxPump(Controller& ctrl) { return ctrl._refluxPump; }
         static Pump& getProductPump(Controller& ctrl) { return ctrl._productPump; }
+        static void setRefluxPump(Controller& ctrl, const Pump& pump) { ctrl._refluxPump = pump; }
+        static void setProductPump(Controller& ctrl, const Pump& pump) { ctrl._productPump = pump; }
         static double getHysteresisUpperBound(Controller& ctrl) { return ctrl.HYSTERESIS_BOUND_UPPER; }
         static double getHysteresisLowerBound(Controller& ctrl) { return ctrl.HYSTERESIS_BOUND_LOWER; }
         static PBRet updateProductPump(Controller& ctrl, double T) { return ctrl._updateProductPump(T); }
         static PBRet initIO(Controller& ctrl, const ControllerConfig& cfg) { return ctrl._initIO(cfg); }
         static PBRet initPumps(Controller& ctrl, const PumpConfig& refluxCfg, const PumpConfig prodCfg) { return ctrl._initPumps(refluxCfg, prodCfg); }
+        static PBRet updateRefluxPump(Controller& ctrl) { return ctrl._updateRefluxPump(); }
+        static void setCurrentOutput(Controller& ctrl, double output) { ctrl._currentOutput = output; }
+        static void setManualPumpSpeed(Controller& ctrl, const PumpSpeeds& pumpSpeeds) { ctrl._manualPumpSpeeds = pumpSpeeds; }
 };
 
 TEST_CASE("Constructor", "[Controller]")
@@ -163,6 +169,91 @@ TEST_CASE("InitPumps", "[Controller]")
     // Invalid product pump
     {
         TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::initPumps(testCtrl, validPumpConfig, invalidPumpConfig));
+    }
+}
+
+TEST_CASE("updateRefluxPump", "[Controller]")
+{
+
+    // Unconfigured pump
+    {
+        Controller testCtrl(1, 1024, 1, validConfig());
+        TEST_ASSERT_TRUE(testCtrl.isConfigured());
+        PumpConfig invalidPumpCfg {};
+        Pump invalidPump(invalidPumpCfg);
+        ControllerUT::setRefluxPump(testCtrl, invalidPump);
+
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::updateRefluxPump(testCtrl));
+    }
+
+    // Active control valid update
+    {
+        Controller testCtrl(1, 1024, 1, validConfig());
+        TEST_ASSERT_TRUE(testCtrl.isConfigured());
+        testCtrl.setRefluxPumpMode(PumpMode::ActiveControl);
+        ControllerUT::setCurrentOutput(testCtrl, 256);
+        Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
+
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateRefluxPump(testCtrl));
+        TEST_ASSERT_EQUAL(256, refluxPump.getPumpSpeed());
+    }
+
+    // Active control above max speed
+    {
+        Controller testCtrl(1, 1024, 1, validConfig());
+        TEST_ASSERT_TRUE(testCtrl.isConfigured());
+        testCtrl.setRefluxPumpMode(PumpMode::ActiveControl);
+        ControllerUT::setCurrentOutput(testCtrl, Pump::PUMP_MAX_SPEED + 1);
+        Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
+
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateRefluxPump(testCtrl));
+        TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, refluxPump.getPumpSpeed());
+    }
+
+    // Manual control valid update
+    {
+        Controller testCtrl(1, 1024, 1, validConfig());
+        TEST_ASSERT_TRUE(testCtrl.isConfigured());
+        testCtrl.setRefluxPumpMode(PumpMode::ManualControl);
+        Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
+
+        PumpSpeeds validSpeeds(256, 256);
+        ControllerUT::setManualPumpSpeed(testCtrl, validSpeeds);
+
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateRefluxPump(testCtrl));
+        TEST_ASSERT_EQUAL(256, refluxPump.getPumpSpeed());
+    }
+
+    // Manual control above max speed
+    {
+        Controller testCtrl(1, 1024, 1, validConfig());
+        TEST_ASSERT_TRUE(testCtrl.isConfigured());
+        testCtrl.setRefluxPumpMode(PumpMode::ManualControl);
+        Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
+
+        PumpSpeeds invalidSpeeds(Pump::PUMP_MAX_SPEED + 1, Pump::PUMP_MAX_SPEED + 1);
+        ControllerUT::setManualPumpSpeed(testCtrl, invalidSpeeds);
+
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateRefluxPump(testCtrl));
+        TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, refluxPump.getPumpSpeed());
+    }
+
+    // Turn pump off
+    {
+        Controller testCtrl(1, 1024, 1, validConfig());
+        TEST_ASSERT_TRUE(testCtrl.isConfigured());
+        testCtrl.setRefluxPumpMode(PumpMode::ActiveControl);
+        ControllerUT::setCurrentOutput(testCtrl, 256);
+        Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
+
+        // Set pump going
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateRefluxPump(testCtrl));
+        TEST_ASSERT_EQUAL(256, refluxPump.getPumpSpeed());
+
+        // Stop pump
+        testCtrl.setRefluxPumpMode(PumpMode::Off);
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateRefluxPump(testCtrl));
+        TEST_ASSERT_EQUAL(0, refluxPump.getPumpSpeed());
     }
 }
 

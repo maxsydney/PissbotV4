@@ -179,6 +179,10 @@ public:
     static PBRet loadFromJSON(ControllerConfig &cfg, const cJSON *cfgRoot);
     bool isConfigured(void) const { return _configured; }
 
+    // Setters
+    void setRefluxPumpMode(PumpMode pumpMode) { _refluxPumpMode = pumpMode; }
+    void setProductPumpMode(PumpMode pumpMode) { _productPumpMode = pumpMode; }
+
     // Getters
     PumpMode getRefluxPumpMode(void) const { return _refluxPumpMode; }
     PumpMode getProductPumpMode(void) const { return _productPumpMode; }
