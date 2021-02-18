@@ -408,7 +408,7 @@ PBRet Controller::_updateProductPump(double temp)
     return PBRet::SUCCESS;
 }
 
-PBRet Controller::_checkTemperatures(const TemperatureData &currTemp) const
+PBRet Controller::_checkTemperatures(const TemperatureData& currTemp) const
 {
     // Verify that the input temperatures are valid
 

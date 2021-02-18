@@ -44,6 +44,7 @@ class ControllerUT
         static PBRet updateRefluxPump(Controller& ctrl) { return ctrl._updateRefluxPump(); }
         static void setCurrentOutput(Controller& ctrl, double output) { ctrl._currentOutput = output; }
         static void setManualPumpSpeed(Controller& ctrl, const PumpSpeeds& pumpSpeeds) { ctrl._manualPumpSpeeds = pumpSpeeds; }
+        static PBRet checkTemperatures(Controller& ctrl, const TemperatureData& currTemp) { return ctrl._checkTemperatures(currTemp); }
 };
 
 TEST_CASE("Constructor", "[Controller]")
@@ -303,6 +304,38 @@ TEST_CASE("updateProductPump", "[Controller]")
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
     TEST_ASSERT_EQUAL(0, productPump.getPumpSpeed());
 }
+
+TEST_CASE("checkTemperatures", "[Controller]")
+{
+    Controller ctrl(1, 1024, 1, validConfig());
+    TEST_ASSERT_TRUE(ctrl.isConfigured());
+
+    // Valid temperatures
+    {
+        TemperatureData validTemp(0.0, 0.0, 0.0, 0.0, 0.0);        // 0 is a valid temperature
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::checkTemperatures(ctrl, validTemp));
+    }
+
+    // Temperature above max control temp
+    {
+        TemperatureData invalidTemp(110.0, 0.0, 0.0, 0.0, 0.0);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::checkTemperatures(ctrl, invalidTemp));
+    }
+
+    // Temperature below min control temp
+    {
+        TemperatureData invalidTemp(-10.0, 0.0, 0.0, 0.0, 0.0);
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::checkTemperatures(ctrl, invalidTemp));
+    }
+
+    // Temperature message is stale
+    {
+        TemperatureData validTemp(0.0, 0.0, 0.0, 0.0, 0.0);
+        vTaskDelay(1250 / portTICK_PERIOD_MS);      // Wait for message to go stale
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::checkTemperatures(ctrl, validTemp));
+    }
+}
+
 TEST_CASE("loadFromJSONValid", "[Controller]")
 {
     ControllerConfig testConfig {};
