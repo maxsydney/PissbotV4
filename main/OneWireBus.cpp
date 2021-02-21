@@ -540,7 +540,7 @@ PBRet TemperatureData::serialize(std::string &JSONStr) const
         return PBRet::FAILURE;
     }
 
-    if (cJSON_AddNumberToObject(root, TemperatureData::RadiatorTempStr, refluxCondensorTemp) == nullptr) {
+    if (cJSON_AddNumberToObject(root, TemperatureData::RefluxCondensorTempStr, refluxCondensorTemp) == nullptr) {
         ESP_LOGW(TemperatureData::Name, "Unable to add reflux condensor temp to temperature JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
