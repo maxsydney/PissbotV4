@@ -20,6 +20,12 @@ static const char* distillerManagerConfig = "\
                 \"GPIO\": 22,\
                 \"PWMChannel\": 1,\
                 \"timerChannel\": 1\
+            },\
+            \"slowPMWLPElement\": {\
+                \"PWMFreq\": 5\
+            },\
+            \"slowPMWHPElement\": {\
+                \"PWMFreq\": 5\
             }\
         },\
         \"SensorManagerConfig\": {\

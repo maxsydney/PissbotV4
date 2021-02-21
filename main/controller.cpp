@@ -286,6 +286,26 @@ PBRet Controller::_initPumps(const PumpConfig& refluxPumpConfig, const PumpConfi
     return PBRet::SUCCESS;
 }
 
+PBRet Controller::_initPWM(const SlowPWMConfig& LPElementCfg, const SlowPWMConfig& HPElementCfg)
+{
+    // Initialize SlowPWM drivers
+
+    _LPElementPWM = SlowPWM(LPElementCfg);
+    _HPElementPWM = SlowPWM(HPElementCfg);
+
+    if (_LPElementPWM.isConfigured() == false) {
+        ESP_LOGW(Controller::Name, "Unable to configure low power element PWM driver");
+        return PBRet::FAILURE;
+    }
+
+    if (_HPElementPWM.isConfigured() == false) {
+        ESP_LOGW(Controller::Name, "Unable to configure high power element PWM driver");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}
+
 PBRet Controller::_doControl(double temp)
 {
     // Implements a basic PID controller with anti-integral windup
@@ -432,9 +452,26 @@ PBRet Controller::_updatePeripheralState(const ControlCommand& cmd)
 {
     esp_err_t err = ESP_OK;
 
-    err |= gpio_set_level(_cfg.fanPin, uint32_t(cmd.fanState));
-    err |= gpio_set_level(_cfg.element1Pin, uint32_t(cmd.LPElementState));
-    err |= gpio_set_level(_cfg.element2Pin, uint32_t(cmd.HPElementState));
+    // Update PWM drivers
+    uint32_t LPElementState = 0;
+    if (_LPElementPWM.update(esp_timer_get_time()) == PBRet::SUCCESS) {
+        LPElementState = _LPElementPWM.getOutputState();
+    } else {
+        ESP_LOGW(Controller::Name, "Failed to update LPElement PWM driver");
+        err |= ESP_FAIL;
+    }
+
+    uint32_t HPElementState = 0;
+    if (_HPElementPWM.update(esp_timer_get_time()) == PBRet::SUCCESS) {
+        HPElementState = _HPElementPWM.getOutputState();
+    } else {
+        ESP_LOGW(Controller::Name, "Failed to update HPElement PWM driver");
+        err |= ESP_FAIL;
+    }
+
+    err |= gpio_set_level(_cfg.fanPin, static_cast<uint32_t> (cmd.fanState));
+    err |= gpio_set_level(_cfg.element1Pin, LPElementState);
+    err |= gpio_set_level(_cfg.element2Pin, HPElementState);
 
     if (err != ESP_OK) {
         ESP_LOGW(Controller::Name, "One or more of the auxilliary states were not updated");
@@ -536,23 +573,40 @@ PBRet Controller::loadFromJSON(ControllerConfig& cfg, const cJSON* cfgRoot)
         return PBRet::FAILURE;
     }
 
+    // Load LPElement PWM driver
+    cJSON* LPElementPWMNode = cJSON_GetObjectItem(cfgRoot, "slowPMWLPElement");
+    if (SlowPWM::loadFromJSON(cfg.LPElementPWM, LPElementPWMNode) != PBRet::SUCCESS) {
+        return PBRet::FAILURE;
+    }
+
+    // Load HPElement PWM driver
+    cJSON* HPElementPWMNode = cJSON_GetObjectItem(cfgRoot, "slowPMWHPElement");
+    if (SlowPWM::loadFromJSON(cfg.HPElementPWM, HPElementPWMNode) != PBRet::SUCCESS) {
+        return PBRet::FAILURE;
+    }
+
     return PBRet::SUCCESS;
 }
 
 PBRet Controller::_initFromParams(const ControllerConfig& cfg)
 {
     if (Controller::checkInputs(cfg) != PBRet::SUCCESS) {;
-        ESP_LOGW(Controller::Name, "Unable to configure controller");
+        ESP_LOGE(Controller::Name, "Unable to configure controller");
         return PBRet::FAILURE;
     }
 
     if (_initPumps(cfg.refluxPumpConfig, cfg.prodPumpConfig) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "Unable to configure one or more pumps");
+        ESP_LOGE(Controller::Name, "Unable to configure one or more pumps");
         return PBRet::FAILURE;
     }
 
     if (_initIO(cfg) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "Unable to configure controller I/O");
+        ESP_LOGE(Controller::Name, "Unable to configure controller I/O");
+        return PBRet::FAILURE;
+    }
+
+    if (_initPWM(cfg.LPElementPWM, cfg.HPElementPWM) != PBRet::SUCCESS) {
+        ESP_LOGE(Controller::Name, "One or more PWM drivers were not configured");
         return PBRet::FAILURE;
     }
 
@@ -786,7 +840,7 @@ PBRet ControlCommand::serialize(std::string &JSONStr) const
     cJSON_AddItemToObject(root, ControlCommand::FanStateStr, fanStateNode);
 
     // Add low power element
-    cJSON* LPElementNode = cJSON_CreateNumber(static_cast<int>(LPElementState));
+    cJSON* LPElementNode = cJSON_CreateNumber(LPElementDutyCycle);
     if (LPElementNode == nullptr) {
         ESP_LOGW(ControlCommand::Name, "Error creating low power element JSON object");
         cJSON_Delete(root);
@@ -795,7 +849,7 @@ PBRet ControlCommand::serialize(std::string &JSONStr) const
     cJSON_AddItemToObject(root, ControlCommand::LPElementStr, LPElementNode);
 
     // Add high power element
-    cJSON* HPElementNode = cJSON_CreateNumber(static_cast<int>(HPElementState));
+    cJSON* HPElementNode = cJSON_CreateNumber(HPElementDutyCycle);
     if (HPElementNode == nullptr) {
         ESP_LOGW(ControlCommand::Name, "Error creating high power element JSON object");
         cJSON_Delete(root);
@@ -832,18 +886,18 @@ PBRet ControlCommand::deserialize(const cJSON *root)
     // Read LPElement
     const cJSON* LPElementNode = cJSON_GetObjectItem(root, ControlCommand::LPElementStr);
     if (cJSON_IsNumber(LPElementNode)) {
-        LPElementState = static_cast<ControllerState>(LPElementNode->valueint);
+        LPElementDutyCycle = LPElementNode->valuedouble;
     } else {
-        ESP_LOGI(ControlCommand::Name, "Unable to read LP Element state from JSON");
+        ESP_LOGI(ControlCommand::Name, "Unable to read LP Element duty cycle from JSON");
         return PBRet::FAILURE;
     }
 
     // Read HPElement
     const cJSON* HPElementNode = cJSON_GetObjectItem(root, ControlCommand::HPElementStr);
     if (cJSON_IsNumber(HPElementNode)) {
-        HPElementState = static_cast<ControllerState>(HPElementNode->valueint);
+        HPElementDutyCycle = HPElementNode->valuedouble;
     } else {
-        ESP_LOGI(ControlCommand::Name, "Unable to read HP Element state from JSON");
+        ESP_LOGI(ControlCommand::Name, "Unable to read HP Element duty cycle from JSON");
         return PBRet::FAILURE;
     }
 

@@ -6,6 +6,7 @@
 #include "messageServer.h"
 #include "SensorManager.h"
 #include "pump.h"
+#include "SlowPWM.h"
 
 enum class ControllerState
 {
@@ -110,6 +111,8 @@ struct ControllerConfig
     gpio_num_t fanPin = (gpio_num_t)GPIO_NUM_NC;
     gpio_num_t element1Pin = (gpio_num_t)GPIO_NUM_NC;
     gpio_num_t element2Pin = (gpio_num_t)GPIO_NUM_NC;
+    SlowPWMConfig LPElementPWM {};
+    SlowPWMConfig HPElementPWM {};
 };
 
 class ControllerDataRequest : public MessageBase
@@ -140,19 +143,19 @@ class ControlCommand : public MessageBase
 
 public:
     ControlCommand(void) = default;
-    ControlCommand(ControllerState fanState, ControllerState LPElementState, ControllerState HPElementState)
+    ControlCommand(ControllerState fanState, double LPElementDutyCycle, double HPElementDutyCycle)
         : MessageBase(ControlCommand::messageType, ControlCommand::Name, esp_timer_get_time()),
-          fanState(fanState), LPElementState(LPElementState), HPElementState(HPElementState) {}
+          fanState(fanState), LPElementDutyCycle(LPElementDutyCycle), HPElementDutyCycle(HPElementDutyCycle) {}
     ControlCommand(const ControlCommand& other)
         : MessageBase(ControlCommand::messageType, ControlCommand::Name, esp_timer_get_time()), fanState(other.fanState),
-          LPElementState(other.LPElementState), HPElementState(other.HPElementState) {}
+          LPElementDutyCycle(other.LPElementDutyCycle), HPElementDutyCycle(other.HPElementDutyCycle) {}
 
     PBRet serialize(std::string &JSONStr) const;
     PBRet deserialize(const cJSON *root);
 
     ControllerState fanState = ControllerState::OFF;
-    ControllerState LPElementState = ControllerState::OFF;
-    ControllerState HPElementState = ControllerState::OFF;
+    double LPElementDutyCycle = 0.0;
+    double HPElementDutyCycle = 0.0;
 };
 
 class Controller : public Task
@@ -193,6 +196,7 @@ private:
     // Initialization
     PBRet _initIO(const ControllerConfig &cfg) const;
     PBRet _initPumps(const PumpConfig &refluxPumpConfig, const PumpConfig &prodPumpConfig);
+    PBRet _initPWM(const SlowPWMConfig& LPElementCfg, const SlowPWMConfig& HPElementCfg);
 
     // Updates
     PBRet _doControl(double temp);
@@ -245,6 +249,8 @@ private:
     PumpMode _refluxPumpMode = PumpMode::Off;
     PumpMode _productPumpMode = PumpMode::Off;
     PumpSpeeds _manualPumpSpeeds {};
+    SlowPWM _LPElementPWM {};
+    SlowPWM _HPElementPWM {};
 };
 
 #endif // MAIN_CONTROLLER_H
