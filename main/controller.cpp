@@ -1,5 +1,6 @@
 #include "controller.h"
 #include "Filesystem.h"
+#include "Utilities.h"
 #include <fstream>
 #include <sstream>
 #include "MessageDefs.h"        // Phase this out. Bad design
@@ -87,13 +88,18 @@ PBRet Controller::_controlCommandCB(std::shared_ptr<MessageBase> msg)
     std::shared_ptr<ControlCommand> cmd = std::static_pointer_cast<ControlCommand>(msg);
     _peripheralState = ControlCommand(*cmd);
 
-    ESP_LOGI(Controller::Name, "Controller peripheral states were updated");
-
-    if (_updatePeripheralState(_peripheralState) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary componenst did not update successfully");
+    // Update PWM drivers
+    if (_LPElementPWM.setDutyCycle(_peripheralState.LPElementDutyCycle) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to update LPElement duty cycle");
         return PBRet::FAILURE;
     }
 
+    if (_HPElementPWM.setDutyCycle(_peripheralState.HPElementDutyCycle) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to update HPElement duty cycle");
+        return PBRet::FAILURE;
+    }
+
+    ESP_LOGI(Controller::Name, "Controller peripheral states were updated");
     return PBRet::SUCCESS;
 }
 
@@ -349,7 +355,8 @@ PBRet Controller::_doControl(double temp)
     _derivative = (1 - alpha) * _derivative + alpha * (_ctrlTuning.getDGain() * (temp - _prevTemp) / _cfg.dt);
 
     // Compute limited output
-    _currentOutput = proportional + _integral + _derivative;
+    const double totalOutput = proportional + _integral + _derivative;
+    _currentOutput = Utilities::bound(totalOutput, Pump::PUMP_OFF, Pump::PUMP_MAX_SPEED);
     _prevError = err;
     _prevTemp = temp;
 

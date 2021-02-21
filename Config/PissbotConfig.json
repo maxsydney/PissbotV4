@@ -16,10 +16,10 @@
                 "timerChannel": 1
             },
             "slowPMWLPElement": {
-                "PWMFreq": 5
+                "PWMFreq": 1
             },
             "slowPMWHPElement": {
-                "PWMFreq": 5
+                "PWMFreq": 1
             }
         },
         "SensorManagerConfig": {
