@@ -14,5 +14,6 @@ void includePumpTests(void);
 void includeControllerTests(void);
 void includeDistillerManagerTests(void);
 void includeFlowmeterTests(void);
+void includeSlowPWMTests(void);
 
 #endif // INCLUDE_TEST_FILES

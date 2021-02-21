@@ -6,12 +6,6 @@
 extern "C" {
 #endif
 
-// class SensorManagerUT
-// {
-//     public:
-        
-// };
-
 void includeSensorManagerTests(void)
 {
     // Dummy function to force discovery of unit tests by main test runner
