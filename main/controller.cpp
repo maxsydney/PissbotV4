@@ -106,7 +106,7 @@ PBRet Controller::_controlCommandCB(std::shared_ptr<MessageBase> msg)
 PBRet Controller::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<ControlSettings> cmd = std::static_pointer_cast<ControlSettings>(msg);
-    _cfg.ctrlSettings = ControlSettings(*cmd);
+    _ctrlSettings = ControlSettings(*cmd);
 
     ESP_LOGI(Controller::Name, "Controller settings were updated");
 
@@ -199,7 +199,7 @@ PBRet Controller::_broadcastControllerTuning(void) const
 PBRet Controller::_broadcastControllerSettings(void) const
 {
     // Send a temperature data message to the queue
-    std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (_cfg.ctrlSettings);
+    std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (_ctrlSettings);
 
     ESP_LOGI(Controller::Name, "Broadcasting controller settings");
     return MessageServer::broadcastMessage(msg);
@@ -286,8 +286,8 @@ PBRet Controller::_initPumps(const PumpConfig& refluxPumpConfig, const PumpConfi
     }
 
     // Set pumps to off until Controller is configured
-    _refluxPumpMode = PumpMode::Off;
-    _productPumpMode = PumpMode::Off;
+    _ctrlSettings.refluxPumpMode = PumpMode::Off;
+    _ctrlSettings.productPumpMode = PumpMode::Off;
 
     return PBRet::SUCCESS;
 }
@@ -383,13 +383,13 @@ PBRet Controller::_updatePumps(void)
 PBRet Controller::_updateRefluxPump(void)
 {
     // Update the reflux pump speed
-    if (_refluxPumpMode == PumpMode::ActiveControl) {
+    if (_ctrlSettings.refluxPumpMode == PumpMode::ActiveControl) {
         if (_refluxPump.updatePumpSpeed(_currentOutput) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in active mode");
             return PBRet::FAILURE;
         }
-    } else if (_refluxPumpMode == PumpMode::ManualControl) {
-        if (_refluxPump.updatePumpSpeed(_manualPumpSpeeds.refluxPumpSpeed) != PBRet::SUCCESS) {
+    } else if (_ctrlSettings.refluxPumpMode == PumpMode::ManualControl) {
+        if (_refluxPump.updatePumpSpeed(_ctrlSettings.manualPumpSpeeds.refluxPumpSpeed) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in manual mode");
             return PBRet::FAILURE;
         }
@@ -406,7 +406,7 @@ PBRet Controller::_updateRefluxPump(void)
 
 PBRet Controller::_updateProductPump(double temp)
 {
-    if (_productPumpMode == PumpMode::ActiveControl) {
+    if (_ctrlSettings.productPumpMode == PumpMode::ActiveControl) {
         // Control pump speed based on head temperature
         if (temp >= Controller::HYSTERESIS_BOUND_UPPER) {
             if (_productPump.updatePumpSpeed(Pump::FLUSH_SPEED) != PBRet::SUCCESS) {
@@ -419,8 +419,8 @@ PBRet Controller::_updateProductPump(double temp)
                 return PBRet::FAILURE;
             }
         }
-    } else if (_productPumpMode == PumpMode::ManualControl) {
-        if (_productPump.updatePumpSpeed(_manualPumpSpeeds.productPumpSpeed) != PBRet::SUCCESS) {
+    } else if (_ctrlSettings.productPumpMode == PumpMode::ManualControl) {
+        if (_productPump.updatePumpSpeed(_ctrlSettings.manualPumpSpeeds.productPumpSpeed) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in manual mode");
             return PBRet::FAILURE;
         }
@@ -623,8 +623,8 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
     }
 
     // Set pumps to active control
-    _refluxPumpMode = PumpMode::ActiveControl;
-    _productPumpMode = PumpMode::ActiveControl;
+    _ctrlSettings.refluxPumpMode = PumpMode::ActiveControl;
+    _ctrlSettings.productPumpMode = PumpMode::ActiveControl;
     _cfg = cfg;
 
     return PBRet::SUCCESS;
@@ -905,6 +905,115 @@ PBRet ControlCommand::deserialize(const cJSON *root)
         HPElementDutyCycle = HPElementNode->valuedouble;
     } else {
         ESP_LOGI(ControlCommand::Name, "Unable to read HP Element duty cycle from JSON");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet ControlSettings::serialize(std::string &JSONStr) const
+{
+    // Write the ControlSettings object to JSON
+
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddStringToObject(root, "MessageType", ControlSettings::Name) == nullptr)
+    {
+        ESP_LOGW(ControlSettings::Name, "Unable to add MessageType to ControlSettings JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    // Add refluxPumpMode
+    cJSON* refluxPumpModeNode = cJSON_CreateNumber(static_cast<int>(refluxPumpMode));
+    if (refluxPumpModeNode == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Error creating refluxPumpMode JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlSettings::refluxPumpModeStr, refluxPumpModeNode);
+
+    // Add productPumpMode
+    cJSON* productPumpModeNode = cJSON_CreateNumber(static_cast<int>(productPumpMode));
+    if (productPumpModeNode == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Error creating productPumpMode JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlSettings::productPumpModeStr, productPumpModeNode);
+
+    // Add reflux pump manual speed
+    cJSON* reluxPumpManualSpeedNode = cJSON_CreateNumber(static_cast<int>(manualPumpSpeeds.refluxPumpSpeed));
+    if (reluxPumpManualSpeedNode == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Error creating reflux pump manual speed JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlSettings::refluxPumpSpeedManualStr, reluxPumpManualSpeedNode);
+
+    // Add product pump manual speed
+    cJSON* productPumpManualSpeedNode = cJSON_CreateNumber(static_cast<int>(manualPumpSpeeds.productPumpSpeed));
+    if (productPumpManualSpeedNode == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Error creating product pump manual speed JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControlSettings::productPumpSpeedManualStr, productPumpManualSpeedNode);
+
+    char* stringPtr = cJSON_Print(root);
+    JSONStr = std::string(stringPtr);
+    cJSON_Delete(root);
+    free(stringPtr);
+
+    return PBRet::SUCCESS;
+}
+
+PBRet ControlSettings::deserialize(const cJSON *root)
+{
+    // Load the ControlSettings object from JSON
+
+    if (root == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Root JSON object was null");
+        return PBRet::FAILURE;
+    }
+
+    // Read reflux pump mode
+    const cJSON* refluxPumpModeNode = cJSON_GetObjectItem(root, ControlSettings::refluxPumpModeStr);
+    if (cJSON_IsNumber(refluxPumpModeNode)) {
+        refluxPumpMode = static_cast<PumpMode>(refluxPumpModeNode->valueint);
+    } else {
+        ESP_LOGI(ControlSettings::Name, "Unable to read reflux pump mode from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read product pump mode
+    const cJSON* productPumpModeNode = cJSON_GetObjectItem(root, ControlSettings::productPumpModeStr);
+    if (cJSON_IsNumber(productPumpModeNode)) {
+        productPumpMode = static_cast<PumpMode>(productPumpModeNode->valueint);
+    } else {
+        ESP_LOGI(ControlSettings::Name, "Unable to read product pump mode from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read reflux pump manual speed
+    const cJSON* refluxPumpManualSpeedNode = cJSON_GetObjectItem(root, ControlSettings::refluxPumpSpeedManualStr);
+    if (cJSON_IsNumber(refluxPumpManualSpeedNode)) {
+        manualPumpSpeeds.refluxPumpSpeed = refluxPumpManualSpeedNode->valueint;
+    } else {
+        ESP_LOGI(ControlSettings::Name, "Unable to read reflux pump manual speed from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read product pump manual speed
+    const cJSON* productPumpManualSpeedNode = cJSON_GetObjectItem(root, ControlSettings::productPumpSpeedManualStr);
+    if (cJSON_IsNumber(productPumpManualSpeedNode)) {
+        manualPumpSpeeds.productPumpSpeed = productPumpManualSpeedNode->valueint;
+    } else {
+        ESP_LOGI(ControlSettings::Name, "Unable to read product pump manual speed from JSON");
         return PBRet::FAILURE;
     }
 

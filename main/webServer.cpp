@@ -299,7 +299,7 @@ PBRet Webserver::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
     ControlSettings ctrlSettings = *std::static_pointer_cast<ControlSettings>(msg);
 
     // Serialize to ControlTuning JSON string memory
-    if (serializeControlSettingsMessage(ctrlSettings, _ctrlSettingsMessage) != PBRet::SUCCESS)
+    if (ctrlSettings.serialize(_ctrlSettingsMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing ControlSettings object to JSON string. Deleting");
         _ctrlSettingsMessage.clear();
@@ -392,52 +392,6 @@ PBRet Webserver::_deviceDataCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;
 }
 
-PBRet Webserver::serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr)
-{
-    // Convert a ControlSettings message into a JSON representation
-    //
-
-    // TODO: Move this to serialize on ControlSettings
-
-    cJSON* root = cJSON_CreateObject();
-    if (root == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddStringToObject(root, "MessageType", "ControlSettings") == nullptr)
-    {
-        ESP_LOGW(Webserver::Name, "Unable to add MessageType to control settings JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "ProdPump", ctrlSettings.getProdCondensorPump()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add product condensor pump state to control settings JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    if (cJSON_AddNumberToObject(root, "RefluxPump", ctrlSettings.getRefluxCondensorPump()) == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to add reflux condensor pump state to control settings JSON string");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
-
-    char* ctrlSettingsMsgJson = cJSON_Print(root);
-    cJSON_Delete(root);
-
-    if (ctrlSettingsMsgJson == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to allocate memory for control settings data JSON string");
-        return PBRet::FAILURE;
-    }
-
-    outStr = ctrlSettingsMsgJson;
-    free(ctrlSettingsMsgJson);
-
-    return PBRet::SUCCESS;
-}
-
 PBRet Webserver::_processControlTuningMessage(cJSON* msgRoot)
 {
     ControlTuning ctrlTuning {};
@@ -465,38 +419,13 @@ PBRet Webserver::_processControlTuningMessage(cJSON* msgRoot)
 
 PBRet Webserver::_processControlSettingsMessage(cJSON* msgRoot)
 {
-    bool prodPump, refluxPump;
-
-    // TODO: Move this to deserialize on ControlTuning
-
-    if (msgRoot == nullptr) {
+    ControlSettings ctrlSettingsMsg {};
+    if (ctrlSettingsMsg.deserialize(msgRoot) != PBRet::SUCCESS) {
         ESP_LOGW(Webserver::Name, "Unable to parse control settings message. cJSON object was null");
         return PBRet::FAILURE;
     }
 
-    cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
-    if (msgData == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to parse data from control settings message");
-        return PBRet::FAILURE;
-    }
-
-    cJSON* prodPumpJSON = cJSON_GetObjectItemCaseSensitive(msgData, "prodPump");
-    if (cJSON_IsNumber(prodPumpJSON)) {
-        prodPump = prodPumpJSON->valueint;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read product pump state from control settings message");
-        return PBRet::FAILURE;
-    }
-
-    cJSON* refluxPumpJSON = cJSON_GetObjectItemCaseSensitive(msgData, "refluxPump");
-    if (cJSON_IsNumber(refluxPumpJSON)) {
-        refluxPump = refluxPumpJSON->valueint;
-    } else {
-        ESP_LOGW(Webserver::Name, "Unable to read reflux pump state from control settings message");
-        return PBRet::FAILURE;
-    }
-
-    std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (prodPump, refluxPump);
+    std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (ctrlSettingsMsg);
 
     ESP_LOGI(Webserver::Name, "Broadcasting controller settings");
     return MessageServer::broadcastMessage(msg);

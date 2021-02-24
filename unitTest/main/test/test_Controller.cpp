@@ -385,7 +385,7 @@ TEST_CASE("ControlTuning serialization/deserialization", "[Controller]")
 
 TEST_CASE("ControlCommand serialization/deserialization", "[Controller]")
 {
-    ControlCommand ctrlCommandIn(ControllerState::ON, ControllerState::ON, ControllerState::ON);
+    ControlCommand ctrlCommandIn(ControllerState::ON, 0.5, 0.75);
     ControlCommand ctrlCommandOut {};
 
     // Test serialization

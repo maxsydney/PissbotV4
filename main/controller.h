@@ -46,23 +46,26 @@ class ControlSettings : public MessageBase
 {
     static constexpr MessageType messageType = MessageType::ControlSettings;
     static constexpr const char *Name = "Controller settings";
+    static constexpr const char *productPumpModeStr = "prodPumpMode";
+    static constexpr const char *refluxPumpModeStr = "refluxPumpMode";
+    static constexpr const char *refluxPumpSpeedManualStr = "refluxPumpSpeedManual";
+    static constexpr const char *productPumpSpeedManualStr = "productPumpSpeedManual";
 
 public:
     ControlSettings(void) = default;
-    ControlSettings(bool prodCondensorPump, bool refluxCondensorPump)
-        : MessageBase(ControlSettings::messageType, ControlSettings::Name, esp_timer_get_time()), 
-        _prodCondensorPump(prodCondensorPump), _refluxCondensorPump(refluxCondensorPump) {}
+    ControlSettings(PumpMode refluxPumpMode, PumpMode productPumpMode, const PumpSpeeds &manualPumpSpeeds)
+        : MessageBase(ControlSettings::messageType, ControlSettings::Name, esp_timer_get_time()),
+          refluxPumpMode(refluxPumpMode), productPumpMode(productPumpMode), manualPumpSpeeds(manualPumpSpeeds) {}
     ControlSettings(const ControlSettings &other)
-        : MessageBase(ControlSettings::messageType, ControlSettings::Name, esp_timer_get_time()), 
-        _prodCondensorPump(other._prodCondensorPump), _refluxCondensorPump(other._refluxCondensorPump) {}
+        : MessageBase(ControlSettings::messageType, ControlSettings::Name, esp_timer_get_time()),
+          refluxPumpMode(other.refluxPumpMode), productPumpMode(other.productPumpMode), manualPumpSpeeds(other.manualPumpSpeeds) {}
+    
+    PBRet serialize(std::string &JSONstr) const;
+    PBRet deserialize(const cJSON *root);
 
-    // TODO: Remove getters and make members public
-    bool getProdCondensorPump(void) const { return _prodCondensorPump; }
-    bool getRefluxCondensorPump(void) const { return _refluxCondensorPump; }
-
-private:
-    bool _prodCondensorPump = false;
-    bool _refluxCondensorPump = false;
+    PumpMode refluxPumpMode = PumpMode::Off;
+    PumpMode productPumpMode = PumpMode::Off;
+    PumpSpeeds manualPumpSpeeds{};
 };
 
 class ControlTuning : public MessageBase
@@ -105,14 +108,13 @@ private:
 struct ControllerConfig
 {
     double dt = 0.0;
-    ControlSettings ctrlSettings{};     // TODO: Remove this, peripherals should always default to off
     PumpConfig refluxPumpConfig{};
     PumpConfig prodPumpConfig{};
     gpio_num_t fanPin = (gpio_num_t)GPIO_NUM_NC;
     gpio_num_t element1Pin = (gpio_num_t)GPIO_NUM_NC;
     gpio_num_t element2Pin = (gpio_num_t)GPIO_NUM_NC;
-    SlowPWMConfig LPElementPWM {};
-    SlowPWMConfig HPElementPWM {};
+    SlowPWMConfig LPElementPWM{};
+    SlowPWMConfig HPElementPWM{};
 };
 
 class ControllerDataRequest : public MessageBase
@@ -146,7 +148,7 @@ public:
     ControlCommand(ControllerState fanState, double LPElementDutyCycle, double HPElementDutyCycle)
         : MessageBase(ControlCommand::messageType, ControlCommand::Name, esp_timer_get_time()),
           fanState(fanState), LPElementDutyCycle(LPElementDutyCycle), HPElementDutyCycle(HPElementDutyCycle) {}
-    ControlCommand(const ControlCommand& other)
+    ControlCommand(const ControlCommand &other)
         : MessageBase(ControlCommand::messageType, ControlCommand::Name, esp_timer_get_time()), fanState(other.fanState),
           LPElementDutyCycle(other.LPElementDutyCycle), HPElementDutyCycle(other.HPElementDutyCycle) {}
 
@@ -167,11 +169,11 @@ class Controller : public Task
     static constexpr const char *ctrlTuningFile = "/spiffs/ctrlTuning.json";
 
     // Bounds
-    static constexpr double HYSTERESIS_BOUND_UPPER = 70;        // Upper hysteresis bound for product pump [deg c]
-    static constexpr double HYSTERESIS_BOUND_LOWER = 68;        // Lower hysteresis bound for product pump [deg c]
-    static constexpr double MAX_CONTROL_TEMP = 105;             // Maximum controllable temp [deg c]
-    static constexpr double MIN_CONTROL_TEMP = -5;              // Minimum controllable temp
-    static constexpr double TEMP_MESSAGE_TIMEOUT = 1e6;         // Time before temperarture message goes stale (us)
+    static constexpr double HYSTERESIS_BOUND_UPPER = 70; // Upper hysteresis bound for product pump [deg c]
+    static constexpr double HYSTERESIS_BOUND_LOWER = 68; // Lower hysteresis bound for product pump [deg c]
+    static constexpr double MAX_CONTROL_TEMP = 105;      // Maximum controllable temp [deg c]
+    static constexpr double MIN_CONTROL_TEMP = -5;       // Minimum controllable temp
+    static constexpr double TEMP_MESSAGE_TIMEOUT = 1e6;  // Time before temperarture message goes stale (us)
 
 public:
     // Constructors
@@ -183,12 +185,12 @@ public:
     bool isConfigured(void) const { return _configured; }
 
     // Setters
-    void setRefluxPumpMode(PumpMode pumpMode) { _refluxPumpMode = pumpMode; }
-    void setProductPumpMode(PumpMode pumpMode) { _productPumpMode = pumpMode; }
+    void setRefluxPumpMode(PumpMode pumpMode) { _ctrlSettings.refluxPumpMode = pumpMode; }
+    void setProductPumpMode(PumpMode pumpMode) { _ctrlSettings.productPumpMode = pumpMode; }
 
     // Getters
-    PumpMode getRefluxPumpMode(void) const { return _refluxPumpMode; }
-    PumpMode getProductPumpMode(void) const { return _productPumpMode; }
+    PumpMode getRefluxPumpMode(void) const { return _ctrlSettings.refluxPumpMode; }
+    PumpMode getProductPumpMode(void) const { return _ctrlSettings.productPumpMode; }
 
     friend class ControllerUT;
 
@@ -196,7 +198,7 @@ private:
     // Initialization
     PBRet _initIO(const ControllerConfig &cfg) const;
     PBRet _initPumps(const PumpConfig &refluxPumpConfig, const PumpConfig &prodPumpConfig);
-    PBRet _initPWM(const SlowPWMConfig& LPElementCfg, const SlowPWMConfig& HPElementCfg);
+    PBRet _initPWM(const SlowPWMConfig &LPElementCfg, const SlowPWMConfig &HPElementCfg);
 
     // Updates
     PBRet _doControl(double temp);
@@ -204,7 +206,7 @@ private:
     PBRet _updatePumps(void);
     PBRet _updateProductPump(double temp);
     PBRet _updateRefluxPump(void);
-    PBRet _checkTemperatures(const TemperatureData& currTemp) const;
+    PBRet _checkTemperatures(const TemperatureData &currTemp) const;
 
     // Setup methods
     PBRet _initFromParams(const ControllerConfig &cfg);
@@ -235,6 +237,7 @@ private:
     ControlCommand _peripheralState{};
     TemperatureData _currentTemp{};
     ControlTuning _ctrlTuning{};
+    ControlSettings _ctrlSettings{};
 
     Pump _refluxPump{};
     Pump _productPump{};
@@ -246,11 +249,8 @@ private:
     double _integral = 0.0;
     double _derivative = 0.0;
     double _prevTemp = 0.0;
-    PumpMode _refluxPumpMode = PumpMode::Off;
-    PumpMode _productPumpMode = PumpMode::Off;
-    PumpSpeeds _manualPumpSpeeds {};
-    SlowPWM _LPElementPWM {};
-    SlowPWM _HPElementPWM {};
+    SlowPWM _LPElementPWM{};
+    SlowPWM _HPElementPWM{};
 };
 
 #endif // MAIN_CONTROLLER_H
