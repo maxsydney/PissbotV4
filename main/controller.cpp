@@ -711,6 +711,8 @@ PBRet ControlTuning::deserialize(const cJSON* root)
         return PBRet::FAILURE;
     }
 
+    
+
     // Read setpoint
     cJSON* setpointNode = cJSON_GetObjectItem(root, ControlTuning::SetpointStr);
     if (cJSON_IsNumber(setpointNode)) {

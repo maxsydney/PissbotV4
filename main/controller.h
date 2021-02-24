@@ -46,8 +46,8 @@ class ControlSettings : public MessageBase
 {
     static constexpr MessageType messageType = MessageType::ControlSettings;
     static constexpr const char *Name = "Controller settings";
-    static constexpr const char *productPumpModeStr = "prodPumpMode";
     static constexpr const char *refluxPumpModeStr = "refluxPumpMode";
+    static constexpr const char *productPumpModeStr = "productPumpMode";
     static constexpr const char *refluxPumpSpeedManualStr = "refluxPumpSpeedManual";
     static constexpr const char *productPumpSpeedManualStr = "productPumpSpeedManual";
 

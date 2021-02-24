@@ -420,8 +420,19 @@ PBRet Webserver::_processControlTuningMessage(cJSON* msgRoot)
 PBRet Webserver::_processControlSettingsMessage(cJSON* msgRoot)
 {
     ControlSettings ctrlSettingsMsg {};
-    if (ctrlSettingsMsg.deserialize(msgRoot) != PBRet::SUCCESS) {
-        ESP_LOGW(Webserver::Name, "Unable to parse control settings message. cJSON object was null");
+    if (msgRoot == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse control settings message. cJSON root object was null");
+        return PBRet::FAILURE;
+    }
+
+    cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
+    if (msgData == nullptr) {
+        ESP_LOGW(Webserver::Name, "Unable to parse data from control settings message");
+        return PBRet::FAILURE;
+    }
+
+    if (ctrlSettingsMsg.deserialize(msgData) != PBRet::SUCCESS) {
+        ESP_LOGW(Webserver::Name, "Unable to parse control settings message. cJSON data object was null");
         return PBRet::FAILURE;
     }
 
