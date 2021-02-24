@@ -25,6 +25,8 @@ ControllerConfig validConfig(void)
     cfg.element1Pin = GPIO_NUM_0;
     cfg.element2Pin = GPIO_NUM_0;
     cfg.fanPin = GPIO_NUM_0;
+    cfg.LPElementPWM.PWMFreq = 1.0;
+    cfg.HPElementPWM.PWMFreq = 1.0;
 
     return cfg;
 }
@@ -43,7 +45,7 @@ class ControllerUT
         static PBRet initPumps(Controller& ctrl, const PumpConfig& refluxCfg, const PumpConfig prodCfg) { return ctrl._initPumps(refluxCfg, prodCfg); }
         static PBRet updateRefluxPump(Controller& ctrl) { return ctrl._updateRefluxPump(); }
         static void setCurrentOutput(Controller& ctrl, double output) { ctrl._currentOutput = output; }
-        static void setManualPumpSpeed(Controller& ctrl, const PumpSpeeds& pumpSpeeds) { ctrl._manualPumpSpeeds = pumpSpeeds; }
+        static void setManualPumpSpeed(Controller& ctrl, const PumpSpeeds& pumpSpeeds) { ctrl._ctrlSettings.manualPumpSpeeds = pumpSpeeds; }
         static PBRet checkTemperatures(Controller& ctrl, const TemperatureData& currTemp) { return ctrl._checkTemperatures(currTemp); }
 };
 
@@ -398,8 +400,29 @@ TEST_CASE("ControlCommand serialization/deserialization", "[Controller]")
     ctrlCommandOut.deserialize(root);
 
     TEST_ASSERT_EQUAL(ctrlCommandIn.fanState, ctrlCommandOut.fanState);
-    TEST_ASSERT_EQUAL(ctrlCommandIn.LPElementState, ctrlCommandOut.LPElementState);
-    TEST_ASSERT_EQUAL(ctrlCommandIn.HPElementState, ctrlCommandOut.HPElementState);
+    TEST_ASSERT_EQUAL(ctrlCommandIn.LPElementDutyCycle, ctrlCommandOut.LPElementDutyCycle);
+    TEST_ASSERT_EQUAL(ctrlCommandIn.HPElementDutyCycle, ctrlCommandOut.HPElementDutyCycle);
+}
+
+TEST_CASE("ControlSettings serialization/deserialization", "[Controller]")
+{
+    const PumpSpeeds pumpSpeeds(1, 2);
+    const ControlSettings ctrlSettingsIn(PumpMode::Off, PumpMode::ManualControl, pumpSpeeds);
+    ControlSettings ctrlSettingsOut {};
+
+    // Test serialization
+    std::string JSONStr {};
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ctrlSettingsIn.serialize(JSONStr));
+
+    // Test deserialization
+    cJSON* root = cJSON_Parse(JSONStr.c_str());
+    TEST_ASSERT_NOT_EQUAL(root, nullptr);
+    ctrlSettingsOut.deserialize(root);
+
+    TEST_ASSERT_EQUAL(ctrlSettingsIn.refluxPumpMode, ctrlSettingsOut.refluxPumpMode);
+    TEST_ASSERT_EQUAL(ctrlSettingsIn.productPumpMode, ctrlSettingsOut.productPumpMode);
+    TEST_ASSERT_EQUAL(ctrlSettingsIn.manualPumpSpeeds.refluxPumpSpeed, ctrlSettingsOut.manualPumpSpeeds.refluxPumpSpeed);
+    TEST_ASSERT_EQUAL(ctrlSettingsIn.manualPumpSpeeds.productPumpSpeed, ctrlSettingsOut.manualPumpSpeeds.productPumpSpeed);
 }
 
 #ifdef __cplusplus

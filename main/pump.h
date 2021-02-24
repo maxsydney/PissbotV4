@@ -29,6 +29,7 @@ class PumpSpeeds
         PumpSpeeds(void) = default;
         PumpSpeeds(uint32_t refluxPumpSpeed, uint32_t productPumpSpeed)
             : refluxPumpSpeed(refluxPumpSpeed), productPumpSpeed(productPumpSpeed) {}
+            
         uint32_t refluxPumpSpeed = 0.0;
         uint32_t productPumpSpeed = 0.0;
 };
