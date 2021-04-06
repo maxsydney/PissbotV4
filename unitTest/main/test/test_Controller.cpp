@@ -425,6 +425,26 @@ TEST_CASE("ControlSettings serialization/deserialization", "[Controller]")
     TEST_ASSERT_EQUAL(ctrlSettingsIn.manualPumpSpeeds.productPumpSpeed, ctrlSettingsOut.manualPumpSpeeds.productPumpSpeed);
 }
 
+TEST_CASE("ControllerState serialization/deserialization", "[Controller]")
+{
+    const ControllerState ctrlStateIn(5.0, 10.0, 15.0, 30.0);
+    ControllerState ctrlStateOut {};
+
+    // Test serialization
+    std::string JSONStr {};
+    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ctrlStateIn.serialize(JSONStr));
+
+    // Test deserialization
+    cJSON* root = cJSON_Parse(JSONStr.c_str());
+    TEST_ASSERT_NOT_EQUAL(root, nullptr);
+    ctrlStateOut.deserialize(root);
+
+    TEST_ASSERT_EQUAL(ctrlStateIn.propOutput, ctrlStateOut.propOutput);
+    TEST_ASSERT_EQUAL(ctrlStateIn.integralOutput, ctrlStateOut.integralOutput);
+    TEST_ASSERT_EQUAL(ctrlStateIn.derivOutput, ctrlStateOut.derivOutput);
+    TEST_ASSERT_EQUAL(ctrlStateIn.totalOutput, ctrlStateOut.totalOutput);
+}
+
 #ifdef __cplusplus
 }
 #endif

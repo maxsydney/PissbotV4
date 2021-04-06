@@ -13,4 +13,4 @@
 - Duty cycle for relays             
 - serialize/deserialize virtual methods on MessageBase
 - Telemeter controller output data
-- Telemeter concentrations
+- Deserialize doesn't init uninitialized MessageBase

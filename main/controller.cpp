@@ -1021,3 +1021,112 @@ PBRet ControlSettings::deserialize(const cJSON *root)
 
     return PBRet::SUCCESS;
 }
+
+PBRet ControllerState::serialize(std::string &JSONStr) const
+{
+    // Write the ControllerState object to JSON
+
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddStringToObject(root, "MessageType", ControllerState::Name) == nullptr)
+    {
+        ESP_LOGW(ControllerState::Name, "Unable to add MessageType to ControllerState JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    // Add proportional term
+    cJSON* propTermNode = cJSON_CreateNumber(propOutput);
+    if (propTermNode == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Error creating propTermNode JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControllerState::proportionalStr, propTermNode);
+
+    // Add integral term
+    cJSON* integralTermNode = cJSON_CreateNumber(integralOutput);
+    if (integralTermNode == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Error creating integralTermNode JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControllerState::integralStr, integralTermNode);
+
+    // Add integral term
+    cJSON* derivativeTermNode = cJSON_CreateNumber(derivOutput);
+    if (derivativeTermNode == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Error creating derivativeTermNode JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControllerState::derivativeStr, derivativeTermNode);
+
+    // Add total output term
+    cJSON* totalOutputNode = cJSON_CreateNumber(totalOutput);
+    if (totalOutputNode == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Error creating totalOutputNode JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ControllerState::totalOutputStr, totalOutputNode);
+
+    char* stringPtr = cJSON_Print(root);
+    JSONStr = std::string(stringPtr);
+    cJSON_Delete(root);
+    free(stringPtr);
+
+    return PBRet::SUCCESS;
+}
+
+PBRet ControllerState::deserialize(const cJSON *root)
+{
+    // Load the ControllerState object from JSON
+
+    if (root == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Root JSON object was null");
+        return PBRet::FAILURE;
+    }
+
+    // Read proportional output
+    const cJSON* propTermNode = cJSON_GetObjectItem(root, ControllerState::proportionalStr);
+    if (cJSON_IsNumber(propTermNode)) {
+        propOutput = propTermNode->valuedouble;
+    } else {
+        ESP_LOGI(ControllerState::Name, "Unable to read proportional output from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read integral output
+    const cJSON* integralTermNode = cJSON_GetObjectItem(root, ControllerState::integralStr);
+    if (cJSON_IsNumber(integralTermNode)) {
+        integralOutput = integralTermNode->valuedouble;
+    } else {
+        ESP_LOGI(ControllerState::Name, "Unable to read integral output from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read derivative output
+    const cJSON* derivTermNode = cJSON_GetObjectItem(root, ControllerState::derivativeStr);
+    if (cJSON_IsNumber(derivTermNode)) {
+        derivOutput = derivTermNode->valuedouble;
+    } else {
+        ESP_LOGI(ControllerState::Name, "Unable to read derivative output from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read total output
+    const cJSON* totalOutputNode = cJSON_GetObjectItem(root, ControllerState::totalOutputStr);
+    if (cJSON_IsNumber(totalOutputNode)) {
+        totalOutput = totalOutputNode->valuedouble;
+    } else {
+        ESP_LOGI(ControllerState::Name, "Unable to read total output from JSON");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}
