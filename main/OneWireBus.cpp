@@ -238,7 +238,11 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
         return PBRet::FAILURE;
     }
 
-    // Read other sensors here
+    // Reject temperature measurements if head temperature is invalid
+    if ((headTemp < PBOneWire::MinValidTemp) || (headTemp > PBOneWire::MaxValidTemp)) {
+        ESP_LOGW(PBOneWire::Name, "Head temperature (%.2f) was invalid", headTemp);
+        return PBRet::FAILURE;
+    }
 
     // Fill data structure
     Tdata = TemperatureData(headTemp, refluxTemp, productTemp, radiatorTemp, boilerTemp);

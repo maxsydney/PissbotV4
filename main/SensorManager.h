@@ -13,8 +13,8 @@ struct SensorManagerConfig
 {
     double dt = 0.0;
     PBOneWireConfig oneWireConfig{};
-    FlowmeterConfig refluxFlowConfig {};
-    FlowmeterConfig productFlowConfig {};
+    FlowmeterConfig refluxFlowConfig{};
+    FlowmeterConfig productFlowConfig{};
 };
 
 enum class SensorManagerCmdType
@@ -58,6 +58,26 @@ public:
     PBRet serialize(std::string &JSONStr) const;
     double refluxFlowrate = 0.0;  // [kg / s]
     double productFlowrate = 0.0; // [kg / s]
+};
+
+class ConcentrationData : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::ConcentrationData;
+    static constexpr const char *Name = "Concentration Data";
+
+    static constexpr const char *VapourConcStr = "vapourConc";
+    static constexpr const char *BoilerConcStr = "boilerConc";
+
+public:
+    ConcentrationData(void) = default;
+    ConcentrationData(double vapourConc, double boilerConc)
+        : MessageBase(ConcentrationData::messageType, ConcentrationData::Name, esp_timer_get_time()), 
+          vapourConcentration(vapourConc), boilerConcentration(boilerConc) {}
+    
+    PBRet serialize(std::string& JSONStr) const;
+
+    double vapourConcentration = 0.0;
+    double boilerConcentration = 0.0;
 };
 
 class AssignSensorCommand : public MessageBase
@@ -112,8 +132,10 @@ private:
 
     // Updates
     PBRet _readFlowmeters(const FlowrateData &F) const;
+    PBRet _estimateABV(const TemperatureData &TData, ConcentrationData& concData) const;
     PBRet _broadcastTemps(const TemperatureData &Tdata) const;
-    PBRet _broadcastFlowrates(const FlowrateData& flowrateData) const;
+    PBRet _broadcastFlowrates(const FlowrateData &flowrateData) const;
+    PBRet _broadcastConcentrations(const ConcentrationData& concData) const;
 
     // Utilities
     PBRet _writeSensorConfigToFile(void) const;
@@ -133,8 +155,8 @@ private:
 
     // Connected sensors
     PBOneWire _OWBus{};
-    Flowmeter _refluxFlowmeter {};
-    Flowmeter _productFlowmeter {};
+    Flowmeter _refluxFlowmeter{};
+    Flowmeter _productFlowmeter{};
 
     // Class data
     bool _configured = false;

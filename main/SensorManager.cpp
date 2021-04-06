@@ -2,6 +2,8 @@
 #include "MessageDefs.h"
 #include "esp_spiffs.h"
 #include "Filesystem.h"
+#include "thermo.h"
+#include "ABVTables.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -54,9 +56,17 @@ void SensorManager::taskMain(void)
             ESP_LOGW(SensorManager::Name, "Unable to read reflux flowmeter");
         }
 
+        // Compute ABV
+        ConcentrationData concData(0.0, 0.0);
+        if (_estimateABV(Tdata, concData) != PBRet::SUCCESS) {
+            ESP_LOGW(SensorManager::Name, "Unable to estimate ABV");
+        }
+
+
         // Broadcast data
         _broadcastTemps(Tdata);
         _broadcastFlowrates(flowData);
+        _broadcastConcentrations(concData);
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -187,6 +197,14 @@ PBRet SensorManager::_broadcastFlowrates(const FlowrateData& flowData) const
 {
     // Send a temperature data message to the queue
     std::shared_ptr<FlowrateData> msg = std::make_shared<FlowrateData> (flowData);
+
+    return MessageServer::broadcastMessage(msg);
+}
+
+PBRet SensorManager::_broadcastConcentrations(const ConcentrationData& concData) const
+{
+    // Send a temperature data message to the queue
+    std::shared_ptr<ConcentrationData> msg = std::make_shared<ConcentrationData> (concData);
 
     return MessageServer::broadcastMessage(msg);
 }
@@ -487,6 +505,64 @@ PBRet FlowrateData::serialize(std::string& JSONStr) const
     JSONStr = std::string(stringPtr);
     cJSON_Delete(root);
     free(stringPtr);
+
+    return PBRet::SUCCESS;
+}
+
+PBRet ConcentrationData::serialize(std::string& JSONStr) const
+{
+    // Serialize the ConcentrationData object into a JSON string
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        ESP_LOGW(ConcentrationData::Name, "Unable to create root JSON object");
+        return PBRet::FAILURE;
+    }
+
+    if (cJSON_AddStringToObject(root, "MessageType", ConcentrationData::Name) == nullptr)
+    {
+        ESP_LOGW(ConcentrationData::Name, "Unable to add MessageType to concenctration data JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    // Add vapour concentration
+    cJSON* vapourConcNode = cJSON_CreateNumber(vapourConcentration);
+    if (vapourConcNode == nullptr) {
+        ESP_LOGW(ConcentrationData::Name, "Error creating vapour concentration JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ConcentrationData::VapourConcStr, vapourConcNode);
+
+    // Add boiler concentration
+    cJSON* boilerConcNode = cJSON_CreateNumber(boilerConcentration);
+    if (boilerConcNode == nullptr) {
+        ESP_LOGW(ConcentrationData::Name, "Error creating boiler concentration JSON object");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+    cJSON_AddItemToObject(root, ConcentrationData::BoilerConcStr, boilerConcNode);
+
+    char* stringPtr = cJSON_Print(root);
+    JSONStr = std::string(stringPtr);
+    cJSON_Delete(root);
+    free(stringPtr);
+
+    return PBRet::SUCCESS;
+}
+
+PBRet SensorManager::_estimateABV(const TemperatureData &TData, ConcentrationData& concData) const
+{
+    // Estimate the vapour (head) and boiler alcohol concentrations and broadcast them
+    // to web interface
+    //
+    // TODO: Not sure that this is where this method should live permanently
+
+    // Only do lookup if temperature is within interpolation range
+    if ((TData.headTemp > ABVTables::MIN_TEMPERATURE) && (TData.headTemp < ABVTables::MAX_TEMPERATURE)) {
+        concData.vapourConcentration = Thermo::computeVapourABVLookup(TData.headTemp);
+        concData.boilerConcentration = Thermo::computeLiquidABVLookup(TData.boilerTemp);
+    }
 
     return PBRet::SUCCESS;
 }

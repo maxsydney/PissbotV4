@@ -78,6 +78,8 @@ enum class SensorType
 class PBOneWire
 {
     static constexpr const char *Name = "PBOneWire";
+    static constexpr double MaxValidTemp = 110.0;
+    static constexpr double MinValidTemp = -10.0;
 
 public:
     // Constructors

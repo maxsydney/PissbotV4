@@ -35,7 +35,8 @@ void Webserver::taskMain(void)
         MessageType::ControlCommand,
         MessageType::ControlSettings,
         MessageType::DeviceData,
-        MessageType::FlowrateData
+        MessageType::FlowrateData,
+        MessageType::ConcentrationData
     };
     Subscriber sub(Webserver::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -54,13 +55,16 @@ void Webserver::taskMain(void)
         _sendToAll(_ctrlSettingsMessage);
         _sendToAll(_flowrateMessage);
         _sendToAll(_ctrlCommandMessage);
+        _sendToAll(_concentrationMessage);
 
         // Clear sent messages
+        // TODO: Improve this
         _temperatureMessage.clear();
         _ctrlTuningMessage.clear();
         _ctrlSettingsMessage.clear();
         _flowrateMessage.clear();
         _ctrlCommandMessage.clear();
+        _concentrationMessage.clear();
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -236,7 +240,8 @@ PBRet Webserver::_setupCBTable(void)
         {MessageType::ControlTuning, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)},
         {MessageType::DeviceData, std::bind(&Webserver::_deviceDataCB, this, std::placeholders::_1)},
         {MessageType::FlowrateData, std::bind(&Webserver::_flowrateDataCB, this, std::placeholders::_1)},
-        {MessageType::ControlCommand, std::bind(&Webserver::_controlCommandCB, this, std::placeholders::_1)}
+        {MessageType::ControlCommand, std::bind(&Webserver::_controlCommandCB, this, std::placeholders::_1)},
+        {MessageType::ConcentrationData, std::bind(&Webserver::_concentrationDataCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -288,6 +293,24 @@ PBRet Webserver::_flowrateDataCB(std::shared_ptr<MessageBase> msg)
     }
 
     return PBRet::SUCCESS;  
+}
+
+PBRet Webserver::_concentrationDataCB(std::shared_ptr<MessageBase> msg)
+{
+    // Take the concentration data and broadcast it to all connected
+    // websockets
+
+    ConcentrationData concData = *std::static_pointer_cast<ConcentrationData>(msg);
+
+    // Serialize to JSON string
+    if (concData.serialize(_concentrationMessage) != PBRet::SUCCESS)
+    {
+        ESP_LOGW(Webserver::Name, "Error writing ConcentrationData object to JSON string. Deleting");
+        _concentrationMessage.clear();
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS; 
 }
 
 PBRet Webserver::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
