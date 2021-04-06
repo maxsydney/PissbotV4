@@ -886,7 +886,7 @@ PBRet ControlCommand::deserialize(const cJSON *root)
     // Read fanState
     const cJSON* fanStateNode = cJSON_GetObjectItem(root, ControlCommand::FanStateStr);
     if (cJSON_IsNumber(fanStateNode)) {
-        fanState = static_cast<ControllerState>(fanStateNode->valueint);
+        fanState = static_cast<ComponentState>(fanStateNode->valueint);
     } else {
         ESP_LOGI(ControlCommand::Name, "Unable to read fanState from JSON");
         return PBRet::FAILURE;

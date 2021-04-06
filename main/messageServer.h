@@ -33,7 +33,8 @@ enum class MessageType {
     SensorManagerCmd,
     DeviceData,
     AssignSensor,
-    ConcentrationData
+    ConcentrationData,
+    ControllerState
 };
 
 // Base class for all messages to be passed over network

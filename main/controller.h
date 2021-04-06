@@ -8,31 +8,11 @@
 #include "pump.h"
 #include "SlowPWM.h"
 
-enum class ControllerState
+enum class ComponentState
 {
     OFF,
     ON
 };
-
-// Controller Settings
-// TODO: Replace these ASAP
-typedef struct
-{
-    float setpoint;
-    float P_gain;
-    float I_gain;
-    float D_gain;
-    float LPFCutoff;
-} ctrlParams_t;
-
-typedef struct
-{
-    int fanState;
-    int flush;
-    int elementLow;
-    int elementHigh;
-    int prodCondensor;
-} ctrlSettings_t;
 
 enum class ControllerDataRequestType
 {
@@ -145,7 +125,7 @@ class ControlCommand : public MessageBase
 
 public:
     ControlCommand(void) = default;
-    ControlCommand(ControllerState fanState, double LPElementDutyCycle, double HPElementDutyCycle)
+    ControlCommand(ComponentState fanState, double LPElementDutyCycle, double HPElementDutyCycle)
         : MessageBase(ControlCommand::messageType, ControlCommand::Name, esp_timer_get_time()),
           fanState(fanState), LPElementDutyCycle(LPElementDutyCycle), HPElementDutyCycle(HPElementDutyCycle) {}
     ControlCommand(const ControlCommand &other)
@@ -155,9 +135,38 @@ public:
     PBRet serialize(std::string &JSONStr) const;
     PBRet deserialize(const cJSON *root);
 
-    ControllerState fanState = ControllerState::OFF;
+    ComponentState fanState = ComponentState::OFF;
     double LPElementDutyCycle = 0.0;
     double HPElementDutyCycle = 0.0;
+};
+
+class ControllerState : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::ControllerState;
+    static constexpr const char *Name = "Controller State";
+
+    static constexpr const char *proportionalStr = "PropOutput";
+    static constexpr const char *integralStr = "IntegralOutput";
+    static constexpr const char *derivativeStr = "DerivOutput";
+    static constexpr const char *totalOutputStr = "TotalOutput";
+
+    public:
+        // Constructors
+        ControllerState(void) = default;
+        ControllerState(double propOutput, double integralOutput, double derivOutput, double totalOutput)
+            : MessageBase(ControllerState::messageType, ControllerState::Name, esp_timer_get_time()), propOutput(propOutput),
+              integralOutput(integralOutput), derivOutput(derivOutput), totalOutput(totalOutput) {};
+        ControllerState(const ControllerState& other)
+            : MessageBase(ControllerState::messageType, ControllerState::Name, esp_timer_get_time()), propOutput(other.propOutput),
+              integralOutput(other.integralOutput), derivOutput(other.derivOutput), totalOutput(other.totalOutput) {};
+
+    PBRet serialize(std::string &JSONStr) const;
+    PBRet deserialize(const cJSON *root);
+
+    double propOutput = 0.0;
+    double integralOutput = 0.0;
+    double derivOutput = 0.0;
+    double totalOutput = 0.0;
 };
 
 class Controller : public Task
@@ -248,6 +257,7 @@ private:
     double _prevError = 0.0;
     double _integral = 0.0;
     double _derivative = 0.0;
+    double _proportional = 0.0;
     double _prevTemp = 0.0;
     SlowPWM _LPElementPWM{};
     SlowPWM _HPElementPWM{};
