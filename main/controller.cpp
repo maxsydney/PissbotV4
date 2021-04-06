@@ -64,6 +64,11 @@ void Controller::taskMain(void)
             ESP_LOGW(Controller::Name, "Pump speeds were not updates");
         }
 
+        // Broadcast controller state
+        if (_broadcastControllerState() != PBRet::SUCCESS) {
+            ESP_LOGW(Controller::Name, "Could not broadcast controller state");
+        }
+
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
 }
@@ -216,6 +221,13 @@ PBRet Controller::_broadcastControllerPeripheralState(void) const
     return MessageServer::broadcastMessage(msg);
 }
 
+PBRet Controller::_broadcastControllerState(void) const
+{
+    // Send a ControllerState message to the queue
+    std::shared_ptr<ControllerState> msg = std::make_shared<ControllerState> (_proportional, _integral, _derivative, _currentOutput);
+    return MessageServer::broadcastMessage(msg);
+}
+
 PBRet Controller::_initIO(const ControllerConfig& cfg) const
 {
     esp_err_t err = ESP_OK;
@@ -320,7 +332,7 @@ PBRet Controller::_doControl(double temp)
     const double err = temp - _ctrlTuning.getSetpoint();
 
     // Proportional term
-    const double proportional = _ctrlTuning.getPGain() * err;
+    _proportional = _ctrlTuning.getPGain() * err;
 
     // Integral term (discretized via bilinear transform)
     _integral += 0.5 * _ctrlTuning.getIGain() * _cfg.dt * (err + _prevError);
@@ -330,14 +342,14 @@ PBRet Controller::_doControl(double temp)
     double intLimMin = 0.0;
     double intLimMax = 0.0;
 
-    if (proportional < Pump::PUMP_MAX_SPEED) {
-        intLimMax = Pump::PUMP_MAX_SPEED - proportional;
+    if (_proportional < Pump::PUMP_MAX_SPEED) {
+        intLimMax = Pump::PUMP_MAX_SPEED - _proportional;
     } else {
         intLimMax = 0.0;
     }
 
-    if (proportional > Pump::PUMP_IDLE_SPEED) {
-        intLimMin = Pump::PUMP_IDLE_SPEED - proportional;
+    if (_proportional > Pump::PUMP_IDLE_SPEED) {
+        intLimMin = Pump::PUMP_IDLE_SPEED - _proportional;
     } else {
         intLimMin = 0.0;
     }
@@ -355,7 +367,7 @@ PBRet Controller::_doControl(double temp)
     _derivative = (1 - alpha) * _derivative + alpha * (_ctrlTuning.getDGain() * (temp - _prevTemp) / _cfg.dt);
 
     // Compute limited output
-    const double totalOutput = proportional + _integral + _derivative;
+    const double totalOutput = _proportional + _integral + _derivative;
     _currentOutput = Utilities::bound(totalOutput, Pump::PUMP_OFF, Pump::PUMP_MAX_SPEED);
     _prevError = err;
     _prevTemp = temp;
@@ -1040,40 +1052,39 @@ PBRet ControllerState::serialize(std::string &JSONStr) const
     }
 
     // Add proportional term
-    cJSON* propTermNode = cJSON_CreateNumber(propOutput);
-    if (propTermNode == nullptr) {
-        ESP_LOGW(ControllerState::Name, "Error creating propTermNode JSON object");
+    if (cJSON_AddNumberToObject(root, ControllerState::proportionalStr, propOutput) == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Unable to add proportional output to ControllerState JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControllerState::proportionalStr, propTermNode);
 
     // Add integral term
-    cJSON* integralTermNode = cJSON_CreateNumber(integralOutput);
-    if (integralTermNode == nullptr) {
-        ESP_LOGW(ControllerState::Name, "Error creating integralTermNode JSON object");
+    if (cJSON_AddNumberToObject(root, ControllerState::integralStr, integralOutput) == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Unable to add integral output to ControllerState JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControllerState::integralStr, integralTermNode);
 
-    // Add integral term
-    cJSON* derivativeTermNode = cJSON_CreateNumber(derivOutput);
-    if (derivativeTermNode == nullptr) {
-        ESP_LOGW(ControllerState::Name, "Error creating derivativeTermNode JSON object");
+    // Add derivative term
+    if (cJSON_AddNumberToObject(root, ControllerState::derivativeStr, derivOutput) == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Unable to add derivative output to ControllerState JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControllerState::derivativeStr, derivativeTermNode);
 
     // Add total output term
-    cJSON* totalOutputNode = cJSON_CreateNumber(totalOutput);
-    if (totalOutputNode == nullptr) {
-        ESP_LOGW(ControllerState::Name, "Error creating totalOutputNode JSON object");
+    if (cJSON_AddNumberToObject(root, ControllerState::totalOutputStr, totalOutput) == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Unable to add totalOutput to ControllerState JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControllerState::totalOutputStr, totalOutputNode);
+
+    // Add uptime
+    if (cJSON_AddNumberToObject(root, ControllerState::UptimeStr, _timeStamp) == nullptr) {
+        ESP_LOGW(ControllerState::Name, "Unable to add timestamp to ControllerState JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
 
     char* stringPtr = cJSON_Print(root);
     JSONStr = std::string(stringPtr);

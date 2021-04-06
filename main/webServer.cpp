@@ -36,7 +36,8 @@ void Webserver::taskMain(void)
         MessageType::ControlSettings,
         MessageType::DeviceData,
         MessageType::FlowrateData,
-        MessageType::ConcentrationData
+        MessageType::ConcentrationData,
+        MessageType::ControllerState
     };
     Subscriber sub(Webserver::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -56,6 +57,7 @@ void Webserver::taskMain(void)
         _sendToAll(_flowrateMessage);
         _sendToAll(_ctrlCommandMessage);
         _sendToAll(_concentrationMessage);
+        _sendToAll(_controllerStateMessage);
 
         // Clear sent messages
         // TODO: Improve this
@@ -65,6 +67,7 @@ void Webserver::taskMain(void)
         _flowrateMessage.clear();
         _ctrlCommandMessage.clear();
         _concentrationMessage.clear();
+        _controllerStateMessage.clear();
 
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
@@ -241,7 +244,8 @@ PBRet Webserver::_setupCBTable(void)
         {MessageType::DeviceData, std::bind(&Webserver::_deviceDataCB, this, std::placeholders::_1)},
         {MessageType::FlowrateData, std::bind(&Webserver::_flowrateDataCB, this, std::placeholders::_1)},
         {MessageType::ControlCommand, std::bind(&Webserver::_controlCommandCB, this, std::placeholders::_1)},
-        {MessageType::ConcentrationData, std::bind(&Webserver::_concentrationDataCB, this, std::placeholders::_1)}
+        {MessageType::ConcentrationData, std::bind(&Webserver::_concentrationDataCB, this, std::placeholders::_1)},
+        {MessageType::ControllerState, std::bind(&Webserver::_controllerStateCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -307,6 +311,24 @@ PBRet Webserver::_concentrationDataCB(std::shared_ptr<MessageBase> msg)
     {
         ESP_LOGW(Webserver::Name, "Error writing ConcentrationData object to JSON string. Deleting");
         _concentrationMessage.clear();
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS; 
+}
+
+PBRet Webserver::_controllerStateCB(std::shared_ptr<MessageBase> msg)
+{
+    // Serialize the ControllerState message and broadcast it to all connected
+    // websockets
+
+    ControllerState ctrlState = *std::static_pointer_cast<ControllerState>(msg);
+
+    // Serialize to JSON string
+    if (ctrlState.serialize(_controllerStateMessage) != PBRet::SUCCESS)
+    {
+        ESP_LOGW(Webserver::Name, "Error writing ControllerState object to JSON string. Deleting");
+        _controllerStateMessage.clear();
         return PBRet::FAILURE;
     }
 

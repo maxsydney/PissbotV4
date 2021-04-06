@@ -56,6 +56,7 @@ class Webserver : public Task
         PBRet _flowrateDataCB(std::shared_ptr<MessageBase> msg);
         PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
         PBRet _concentrationDataCB(std::shared_ptr<MessageBase> msg);
+        PBRet _controllerStateCB(std::shared_ptr<MessageBase> msg);
 
         // Message serialization
         static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);
@@ -83,6 +84,7 @@ class Webserver : public Task
         std::string _ctrlCommandMessage {};
         std::string _ctrlTuningMessage {};
         std::string _concentrationMessage {};
+        std::string _controllerStateMessage {};
 
         // FreeRTOS hook method
         void taskMain(void) override;

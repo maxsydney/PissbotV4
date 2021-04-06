@@ -149,6 +149,7 @@ class ControllerState : public MessageBase
     static constexpr const char *integralStr = "IntegralOutput";
     static constexpr const char *derivativeStr = "DerivOutput";
     static constexpr const char *totalOutputStr = "TotalOutput";
+    static constexpr const char *UptimeStr = "Uptime";
 
     public:
         // Constructors
@@ -240,6 +241,7 @@ private:
     PBRet _broadcastControllerTuning(void) const;
     PBRet _broadcastControllerSettings(void) const;
     PBRet _broadcastControllerPeripheralState(void) const;
+    PBRet _broadcastControllerState(void) const;
 
     // Controller data
     ControllerConfig _cfg{};
@@ -255,9 +257,9 @@ private:
     // Internal state
     double _currentOutput = 0.0;
     double _prevError = 0.0;
+    double _proportional = 0.0;
     double _integral = 0.0;
     double _derivative = 0.0;
-    double _proportional = 0.0;
     double _prevTemp = 0.0;
     SlowPWM _LPElementPWM{};
     SlowPWM _HPElementPWM{};
