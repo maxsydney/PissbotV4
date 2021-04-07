@@ -13,6 +13,14 @@ enum class ComponentState
     ON
 };
 
+enum class ControllerDataRequestType
+{
+    None,
+    Tuning,
+    Settings,
+    PeripheralState
+};
+
 class ControlSettings : public MessageBase
 {
     static constexpr MessageType messageType = MessageType::ControlSettings;
@@ -53,27 +61,20 @@ class ControlTuning : public MessageBase
 public:
     ControlTuning(void) = default;
     ControlTuning(double setpoint, double PGain, double IGain, double DGain, double LPFCutoff)
-        : MessageBase(ControlTuning::messageType, ControlTuning::Name, esp_timer_get_time()), _setpoint(setpoint),
-          _PGain(PGain), _IGain(IGain), _DGain(DGain), _LPFCutoff(LPFCutoff) {}
+        : MessageBase(ControlTuning::messageType, ControlTuning::Name, esp_timer_get_time()), setpoint(setpoint),
+          PGain(PGain), IGain(IGain), DGain(DGain), LPFCutoff(LPFCutoff) {}
     ControlTuning(const ControlTuning &other)
-        : MessageBase(ControlTuning::messageType, ControlTuning::Name, esp_timer_get_time()), _setpoint(other._setpoint),
-          _PGain(other._PGain), _IGain(other._IGain), _DGain(other._DGain), _LPFCutoff(other._LPFCutoff) {}
-
-    double getSetpoint(void) const { return _setpoint; }
-    double getPGain(void) const { return _PGain; }
-    double getIGain(void) const { return _IGain; }
-    double getDGain(void) const { return _DGain; }
-    double getLPFCutoff(void) const { return _LPFCutoff; }
+        : MessageBase(ControlTuning::messageType, ControlTuning::Name, esp_timer_get_time()), setpoint(other.setpoint),
+          PGain(other.PGain), IGain(other.IGain), DGain(other.DGain), LPFCutoff(other.LPFCutoff) {}
 
     PBRet serialize(std::string &JSONstr) const;
     PBRet deserialize(const cJSON *root);
 
-private:
-    double _setpoint = 0.0;
-    double _PGain = 0.0;
-    double _IGain = 0.0;
-    double _DGain = 0.0;
-    double _LPFCutoff = 0.0;
+    double setpoint = 0.0;
+    double PGain = 0.0;
+    double IGain = 0.0;
+    double DGain = 0.0;
+    double LPFCutoff = 0.0;
 };
 
 class ControlCommand : public MessageBase
@@ -130,6 +131,23 @@ class ControllerState : public MessageBase
     double integralOutput = 0.0;
     double derivOutput = 0.0;
     double totalOutput = 0.0;
+};
+
+class ControllerDataRequest : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::ControllerDataRequest;
+    static constexpr const char *Name = "Controller data request";
+
+public:
+    ControllerDataRequest(void) = default;
+    ControllerDataRequest(ControllerDataRequestType requestType)
+        : MessageBase(ControllerDataRequest::messageType, ControllerDataRequest::Name, esp_timer_get_time()),
+          _requestType(requestType) {}
+
+    ControllerDataRequestType getType(void) const { return _requestType; }
+
+private:
+    ControllerDataRequestType _requestType = ControllerDataRequestType::None;
 };
 
 #endif // MAIN_CONTROLLER_MESSAGING_H

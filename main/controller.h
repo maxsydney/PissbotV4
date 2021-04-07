@@ -8,14 +8,6 @@
 #include "SlowPWM.h"
 #include "ControllerMessaging.h"
 
-enum class ControllerDataRequestType
-{
-    None,
-    Tuning,
-    Settings,
-    PeripheralState
-};
-
 struct ControllerConfig
 {
     double dt = 0.0;
@@ -26,23 +18,6 @@ struct ControllerConfig
     gpio_num_t element2Pin = (gpio_num_t)GPIO_NUM_NC;
     SlowPWMConfig LPElementPWM{};
     SlowPWMConfig HPElementPWM{};
-};
-
-class ControllerDataRequest : public MessageBase
-{
-    static constexpr MessageType messageType = MessageType::ControllerDataRequest;
-    static constexpr const char *Name = "Controller data request";
-
-public:
-    ControllerDataRequest(void) = default;
-    ControllerDataRequest(ControllerDataRequestType requestType)
-        : MessageBase(ControllerDataRequest::messageType, ControllerDataRequest::Name, esp_timer_get_time()),
-          _requestType(requestType) {}
-
-    ControllerDataRequestType getType(void) const { return _requestType; }
-
-private:
-    ControllerDataRequestType _requestType = ControllerDataRequestType::None;
 };
 
 class Controller : public Task

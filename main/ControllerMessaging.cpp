@@ -18,52 +18,40 @@ PBRet ControlTuning::serialize(std::string& JSONstr) const
     }
 
     // Add setpoint
-    cJSON* setpoint = cJSON_CreateNumber(_setpoint);
-    if (setpoint == nullptr) {
-        ESP_LOGW(ControlTuning::Name, "Error creating setpoint JSON object");
+    if (cJSON_AddNumberToObject(root, ControlTuning::SetpointStr, setpoint) == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Unable to add setpoint to ControlTuning JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlTuning::SetpointStr, setpoint);
 
     // Add P gain
-    cJSON* PGain = cJSON_CreateNumber(_PGain);
-    if (PGain == nullptr) {
-        ESP_LOGW(ControlTuning::Name, "Error creating PGain JSON object");
+    if (cJSON_AddNumberToObject(root, ControlTuning::PGainStr, PGain) == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Unable to add P gain to ControlTuning JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlTuning::PGainStr, PGain);
 
     // Add I gain
-    cJSON* IGain = cJSON_CreateNumber(_IGain);
-    if (IGain == nullptr) {
-        ESP_LOGW(ControlTuning::Name, "Error creating IGain JSON object");
+    if (cJSON_AddNumberToObject(root, ControlTuning::IGainStr, IGain) == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Unable to add I gain to ControlTuning JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlTuning::IGainStr, IGain);
 
     // Add D gain
-    cJSON* DGain = cJSON_CreateNumber(_DGain);
-    if (DGain == nullptr) {
-        ESP_LOGW(ControlTuning::Name, "Error creating IGain JSON object");
+    if (cJSON_AddNumberToObject(root, ControlTuning::DGainStr, DGain) == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Unable to add D gain to ControlTuning JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlTuning::DGainStr, DGain);
 
     // Add LPF cutoff
-    cJSON* LPFCutoff = cJSON_CreateNumber(_LPFCutoff);
-    if (LPFCutoff == nullptr) {
-        ESP_LOGW(ControlTuning::Name, "Error creating LPF cutoff JSON object");
+    if (cJSON_AddNumberToObject(root, ControlTuning::LPFCutoffStr, LPFCutoff) == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Unable to add LPF cutoff to ControlTuning JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlTuning::LPFCutoffStr, LPFCutoff);
 
-    // Copy JSON to string. cJSON requires printing to a char* pointer. Copy into
-    // std::string and free memory to avoid memory leak
     char* stringPtr = cJSON_Print(root);
     JSONstr = std::string(stringPtr);
     cJSON_Delete(root);
@@ -84,7 +72,7 @@ PBRet ControlTuning::deserialize(const cJSON* root)
     // Read setpoint
     cJSON* setpointNode = cJSON_GetObjectItem(root, ControlTuning::SetpointStr);
     if (cJSON_IsNumber(setpointNode)) {
-        _setpoint = setpointNode->valuedouble;
+        setpoint = setpointNode->valuedouble;
     } else {
         ESP_LOGI(ControlTuning::Name, "Unable to read setpint from JSON");
         return PBRet::FAILURE;
@@ -93,7 +81,7 @@ PBRet ControlTuning::deserialize(const cJSON* root)
     // Read P gain
     cJSON* PGainNode = cJSON_GetObjectItem(root, ControlTuning::PGainStr);
     if (cJSON_IsNumber(PGainNode)) {
-        _PGain = PGainNode->valuedouble;
+        PGain = PGainNode->valuedouble;
     } else {
         ESP_LOGI(ControlTuning::Name, "Unable to read P gain from JSON");
         return PBRet::FAILURE;
@@ -102,7 +90,7 @@ PBRet ControlTuning::deserialize(const cJSON* root)
     // Read I gain
     cJSON* IGainNode = cJSON_GetObjectItem(root, ControlTuning::IGainStr);
     if (cJSON_IsNumber(IGainNode)) {
-        _IGain = IGainNode->valuedouble;
+        IGain = IGainNode->valuedouble;
     } else {
         ESP_LOGI(ControlTuning::Name, "Unable to read I gain from JSON");
         return PBRet::FAILURE;
@@ -111,7 +99,7 @@ PBRet ControlTuning::deserialize(const cJSON* root)
     // Read D gain
     cJSON* DGainNode = cJSON_GetObjectItem(root, ControlTuning::DGainStr);
     if (cJSON_IsNumber(DGainNode)) {
-        _DGain = DGainNode->valuedouble;
+        DGain = DGainNode->valuedouble;
     } else {
         ESP_LOGI(ControlTuning::Name, "Unable to read D gain from JSON");
         return PBRet::FAILURE;
@@ -120,7 +108,7 @@ PBRet ControlTuning::deserialize(const cJSON* root)
     // Read LPF cutoff
     cJSON* LPFCutoffNode = cJSON_GetObjectItem(root, ControlTuning::LPFCutoffStr);
     if (cJSON_IsNumber(LPFCutoffNode)) {
-        _LPFCutoff = LPFCutoffNode->valuedouble;
+        LPFCutoff = LPFCutoffNode->valuedouble;
     } else {
         ESP_LOGI(ControlTuning::Name, "Unable to read LPF cutoff from JSON");
         return PBRet::FAILURE;
@@ -147,31 +135,25 @@ PBRet ControlCommand::serialize(std::string &JSONStr) const
     }
 
     // Add fanstate
-    cJSON* fanStateNode = cJSON_CreateNumber(static_cast<int>(fanState));
-    if (fanStateNode == nullptr) {
-        ESP_LOGW(ControlCommand::Name, "Error creating fanState JSON object");
+    if (cJSON_AddNumberToObject(root, ControlCommand::FanStateStr, static_cast<int>(fanState)) == nullptr) {
+        ESP_LOGW(ControlCommand::Name, "Unable to add fan state to ControlCommand JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlCommand::FanStateStr, fanStateNode);
 
     // Add low power element
-    cJSON* LPElementNode = cJSON_CreateNumber(LPElementDutyCycle);
-    if (LPElementNode == nullptr) {
-        ESP_LOGW(ControlCommand::Name, "Error creating low power element JSON object");
+    if (cJSON_AddNumberToObject(root, ControlCommand::LPElementStr, LPElementDutyCycle) == nullptr) {
+        ESP_LOGW(ControlCommand::Name, "Unable to add LP element duty cycle to ControlCommand JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlCommand::LPElementStr, LPElementNode);
 
     // Add high power element
-    cJSON* HPElementNode = cJSON_CreateNumber(HPElementDutyCycle);
-    if (HPElementNode == nullptr) {
-        ESP_LOGW(ControlCommand::Name, "Error creating high power element JSON object");
+    if (cJSON_AddNumberToObject(root, ControlCommand::HPElementStr, HPElementDutyCycle) == nullptr) {
+        ESP_LOGW(ControlCommand::Name, "Unable to add HP element duty cycle to ControlCommand JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlCommand::HPElementStr, HPElementNode);
 
     char* stringPtr = cJSON_Print(root);
     JSONStr = std::string(stringPtr);
@@ -238,40 +220,32 @@ PBRet ControlSettings::serialize(std::string &JSONStr) const
     }
 
     // Add refluxPumpMode
-    cJSON* refluxPumpModeNode = cJSON_CreateNumber(static_cast<int>(refluxPumpMode));
-    if (refluxPumpModeNode == nullptr) {
-        ESP_LOGW(ControlSettings::Name, "Error creating refluxPumpMode JSON object");
+    if (cJSON_AddNumberToObject(root, ControlSettings::refluxPumpModeStr, static_cast<int>(refluxPumpMode)) == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Unable to add reflux pump mode to ControlSettings JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlSettings::refluxPumpModeStr, refluxPumpModeNode);
 
     // Add productPumpMode
-    cJSON* productPumpModeNode = cJSON_CreateNumber(static_cast<int>(productPumpMode));
-    if (productPumpModeNode == nullptr) {
-        ESP_LOGW(ControlSettings::Name, "Error creating productPumpMode JSON object");
+    if (cJSON_AddNumberToObject(root, ControlSettings::productPumpModeStr, static_cast<int>(productPumpMode)) == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Unable to add product pump mode to ControlSettings JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlSettings::productPumpModeStr, productPumpModeNode);
 
     // Add reflux pump manual speed
-    cJSON* reluxPumpManualSpeedNode = cJSON_CreateNumber(static_cast<int>(manualPumpSpeeds.refluxPumpSpeed));
-    if (reluxPumpManualSpeedNode == nullptr) {
-        ESP_LOGW(ControlSettings::Name, "Error creating reflux pump manual speed JSON object");
+    if (cJSON_AddNumberToObject(root, ControlSettings::refluxPumpSpeedManualStr, static_cast<int>(manualPumpSpeeds.refluxPumpSpeed)) == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Unable to add reflux pump manual speed to ControlSettings JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlSettings::refluxPumpSpeedManualStr, reluxPumpManualSpeedNode);
 
     // Add product pump manual speed
-    cJSON* productPumpManualSpeedNode = cJSON_CreateNumber(static_cast<int>(manualPumpSpeeds.productPumpSpeed));
-    if (productPumpManualSpeedNode == nullptr) {
-        ESP_LOGW(ControlSettings::Name, "Error creating product pump manual speed JSON object");
+    if (cJSON_AddNumberToObject(root, ControlSettings::productPumpSpeedManualStr, static_cast<int>(manualPumpSpeeds.productPumpSpeed)) == nullptr) {
+        ESP_LOGW(ControlSettings::Name, "Unable to add product pump manual speed to ControlSettings JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ControlSettings::productPumpSpeedManualStr, productPumpManualSpeedNode);
 
     char* stringPtr = cJSON_Print(root);
     JSONStr = std::string(stringPtr);

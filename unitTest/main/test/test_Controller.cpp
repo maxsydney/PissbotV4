@@ -378,11 +378,11 @@ TEST_CASE("ControlTuning serialization/deserialization", "[Controller]")
     TEST_ASSERT_NOT_EQUAL(root, nullptr);
     ctrlTuningOut.deserialize(root);
 
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getSetpoint(), ctrlTuningOut.getSetpoint());
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getPGain(), ctrlTuningOut.getPGain());
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getIGain(), ctrlTuningOut.getIGain());
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getDGain(), ctrlTuningOut.getDGain());
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.getLPFCutoff(), ctrlTuningOut.getLPFCutoff());
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.setpoint, ctrlTuningOut.setpoint);
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.PGain, ctrlTuningOut.PGain);
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.IGain, ctrlTuningOut.IGain);
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.DGain, ctrlTuningOut.DGain);
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.LPFCutoff, ctrlTuningOut.LPFCutoff);
 }
 
 TEST_CASE("ControlCommand serialization/deserialization", "[Controller]")

@@ -330,13 +330,13 @@ PBRet Controller::_doControl(double temp)
     // Implements a basic PID controller with anti-integral windup
     // and filtering on derivative
 
-    const double err = temp - _ctrlTuning.getSetpoint();
+    const double err = temp - _ctrlTuning.setpoint;
 
     // Proportional term
-    _proportional = _ctrlTuning.getPGain() * err;
+    _proportional = _ctrlTuning.PGain * err;
 
     // Integral term (discretized via bilinear transform)
-    _integral += 0.5 * _ctrlTuning.getIGain() * _cfg.dt * (err + _prevError);
+    _integral += 0.5 * _ctrlTuning.IGain * _cfg.dt * (err + _prevError);
 
     // Dynamic integral clamping/anti windup. Limit integral signal so that
     // PI control does not exceed pump maximum speed. 
@@ -365,7 +365,7 @@ PBRet Controller::_doControl(double temp)
     // TODO: Filtering on D term? Quite tricky due to low temp sensor sample rate
     // TODO: Create filter object
     const double alpha = 0.15;      // TODO: Improve hacky dterm filter
-    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlTuning.getDGain() * (temp - _prevTemp) / _cfg.dt);
+    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlTuning.DGain * (temp - _prevTemp) / _cfg.dt);
 
     // Compute limited output
     const double totalOutput = _proportional + _integral + _derivative;
