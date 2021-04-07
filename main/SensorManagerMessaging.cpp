@@ -1,5 +1,6 @@
 #include "SensorManagerMessaging.h"
 
+// TODO: Unit test me
 PBRet FlowrateData::serialize(std::string& JSONStr) const
 {
     // Serialize the FlowrateDate object into a JSON string
@@ -17,34 +18,26 @@ PBRet FlowrateData::serialize(std::string& JSONStr) const
     }
 
     // Add reflux flowrate
-    cJSON* refluxNode = cJSON_CreateNumber(refluxFlowrate);
-    if (refluxNode == nullptr) {
-        ESP_LOGW(FlowrateData::Name, "Error creating reflux flowrate JSON object");
+    if (cJSON_AddNumberToObject(root, FlowrateData::RefluxFlowrateStr, refluxFlowrate) == nullptr) {
+        ESP_LOGW(FlowrateData::Name, "Unable to add reflux flowrate to FlowrateData JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, FlowrateData::RefluxFlowrateStr, refluxNode);
 
     // Add product flowrate
-    cJSON* productNode = cJSON_CreateNumber(productFlowrate);
-    if (productNode == nullptr) {
-        ESP_LOGW(FlowrateData::Name, "Error creating product flowrate JSON object");
+    if (cJSON_AddNumberToObject(root, FlowrateData::ProductFlowrateStr, productFlowrate) == nullptr) {
+        ESP_LOGW(FlowrateData::Name, "Unable to add product flowrate to FlowrateData JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, FlowrateData::ProductFlowrateStr, productNode);
 
     // Add timestamp
-    cJSON* timestampNode = cJSON_CreateNumber(_timeStamp);
-    if (timestampNode == nullptr) {
-        ESP_LOGW(FlowrateData::Name, "Error creating timestamp JSON object");
+    if (cJSON_AddNumberToObject(root, MessageBase::TimeStampStr, _timeStamp) == nullptr) {
+        ESP_LOGW(FlowrateData::Name, "Unable to add timestamp to FlowrateData JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, MessageBase::TimeStampStr, timestampNode);
 
-    // Copy JSON to string. cJSON requires printing to a char* pointer. Copy into
-    // std::string and free memory to avoid memory leak
     char* stringPtr = cJSON_Print(root);
     JSONStr = std::string(stringPtr);
     cJSON_Delete(root);
@@ -53,6 +46,7 @@ PBRet FlowrateData::serialize(std::string& JSONStr) const
     return PBRet::SUCCESS;
 }
 
+// TODO: Unit test me
 PBRet ConcentrationData::serialize(std::string& JSONStr) const
 {
     // Serialize the ConcentrationData object into a JSON string
@@ -70,22 +64,18 @@ PBRet ConcentrationData::serialize(std::string& JSONStr) const
     }
 
     // Add vapour concentration
-    cJSON* vapourConcNode = cJSON_CreateNumber(vapourConcentration);
-    if (vapourConcNode == nullptr) {
-        ESP_LOGW(ConcentrationData::Name, "Error creating vapour concentration JSON object");
+    if (cJSON_AddNumberToObject(root, ConcentrationData::VapourConcStr, vapourConcentration) == nullptr) {
+        ESP_LOGW(ConcentrationData::Name, "Unable to add vapour concentration to ConcentrationData JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ConcentrationData::VapourConcStr, vapourConcNode);
 
     // Add boiler concentration
-    cJSON* boilerConcNode = cJSON_CreateNumber(boilerConcentration);
-    if (boilerConcNode == nullptr) {
-        ESP_LOGW(ConcentrationData::Name, "Error creating boiler concentration JSON object");
+    if (cJSON_AddNumberToObject(root, ConcentrationData::BoilerConcStr, boilerConcentration) == nullptr) {
+        ESP_LOGW(ConcentrationData::Name, "Unable to add boiler concentration to ConcentrationData JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
-    cJSON_AddItemToObject(root, ConcentrationData::BoilerConcStr, boilerConcNode);
 
     char* stringPtr = cJSON_Print(root);
     JSONStr = std::string(stringPtr);
