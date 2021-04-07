@@ -8,7 +8,6 @@
                 "${workspaceFolder}/components/esp32-ds18b20/include",
                 "${workspaceFolder}/components/esp32-owb/include",
                 "${workspaceFolder}/build/include",
-                "${workspaceFolder}/components/HD44780/include",
                 "${IDF_PATH}/components/**"
             ],
             "browse": {
