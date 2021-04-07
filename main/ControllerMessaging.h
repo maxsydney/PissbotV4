@@ -4,6 +4,7 @@
 #include "PBCommon.h"
 #include "messageServer.h"
 #include "pump.h"
+#include "cJSON.h"
 
 // TODO: Should this be in Controller.h?
 enum class ComponentState

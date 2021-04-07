@@ -1,5 +1,4 @@
 #include "ControllerMessaging.h"
-#include "cJSON.h"
 
 PBRet ControlTuning::serialize(std::string& JSONstr) const
 {
