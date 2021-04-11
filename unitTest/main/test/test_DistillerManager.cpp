@@ -24,7 +24,7 @@ TEST_CASE("loadFromJSONValid", "[DistillerManager]")
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, DistillerManager::loadFromJSON(testConfig, cfg));
 }
 
-TEST_CASE("loadFromJSONInvlid", "[DistillerManager]")
+TEST_CASE("loadFromJSONInvalid", "[DistillerManager]")
 {
     DistillerConfig testConfig {};
     cJSON* root = cJSON_Parse(distillerManagerConfig);

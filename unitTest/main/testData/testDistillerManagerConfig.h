@@ -46,7 +46,8 @@ static const char* distillerManagerConfig = "\
         \"WebserverConfig\": {\
             \"maxConnections\": 12,\
             \"maxBroadcastFreq\": 10\
-        }\
+        },\
+        \"LEDGPIO\": 12\
     },\
     \"DistillerConfigInvalid\": {\
         \"ControllerConfig\": {\
