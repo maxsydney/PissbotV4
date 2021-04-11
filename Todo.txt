@@ -9,8 +9,6 @@
 - Calibrate flow meter
 - Add browser based OTA terminal (network logging)
 - Add process phase tracking
-- Scan for new sensors without restarting
-- Duty cycle for relays             
+- Scan for new sensors without restarting       
 - serialize/deserialize virtual methods on MessageBase
-- Telemeter controller output data
 - Deserialize doesn't init uninitialized MessageBase
