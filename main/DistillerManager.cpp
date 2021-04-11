@@ -50,6 +50,8 @@ void DistillerManager::taskMain(void)
     while(true) {
         _processQueue();
 
+        _doHeartbeat();
+
         vTaskDelay(100 / portTICK_RATE_MS);
     }
 }
@@ -105,6 +107,12 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
         ESP_LOGW(DistillerManager::Name, "Unable to start sensor webserver");
     }
 
+    // Initialize LED GPIO
+    _LEDGPIO = cfg.LEDGPIO;
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[_LEDGPIO], PIN_FUNC_GPIO);
+    gpio_set_direction(_LEDGPIO, GPIO_MODE_OUTPUT);
+    gpio_set_level(_LEDGPIO, 0); 
+
     return PBRet::SUCCESS;
 }
 
@@ -141,6 +149,33 @@ PBRet DistillerManager::loadFromJSON(DistillerConfig& cfg, const cJSON* cfgRoot)
     if (Webserver::loadFromJSON(cfg.webserverConfig, webserverNode) != PBRet::SUCCESS) {
         return PBRet::FAILURE;
     }
+
+    // Load LED pin
+    cJSON* LEDGPIONode = cJSON_GetObjectItem(cfgRoot, "LEDGPIO");
+    if (cJSON_IsNumber(LEDGPIONode)) {
+        cfg.LEDGPIO = static_cast<gpio_num_t>(LEDGPIONode->valueint);
+    } else {
+        ESP_LOGW(DistillerManager::Name, "Unable to read LED GPIO from JSON");
+        return PBRet::FAILURE;
+    }
     
+    return PBRet::SUCCESS;
+}
+
+PBRet DistillerManager::_doHeartbeat(void)
+{
+    // Periodically transmit heartbeat signal
+    const double timeSinceLastHeartbeat = esp_timer_get_time() * 1e-3 - _lastHeartbeatTime;
+
+    if (timeSinceLastHeartbeat > DistillerManager::HeartBeatPeriod) {
+        ESP_LOGI(DistillerManager::Name, "Heartbeat");
+
+        gpio_set_level(_LEDGPIO, 1);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        gpio_set_level(_LEDGPIO, 0);
+
+        _lastHeartbeatTime = esp_timer_get_time() * 1e-3;
+    }
+
     return PBRet::SUCCESS;
 }

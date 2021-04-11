@@ -5,6 +5,7 @@
 #include "CppTask.h"
 #include "controller.h"
 #include "WebServer.h"
+#include "driver/gpio.h"
 #include "SensorManager.h"
 #include "MessageDefs.h"
 
@@ -19,6 +20,8 @@ class DistillerConfig
         ControllerConfig ctrlConfig {};
         SensorManagerConfig sensorManagerConfig {};
         WebserverConfig webserverConfig {};
+
+        gpio_num_t LEDGPIO = (gpio_num_t) GPIO_NUM_NC;
 };
 
 // TODO: With robust inter-task communication, tasks shouldn't need to get a pointer
@@ -26,6 +29,7 @@ class DistillerConfig
 class DistillerManager : public Task
 {
     static constexpr const char* Name = "Distiller Manager";
+    static constexpr const double HeartBeatPeriod = 5000;   // [ms]
 
     public:
         // Delete copy and assignment constructors
@@ -48,7 +52,6 @@ class DistillerManager : public Task
     private:
         // Private constructor
         DistillerManager(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const DistillerConfig& cfg);
-
         PBRet _initFromParams(const DistillerConfig& cfg);
 
         // Setup methods
@@ -60,9 +63,12 @@ class DistillerManager : public Task
         // Pointer to singleton object
         static DistillerManager* _managerPtr;
 
+        PBRet _doHeartbeat(void);
+
         // Class data
         bool _configured = false;
-        DistillerConfig _cfg {};
+        double _lastHeartbeatTime = 0.0;     // [ms]
+        gpio_num_t _LEDGPIO = (gpio_num_t) GPIO_NUM_NC;
         std::unique_ptr<Webserver> _webserver;
         std::unique_ptr<Controller> _controller;
         std::unique_ptr<SensorManager> _sensorManager;

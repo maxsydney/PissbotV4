@@ -12,3 +12,7 @@
 - Scan for new sensors without restarting       
 - serialize/deserialize virtual methods on MessageBase
 - Deserialize doesn't init uninitialized MessageBase
+- Queue operations are not atomic and could cause concurrency problems
+- Implement heap monitoring in distillerManager
+- Implement handling for failure modes
+- Network logging
