@@ -1,5 +1,5 @@
 #include <cmath>
-#include "thermo.h"
+#include "Thermo.h"
 #include "Utilities.h"
 #include "ABVTables.h"
 

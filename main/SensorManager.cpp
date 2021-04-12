@@ -2,7 +2,7 @@
 #include "MessageDefs.h"
 #include "esp_spiffs.h"
 #include "Filesystem.h"
-#include "thermo.h"
+#include "Thermo.h"
 #include "ABVTables.h"
 #include <fstream>
 #include <sstream>
