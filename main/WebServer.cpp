@@ -45,33 +45,14 @@ void Webserver::taskMain(void)
     MessageServer::registerTask(sub);
 
     // Set update frequency
-    const TickType_t timestep =  1000 / (_cfg.maxBroadcastFreq * portTICK_PERIOD_MS);
+    const TickType_t updatePeriod =  1000 / (_cfg.maxBroadcastFreq * portTICK_PERIOD_MS);
     portTickType xLastWakeTime = xTaskGetTickCount();
 
     while (true) {
         // Retrieve data from the queue
         _processQueue();
 
-        // Broadcast data
-        _sendToAll(_temperatureMessage);
-        _sendToAll(_ctrlTuningMessage);
-        _sendToAll(_ctrlSettingsMessage);
-        _sendToAll(_flowrateMessage);
-        _sendToAll(_ctrlCommandMessage);
-        _sendToAll(_concentrationMessage);
-        _sendToAll(_controllerStateMessage);
-
-        // Clear sent messages
-        // TODO: Improve this
-        _temperatureMessage.clear();
-        _ctrlTuningMessage.clear();
-        _ctrlSettingsMessage.clear();
-        _flowrateMessage.clear();
-        _ctrlCommandMessage.clear();
-        _concentrationMessage.clear();
-        _controllerStateMessage.clear();
-
-        vTaskDelayUntil(&xLastWakeTime, timestep);
+        vTaskDelayUntil(&xLastWakeTime, updatePeriod);
     }
 }
 
@@ -257,49 +238,44 @@ PBRet Webserver::_setupCBTable(void)
 PBRet Webserver::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
 {
     // Take the temperature data and broadcast it to all available
-    // websocket connections. To avoid spamming the network, if several
-    // temperature data messages are in the queue, only the most recent
-    // is sent. 
+    // websocket connections.
     //
     // Temperature data is serialized to JSON and broadcast over websockets
     // to the browser client
 
     // Get TemperatureData object
     TemperatureData TData = *std::static_pointer_cast<TemperatureData>(msg);
+    std::string temperatureMessage {};
 
     // Serialize to TemperatureData JSON string memory
-    if (TData.serialize(_temperatureMessage) != PBRet::SUCCESS)
+    if (TData.serialize(temperatureMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing TemperatureData object to JSON string. Deleting");
-        _temperatureMessage.clear();
         return PBRet::FAILURE;
     }
 
-    return PBRet::SUCCESS;   
+    return _sendToAll(temperatureMessage);   
 }
 
 PBRet Webserver::_flowrateDataCB(std::shared_ptr<MessageBase> msg)
 {
     // Take the flowrate data and broadcast it to all available
-    // websocket connections. To avoid spamming the network, if several
-    // temperature data messages are in the queue, only the most recent
-    // is sent. 
-    //
+    // websocket connections.
     // Flowrate data is serialized to JSON and broadcast over websockets
     // to the browser client
 
     // Get FlowrateData object
     FlowrateData flowrateData = *std::static_pointer_cast<FlowrateData>(msg);
+    std::string flowrateMessage {};
 
     // Serialize to TemperatureData JSON string memory
-    if (flowrateData.serialize(_flowrateMessage) != PBRet::SUCCESS)
+    if (flowrateData.serialize(flowrateMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing FlowrateData object to JSON string. Deleting");
-        _flowrateMessage.clear();
         return PBRet::FAILURE;
     }
 
-    return PBRet::SUCCESS;  
+    return _sendToAll(flowrateMessage);   
 }
 
 PBRet Webserver::_concentrationDataCB(std::shared_ptr<MessageBase> msg)
@@ -308,16 +284,16 @@ PBRet Webserver::_concentrationDataCB(std::shared_ptr<MessageBase> msg)
     // websockets
 
     ConcentrationData concData = *std::static_pointer_cast<ConcentrationData>(msg);
+    std::string concentrationMessage {};
 
     // Serialize to JSON string
-    if (concData.serialize(_concentrationMessage) != PBRet::SUCCESS)
+    if (concData.serialize(concentrationMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing ConcentrationData object to JSON string. Deleting");
-        _concentrationMessage.clear();
         return PBRet::FAILURE;
     }
 
-    return PBRet::SUCCESS; 
+    return _sendToAll(concentrationMessage); 
 }
 
 PBRet Webserver::_controllerStateCB(std::shared_ptr<MessageBase> msg)
@@ -326,16 +302,16 @@ PBRet Webserver::_controllerStateCB(std::shared_ptr<MessageBase> msg)
     // websockets
 
     ControllerState ctrlState = *std::static_pointer_cast<ControllerState>(msg);
+    std::string controllerStateMessage {};
 
     // Serialize to JSON string
-    if (ctrlState.serialize(_controllerStateMessage) != PBRet::SUCCESS)
+    if (ctrlState.serialize(controllerStateMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing ControllerState object to JSON string. Deleting");
-        _controllerStateMessage.clear();
         return PBRet::FAILURE;
     }
 
-    return PBRet::SUCCESS; 
+    return _sendToAll(controllerStateMessage); 
 }
 
 PBRet Webserver::_socketLogMessageCB(std::shared_ptr<MessageBase> msg)
@@ -358,16 +334,16 @@ PBRet Webserver::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
 
     // Get controlTuning object
     ControlSettings ctrlSettings = *std::static_pointer_cast<ControlSettings>(msg);
+    std::string ctrlSettingsMessage {};
 
     // Serialize to ControlTuning JSON string memory
-    if (ctrlSettings.serialize(_ctrlSettingsMessage) != PBRet::SUCCESS)
+    if (ctrlSettings.serialize(ctrlSettingsMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing ControlSettings object to JSON string. Deleting");
-        _ctrlSettingsMessage.clear();
         return PBRet::FAILURE;
     }
 
-    return PBRet::SUCCESS;
+    return _sendToAll(ctrlSettingsMessage);
 }
 
 PBRet Webserver::_controlTuningCB(std::shared_ptr<MessageBase> msg)
@@ -375,20 +351,18 @@ PBRet Webserver::_controlTuningCB(std::shared_ptr<MessageBase> msg)
     // Serialize the controller tuning parameters and broadcast to all 
     // connected websockets
 
-    ESP_LOGI(Webserver::Name, "Got ControllerTuning message");
-
     // Get controlTuning object
     ControlTuning ctrlTuning = *std::static_pointer_cast<ControlTuning>(msg);
+    std::string ctrlTuningMessage {};
 
     // Serialize to ControlTuning JSON string memory
-    if (ctrlTuning.serialize(_ctrlTuningMessage) != PBRet::SUCCESS)
+    if (ctrlTuning.serialize(ctrlTuningMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing ControlTuning object to JSON string. Deleting");
-        _ctrlTuningMessage.clear();
         return PBRet::FAILURE;
     }
 
-    return PBRet::SUCCESS;
+    return _sendToAll(ctrlTuningMessage);
 }
 
 PBRet Webserver::_controlCommandCB(std::shared_ptr<MessageBase> msg)
@@ -398,16 +372,16 @@ PBRet Webserver::_controlCommandCB(std::shared_ptr<MessageBase> msg)
 
     // Get ControlCommand object
     ControlCommand ctrlCmd = *std::static_pointer_cast<ControlCommand>(msg);
+    std::string ctrlCommandMessage {};
 
     // Serialize to ControlCommand JSON string memory
-    if (ctrlCmd.serialize(_ctrlCommandMessage) != PBRet::SUCCESS)
+    if (ctrlCmd.serialize(ctrlCommandMessage) != PBRet::SUCCESS)
     {
         ESP_LOGW(Webserver::Name, "Error writing ControlCommand object to JSON string. Deleting");
-        _ctrlCommandMessage.clear();
         return PBRet::FAILURE;
     }
 
-    return PBRet::SUCCESS;
+    return _sendToAll(ctrlCommandMessage);
 }
 
 PBRet Webserver::_deviceDataCB(std::shared_ptr<MessageBase> msg)

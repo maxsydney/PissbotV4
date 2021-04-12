@@ -78,16 +78,6 @@ class Webserver : public Task
         // Websocket methods
         PBRet _sendToAll(const std::string& msg);
 
-        // Queued messages to broadcast
-        // TODO: Replace these with actual data objects
-        std::string _temperatureMessage {};
-        std::string _flowrateMessage {};
-        std::string _ctrlSettingsMessage {};
-        std::string _ctrlCommandMessage {};
-        std::string _ctrlTuningMessage {};
-        std::string _concentrationMessage {};
-        std::string _controllerStateMessage {};
-
         // FreeRTOS hook method
         void taskMain(void) override;
 
