@@ -3,7 +3,7 @@
 #include "connectionManager.h"
 #include "SensorManager.h"
 #include "SensorManager.h"
-#include "controller.h"
+#include "Controller.h"
 #include "espfs.h"
 #include "espfs_image.h"
 #include "libesphttpd/httpd-espfs.h"

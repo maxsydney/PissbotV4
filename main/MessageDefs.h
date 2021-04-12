@@ -2,7 +2,7 @@
 #define MAIN_MESSAGE_DEFS_H
 
 #include <string>
-#include "messageServer.h"
+#include "MessageServer.h"
 
 class GeneralMessage : public MessageBase
 {

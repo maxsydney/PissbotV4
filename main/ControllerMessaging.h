@@ -2,7 +2,7 @@
 #define MAIN_CONTROLLER_MESSAGING_H
 
 #include "PBCommon.h"
-#include "messageServer.h"
+#include "MessageServer.h"
 #include "pump.h"
 #include "cJSON.h"
 

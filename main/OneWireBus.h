@@ -5,7 +5,7 @@
 
 #include "OneWireBusMessaging.h"
 #include "PBCommon.h"
-#include "messageServer.h"
+#include "MessageServer.h"
 #include "PBds18b20.h"
 #include "owb.h"
 #include "owb_rmt.h"

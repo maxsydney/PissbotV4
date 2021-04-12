@@ -3,7 +3,7 @@
 
 #include "PBCommon.h"
 #include "CppTask.h"
-#include "controller.h"
+#include "Controller.h"
 #include "WebServer.h"
 #include "driver/gpio.h"
 #include "SensorManager.h"
