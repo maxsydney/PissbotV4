@@ -2,7 +2,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <esp_log.h>
-#include "pinDefs.h"
 #include "pump.h"
 #include "controller.h"
 #include "Utilities.h"
