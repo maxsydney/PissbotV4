@@ -1,6 +1,5 @@
 #include "unity.h"
 #include "main/controller.h"
-#include "main/pinDefs.h"
 #include "testControllerConfig.h"
 
 #ifdef __cplusplus
