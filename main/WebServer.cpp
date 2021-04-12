@@ -1,6 +1,6 @@
 
 #include "Webserver.h"
-#include "connectionManager.h"
+#include "ConnectionManager.h"
 #include "SensorManager.h"
 #include "SensorManager.h"
 #include "Controller.h"

@@ -15,7 +15,7 @@
 #include "ota.h"
 #include "webServer.h"
 #include "sensors.h"
-#include "connectionManager.h"
+#include "ConnectionManager.h"
 
 // #define LISTEN_PORT     80u
 // #define STATIC_IP		"192.168.1.202"

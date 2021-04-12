@@ -3,7 +3,7 @@
 
 #include "PBCommon.h"
 #include "MessageServer.h"
-#include "pump.h"
+#include "Pump.h"
 #include "cJSON.h"
 
 // TODO: Should this be in Controller.h?

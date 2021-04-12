@@ -4,7 +4,7 @@
 #include "PBCommon.h"
 #include "CppTask.h"
 #include "SensorManager.h"
-#include "pump.h"
+#include "Pump.h"
 #include "SlowPWM.h"
 #include "ControllerMessaging.h"
 
