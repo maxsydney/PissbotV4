@@ -1,5 +1,6 @@
 
 #include "WebServer.h"
+#include "WebServerMessaging.h"
 #include "ConnectionManager.h"
 #include "SensorManager.h"
 #include "SensorManager.h"
@@ -37,7 +38,8 @@ void Webserver::taskMain(void)
         MessageType::DeviceData,
         MessageType::FlowrateData,
         MessageType::ConcentrationData,
-        MessageType::ControllerState
+        MessageType::ControllerState,
+        MessageType::SocketLog
     };
     Subscriber sub(Webserver::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -245,7 +247,8 @@ PBRet Webserver::_setupCBTable(void)
         {MessageType::FlowrateData, std::bind(&Webserver::_flowrateDataCB, this, std::placeholders::_1)},
         {MessageType::ControlCommand, std::bind(&Webserver::_controlCommandCB, this, std::placeholders::_1)},
         {MessageType::ConcentrationData, std::bind(&Webserver::_concentrationDataCB, this, std::placeholders::_1)},
-        {MessageType::ControllerState, std::bind(&Webserver::_controllerStateCB, this, std::placeholders::_1)}
+        {MessageType::ControllerState, std::bind(&Webserver::_controllerStateCB, this, std::placeholders::_1)},
+        {MessageType::SocketLog, std::bind(&Webserver::_socketLogMessageCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -333,6 +336,19 @@ PBRet Webserver::_controllerStateCB(std::shared_ptr<MessageBase> msg)
     }
 
     return PBRet::SUCCESS; 
+}
+
+PBRet Webserver::_socketLogMessageCB(std::shared_ptr<MessageBase> msg)
+{
+    SocketLogMessage logMsg = *std::static_pointer_cast<SocketLogMessage>(msg);
+
+    std::string logMsgOut {};
+    if (logMsg.serialize(logMsgOut) != PBRet::SUCCESS) {
+        ESP_LOGW(Webserver::Name, "Error writing SocketLogMessage object to JSON string");
+        return PBRet::FAILURE;
+    }
+
+    return _sendToAll(logMsgOut);
 }
 
 PBRet Webserver::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
@@ -633,3 +649,11 @@ PBRet Webserver::_requestControllerPeripheralState(void)
 
     return MessageServer::broadcastMessage(msg);
 }
+
+PBRet Webserver::socketLog(const std::string& logMsg)
+{
+    // Broadcast a logged message to all available sockets
+    std::shared_ptr<SocketLogMessage> msg = std::make_shared<SocketLogMessage> (logMsg);
+    return MessageServer::broadcastMessage(msg);
+}
+

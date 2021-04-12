@@ -39,6 +39,7 @@ class Webserver : public Task
         // Utility methods
         static PBRet checkInputs(const WebserverConfig& cfg);
         static PBRet loadFromJSON(WebserverConfig& cfg, const cJSON* cfgRoot);
+        static PBRet socketLog(const std::string& logMsg);
         bool isConfigured(void) const { return _configured; }
 
     private:
@@ -57,6 +58,7 @@ class Webserver : public Task
         PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
         PBRet _concentrationDataCB(std::shared_ptr<MessageBase> msg);
         PBRet _controllerStateCB(std::shared_ptr<MessageBase> msg);
+        PBRet _socketLogMessageCB(std::shared_ptr<MessageBase> msg);
 
         // Message serialization
         static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);

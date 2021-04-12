@@ -34,7 +34,8 @@ enum class MessageType {
     DeviceData,
     AssignSensor,
     ConcentrationData,
-    ControllerState
+    ControllerState,
+    SocketLog
 };
 
 // Base class for all messages to be passed over network
