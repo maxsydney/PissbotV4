@@ -1,13 +1,11 @@
 - D-term filtering                                                              - Partially complete
 - I-term engage only once still is up to temperature                            
 - Record current process data in RAM                
-- Create small factory app to OTA full app
 - Write drivers for flowrate sensors                                            - Partially complete
 - Include Feedforward control 
 - Configurable minimum pump speeds
 - Install flowmeters
 - Calibrate flow meter
-- Add browser based OTA terminal (network logging)
 - Add process phase tracking
 - Scan for new sensors without restarting       
 - serialize/deserialize virtual methods on MessageBase
@@ -15,4 +13,3 @@
 - Queue operations are not atomic and could cause concurrency problems
 - Implement heap monitoring in distillerManager
 - Implement handling for failure modes
-- Network logging

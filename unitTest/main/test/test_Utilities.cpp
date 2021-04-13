@@ -176,6 +176,62 @@ TEST_CASE("Check double vector", "[Utilities]")
     }
 }
 
+TEST_CASE("CircularBuffer", "[Utilities]")
+{
+    CircularBuffer buff(5);
+
+    // Check all entries initialized to 0
+    for (size_t i = 0; i < buff.size(); i++) {
+        TEST_ASSERT_EQUAL(0.0, buff.at(i));
+    }
+
+    // Add some values and check order is preserved
+    buff.insert(0.0);
+    buff.insert(1.0);
+    buff.insert(2.0);
+
+    TEST_ASSERT_EQUAL(0.0, buff.at(0));
+    TEST_ASSERT_EQUAL(0.0, buff.at(1));
+    TEST_ASSERT_EQUAL(0.0, buff.at(2));
+    TEST_ASSERT_EQUAL(1.0, buff.at(3));
+    TEST_ASSERT_EQUAL(2.0, buff.at(4));
+
+    // Fill buffer and check all values can be accessed
+    buff.insert(3.0);
+    buff.insert(4.0);
+    for (size_t i = 0; i < buff.size(); i++) {
+        TEST_ASSERT_EQUAL(i, buff.at(i));
+        TEST_ASSERT_EQUAL(i, buff[i]);
+    }
+
+    // Test values can be modified
+    buff[2] = 0.0;
+    TEST_ASSERT_EQUAL(0.0, buff.at(2));
+
+    // Fill with many values
+    for (size_t i = 0; i < 20; i++) {
+        buff.insert(i);
+    }
+
+    TEST_ASSERT_EQUAL(15.0, buff.at(0));
+    TEST_ASSERT_EQUAL(16.0, buff.at(1));
+    TEST_ASSERT_EQUAL(17.0, buff.at(2));
+    TEST_ASSERT_EQUAL(18.0, buff.at(3));
+    TEST_ASSERT_EQUAL(19.0, buff.at(4));
+
+    // Attempting to access past boundary returns wrapped index
+    TEST_ASSERT_EQUAL(buff.at(5), buff.at(0));
+    TEST_ASSERT_EQUAL(buff.at(6), buff.at(1));
+    TEST_ASSERT_EQUAL(buff.at(7), buff.at(2));
+    TEST_ASSERT_EQUAL(buff.at(8), buff.at(3));
+    TEST_ASSERT_EQUAL(buff.at(9), buff.at(4));
+}
+
+TEST_CASE("CircularBufferEmpty", "[Utilities]")
+{
+    // TODO: Add tests
+}
+
 #ifdef __cplusplus
 }
 #endif

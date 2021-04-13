@@ -104,3 +104,39 @@ bool Utilities::check(const std::vector<double>& val)
 
     return true;
 }
+
+void CircularBuffer::insert(double val)
+{
+    _buff[_curr++] = val;
+
+    if (_curr >= _size) {
+        _curr -= _size;      // TODO: Verify that _curr cannot ever be greater than size
+    }
+}
+
+double CircularBuffer::at(size_t index) const
+{   
+    return _buff[_computeOffset(index)];
+}
+
+void CircularBuffer::clear(void)
+{
+    std::fill(_buff.begin(), _buff.end(), 0.0);
+}
+
+double& CircularBuffer::operator[] (size_t index)
+{
+    return _buff[_computeOffset(index)];
+}
+
+size_t CircularBuffer::_computeOffset(size_t index) const
+{
+    // Avoid module by zero
+    if (_size == 0) {
+        return 0;
+    }
+
+    int offset = (_curr + index) % _size;
+
+    return offset;
+}
