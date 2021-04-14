@@ -20,6 +20,7 @@ static void includeAllTests(void)
     includeDistillerManagerTests();
     includeFlowmeterTests();
     includeSlowPWMTests();
+    includeFilterTests();
 }
 
 void app_main(void)
