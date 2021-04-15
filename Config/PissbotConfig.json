@@ -1,7 +1,7 @@
 {
     "DistillerConfig": {
         "ControllerConfig": {
-            "dt": 0.2,
+            "dt": 0.375,
             "GPIO_fan": 21,
             "GPIO_element1": 13,
             "GPIO_element2": 32,
@@ -23,7 +23,7 @@
             }
         },
         "SensorManagerConfig": {
-            "dt": 0.2,
+            "dt": 0.1875,
             "oneWireConfig": {
                 "GPIO_onewire": 15,
                 "DS18B20Resolution": 11

@@ -6,6 +6,7 @@
 #include "SensorManager.h"
 #include "Pump.h"
 #include "SlowPWM.h"
+#include "Filter.h"
 #include "ControllerMessaging.h"
 
 struct ControllerConfig
@@ -103,6 +104,7 @@ private:
     Pump _refluxPump{};
     Pump _productPump{};
     bool _configured = false;
+    IIRLowpassFilter _derivFilter {};
 
     // Internal state
     double _currentOutput = 0.0;

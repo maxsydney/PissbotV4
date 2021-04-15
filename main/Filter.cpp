@@ -94,18 +94,26 @@ PBRet Filter::checkInputs(const FilterConfig& config)
 
 IIRLowpassFilter::IIRLowpassFilter(const IIRLowpassFilterConfig& config)
 {
-    _initFromConfig(config);
+    // Initialize filter
+    if (_initFromConfig(config) == PBRet::SUCCESS) {
+        ESP_LOGI(IIRLowpassFilter::Name, "Filter configured!");
+        _configured = true;
+    } else {
+        ESP_LOGW(IIRLowpassFilter::Name, "Unable to configure filter");
+    }
 }
 
 PBRet IIRLowpassFilter::filter(double val, double& output)
 {
-    if (_filter.isConfigured() == false) {
-        ESP_LOGE(IIRLowpassFilter::Name, "Base filter object was not configured");
-        return PBRet::FAILURE;
-    }
+    printf("Fs: %f - Fc: %f\n", _config.Fs, _config.Fc);
 
     if (_configured == false) {
         ESP_LOGE(IIRLowpassFilter::Name, "IIRLowpassFilter object was not configured");
+        return PBRet::FAILURE;
+    }
+
+    if (_filter.isConfigured() == false) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Base filter object was not configured");
         return PBRet::FAILURE;
     }
 
@@ -114,12 +122,19 @@ PBRet IIRLowpassFilter::filter(double val, double& output)
 
 PBRet IIRLowpassFilter::setCutoffFreq(double Fc)
 {
-    _config.Fc = Fc;
+    IIRLowpassFilterConfig tempCfg {};
+    tempCfg.Fs = _config.Fs;
+    tempCfg.Fc = Fc;
 
-    if (checkInputs(_config) == PBRet::FAILURE) {
+    printf("Updating cutoff frequency\n");
+    printf("Fs: %f - Fc: %f\n", tempCfg.Fs, tempCfg.Fc);
+
+    if (checkInputs(tempCfg) == PBRet::FAILURE) {
         ESP_LOGE(IIRLowpassFilter::Name, "Invalid inputs. Filter not updated");
         return PBRet::FAILURE;
     }
+
+    _config = tempCfg;
 
     FilterConfig filterConfig {};
     if (_computeFilterCoefficients(_config.Fs, _config.Fc, filterConfig) == PBRet::FAILURE) {
@@ -135,7 +150,7 @@ PBRet IIRLowpassFilter::setCutoffFreq(double Fc)
 PBRet IIRLowpassFilter::setSamplingFreq(double Fs)
 {
     _config.Fs = Fs;
-
+    // TODO: Fix this like setCutoffFreq
     if (checkInputs(_config) == PBRet::FAILURE) {
         ESP_LOGE(IIRLowpassFilter::Name, "Invalid inputs. Filter not updated");
         return PBRet::FAILURE;
@@ -171,7 +186,7 @@ PBRet IIRLowpassFilter::checkInputs(const IIRLowpassFilterConfig& config)
         err |= ESP_FAIL;
     }
 
-    if (config.Fc <= (config.Fs / 2)) {
+    if (config.Fc >= (config.Fs / 2)) {
         ESP_LOGE(IIRLowpassFilter::Name, "Sampling frequency (%.3f) was above the nyquist frequency", config.Fc);
         err |= ESP_FAIL;
     }
@@ -223,6 +238,9 @@ PBRet IIRLowpassFilter::_initFromConfig(const IIRLowpassFilterConfig& config)
             ESP_LOGI(IIRLowpassFilter::Name, "Failed to configure base filter object");
             return PBRet::FAILURE;
         }
+
+        printf("IIR Filter configured\n");
+        printf("Fs: %f - Fc: %f\n", _config.Fs, _config.Fc);
 
         return PBRet::SUCCESS;
     }

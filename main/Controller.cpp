@@ -130,6 +130,11 @@ PBRet Controller::_controlTuningCB(std::shared_ptr<MessageBase> msg)
     std::shared_ptr<ControlTuning> cmd = std::static_pointer_cast<ControlTuning>(msg);
     _ctrlTuning = ControlTuning(*cmd);
 
+    // Update filter
+    if (_derivFilter.setCutoffFreq(_ctrlTuning.LPFCutoff) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to update derivative filter");
+    }
+
     // Write controller tuning to file
     if (saveTuningToFile() != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
@@ -361,11 +366,13 @@ PBRet Controller::_doControl(double temp)
         _integral = intLimMin;
     }
 
-    // Derivative term (discretized via backwards temperature differentiation)
-    // TODO: Filtering on D term? Quite tricky due to low temp sensor sample rate
-    // TODO: Create filter object
-    const double alpha = 0.15;      // TODO: Improve hacky dterm filter
-    _derivative = (1 - alpha) * _derivative + alpha * (_ctrlTuning.DGain * (temp - _prevTemp) / _cfg.dt);
+    // Derivative term filtered with biquad LPF. If filter is not configured, use 
+    // raw measurements
+    const double derivRaw = _ctrlTuning.DGain * (temp - _prevTemp) / _cfg.dt;
+    if (_derivFilter.filter(derivRaw, _derivative) != PBRet::SUCCESS) {
+        // Error message printed in filter
+        _derivative = derivRaw;
+    }
 
     // Compute limited output
     const double totalOutput = _proportional + _integral + _derivative;
@@ -633,6 +640,16 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
     // Load controller tuning from file (if it exists)
     if (loadTuningFromFile() != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Unable to load controller tuning from file");
+    }
+
+    // Initialize derivative filter
+    IIRLowpassFilterConfig filterConfig {};
+    filterConfig.Fs = 2.667;        // TODO: Store this in config
+    filterConfig.Fc = _ctrlTuning.LPFCutoff;
+    _derivFilter = IIRLowpassFilter(filterConfig);
+
+    if (_derivFilter.isConfigured() == false) {
+        ESP_LOGW(Controller::Name, "Unable to initialize derivative filter");
     }
 
     // Set pumps to active control
