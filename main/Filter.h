@@ -63,6 +63,7 @@ class IIRLowpassFilterConfig
 // https://e2e.ti.com/cfs-file/__key/communityserver-discussions-components-files/6/Configure-the-Coefficients-for-Digital-Biquad-Filters-in-TLV320AIc3xxx-F_2E00__2E00__2E00_.pdf
 class IIRLowpassFilter
 {
+    static constexpr const char *Name = "IIRLowpassFilter";
     public:
         // Constructors
         IIRLowpassFilter(void) = default;
@@ -70,7 +71,8 @@ class IIRLowpassFilter
 
         // Update
         PBRet filter(double val, double& output);
-        PBRet setCutoff(double Fc);
+        PBRet setCutoffFreq(double Fc);
+        PBRet setSamplingFreq(double Fs);
 
         // Utility
         static PBRet checkInputs(const IIRLowpassFilterConfig& config);
@@ -80,9 +82,10 @@ class IIRLowpassFilter
     private:
 
         PBRet _initFromConfig(const IIRLowpassFilterConfig& config);
+        PBRet _computeFilterCoefficients(double samplingFreq, double cutoffFreq, FilterConfig& filterConfig);
 
         Filter _filter {};
-        IIRLowpassFilterConfig _params {};
+        IIRLowpassFilterConfig _config {};
         bool _configured = false;
 
 };

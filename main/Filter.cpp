@@ -3,6 +3,7 @@
 
 #include <numeric>
 #include <algorithm>
+#include <math.h>
 
 Filter::Filter(const FilterConfig& config)
 {
@@ -89,4 +90,167 @@ PBRet Filter::checkInputs(const FilterConfig& config)
     }
 
     return err == ESP_OK ? PBRet::SUCCESS : PBRet::FAILURE;
+}
+
+IIRLowpassFilter::IIRLowpassFilter(const IIRLowpassFilterConfig& config)
+{
+    _initFromConfig(config);
+}
+
+PBRet IIRLowpassFilter::filter(double val, double& output)
+{
+    if (_filter.isConfigured() == false) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Base filter object was not configured");
+        return PBRet::FAILURE;
+    }
+
+    if (_configured == false) {
+        ESP_LOGE(IIRLowpassFilter::Name, "IIRLowpassFilter object was not configured");
+        return PBRet::FAILURE;
+    }
+
+    return _filter.filter(val, output);
+}
+
+PBRet IIRLowpassFilter::setCutoffFreq(double Fc)
+{
+    _config.Fc = Fc;
+
+    if (checkInputs(_config) == PBRet::FAILURE) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Invalid inputs. Filter not updated");
+        return PBRet::FAILURE;
+    }
+
+    FilterConfig filterConfig {};
+    if (_computeFilterCoefficients(_config.Fs, _config.Fc, filterConfig) == PBRet::FAILURE) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Failed to compute filter coefficients. Filter not updated");
+        return PBRet::FAILURE;
+    }
+
+    _filter = Filter(filterConfig);
+
+    return _filter.isConfigured() ? PBRet::SUCCESS : PBRet::FAILURE;
+}
+
+PBRet IIRLowpassFilter::setSamplingFreq(double Fs)
+{
+    _config.Fs = Fs;
+
+    if (checkInputs(_config) == PBRet::FAILURE) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Invalid inputs. Filter not updated");
+        return PBRet::FAILURE;
+    }
+
+    FilterConfig filterConfig {};
+    if (_computeFilterCoefficients(_config.Fs, _config.Fc, filterConfig) == PBRet::FAILURE) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Failed to compute filter coefficients. Filter not updated");
+        return PBRet::FAILURE;
+    }
+
+    _filter = Filter(filterConfig);
+
+    return _filter.isConfigured() ? PBRet::SUCCESS : PBRet::FAILURE;
+}
+
+PBRet IIRLowpassFilter::checkInputs(const IIRLowpassFilterConfig& config)
+{
+    esp_err_t err = 0;
+
+    if (Utilities::check(config.Fs) == false) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Sampling frequency was inf or NaN");
+        err |= ESP_FAIL;
+    }
+
+    if (config.Fs <= 0) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Sampling frequency was <= 0");
+        err |= ESP_FAIL;
+    }
+
+    if (Utilities::check(config.Fc) == false) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Cutoff frequency was inf or NaN");
+        err |= ESP_FAIL;
+    }
+
+    if (config.Fc <= (config.Fs / 2)) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Sampling frequency (%.3f) was above the nyquist frequency", config.Fc);
+        err |= ESP_FAIL;
+    }
+
+    return err == ESP_OK ? PBRet::SUCCESS : PBRet::FAILURE;
+}
+
+PBRet IIRLowpassFilter::loadFromJSON(IIRLowpassFilterConfig& cfg, const cJSON* cfgRoot)
+{
+    if (cfgRoot == nullptr) {
+        ESP_LOGW(IIRLowpassFilter::Name, "cfg was null");
+        return PBRet::FAILURE;
+    }
+
+    // Get sampling frequency
+    cJSON* FsNode = cJSON_GetObjectItem(cfgRoot, "Fs");
+    if (cJSON_IsNumber(FsNode)) {
+        cfg.Fs = FsNode->valuedouble;
+    } else {
+        ESP_LOGI(IIRLowpassFilter::Name, "Unable to read sampling frequency from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Get cutoff frequency
+    cJSON* FcNode = cJSON_GetObjectItem(cfgRoot, "Fc");
+    if (cJSON_IsNumber(FcNode)) {
+        cfg.Fs = FcNode->valuedouble;
+    } else {
+        ESP_LOGI(IIRLowpassFilter::Name, "Unable to read cutoff frequency from JSON");
+        return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet IIRLowpassFilter::_initFromConfig(const IIRLowpassFilterConfig& config)
+{
+    if (checkInputs(config) == PBRet::SUCCESS) {
+        _config = config;
+
+        FilterConfig filterConfig {};
+        if (_computeFilterCoefficients(_config.Fs, _config.Fc, filterConfig) != PBRet::SUCCESS) {
+            ESP_LOGI(IIRLowpassFilter::Name, "Failed to compute filter coefficients");
+            return PBRet::FAILURE;
+        }
+
+        _filter = Filter(filterConfig);
+        if (_filter.isConfigured() == false) {
+            ESP_LOGI(IIRLowpassFilter::Name, "Failed to configure base filter object");
+            return PBRet::FAILURE;
+        }
+
+        return PBRet::SUCCESS;
+    }
+
+    return PBRet::FAILURE;
+}
+
+PBRet IIRLowpassFilter::_computeFilterCoefficients(double samplingFreq, double cutoffFreq, FilterConfig& filterConfig)
+{
+    // Compute biquad filter coefficients
+    // https://e2e.ti.com/cfs-file/__key/communityserver-discussions-components-files/6/Configure-the-Coefficients-for-Digital-Biquad-Filters-in-TLV320AIc3xxx-F_2E00__2E00__2E00_.pdf
+
+    const double omega0 = 2.0 * M_PI * cutoffFreq / samplingFreq;
+    const double Q = 0.707;
+    const double alpha = sin(omega0) / (2.0 * Q);
+
+    // Compute normalized denominator coefficients
+    const double a0 = 1.0 + alpha;
+    const double a1 = -2.0 * cos(omega0) / a0;
+    const double a2 = (1.0 - alpha) / a0;
+
+    // Compute normalized numerator coefficients
+    const double b0 = (1.0 - cos(omega0)) / (2.0 * a0);
+    const double b1 = (1.0 - cos(omega0)) / a0;
+    const double b2 = b0;
+
+    filterConfig.num = {b0, b1, b2};
+    filterConfig.den = {a1, a2};
+
+    return PBRet::SUCCESS;
 }
