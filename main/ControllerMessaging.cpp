@@ -45,9 +45,16 @@ PBRet ControlTuning::serialize(std::string& JSONstr) const
         return PBRet::FAILURE;
     }
 
-    // Add LPF cutoff
-    if (cJSON_AddNumberToObject(root, ControlTuning::LPFCutoffStr, LPFCutoff) == nullptr) {
-        ESP_LOGW(ControlTuning::Name, "Unable to add LPF cutoff to ControlTuning JSON string");
+    // Add LPF cutoff frequency
+    if (cJSON_AddNumberToObject(root, ControlTuning::LPFCutoffStr, derivFilterCfg.Fc) == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Unable to add LPF sample frequency to ControlTuning JSON string");
+        cJSON_Delete(root);
+        return PBRet::FAILURE;
+    }
+
+    // Add LPF sample frequency
+    if (cJSON_AddNumberToObject(root, ControlTuning::LPFSampleFreqStr, derivFilterCfg.Fs) == nullptr) {
+        ESP_LOGW(ControlTuning::Name, "Unable to add LPF sample frequency to ControlTuning JSON string");
         cJSON_Delete(root);
         return PBRet::FAILURE;
     }
@@ -74,7 +81,7 @@ PBRet ControlTuning::deserialize(const cJSON* root)
     if (cJSON_IsNumber(setpointNode)) {
         setpoint = setpointNode->valuedouble;
     } else {
-        ESP_LOGI(ControlTuning::Name, "Unable to read setpint from JSON");
+        ESP_LOGW(ControlTuning::Name, "Unable to read setpint from JSON");
         return PBRet::FAILURE;
     }
 
@@ -83,7 +90,7 @@ PBRet ControlTuning::deserialize(const cJSON* root)
     if (cJSON_IsNumber(PGainNode)) {
         PGain = PGainNode->valuedouble;
     } else {
-        ESP_LOGI(ControlTuning::Name, "Unable to read P gain from JSON");
+        ESP_LOGW(ControlTuning::Name, "Unable to read P gain from JSON");
         return PBRet::FAILURE;
     }
 
@@ -92,7 +99,7 @@ PBRet ControlTuning::deserialize(const cJSON* root)
     if (cJSON_IsNumber(IGainNode)) {
         IGain = IGainNode->valuedouble;
     } else {
-        ESP_LOGI(ControlTuning::Name, "Unable to read I gain from JSON");
+        ESP_LOGW(ControlTuning::Name, "Unable to read I gain from JSON");
         return PBRet::FAILURE;
     }
 
@@ -101,16 +108,25 @@ PBRet ControlTuning::deserialize(const cJSON* root)
     if (cJSON_IsNumber(DGainNode)) {
         DGain = DGainNode->valuedouble;
     } else {
-        ESP_LOGI(ControlTuning::Name, "Unable to read D gain from JSON");
+        ESP_LOGW(ControlTuning::Name, "Unable to read D gain from JSON");
         return PBRet::FAILURE;
     }
 
     // Read LPF cutoff
     cJSON* LPFCutoffNode = cJSON_GetObjectItem(root, ControlTuning::LPFCutoffStr);
     if (cJSON_IsNumber(LPFCutoffNode)) {
-        LPFCutoff = LPFCutoffNode->valuedouble;
+        derivFilterCfg.Fc = LPFCutoffNode->valuedouble;
     } else {
-        ESP_LOGI(ControlTuning::Name, "Unable to read LPF cutoff from JSON");
+        ESP_LOGW(ControlTuning::Name, "Unable to read LPF cutoff from JSON");
+        return PBRet::FAILURE;
+    }
+
+    // Read LPF sample frequency
+    cJSON* LPFSampleFreqNode = cJSON_GetObjectItem(root, ControlTuning::LPFSampleFreqStr);
+    if (cJSON_IsNumber(LPFSampleFreqNode) == true) {
+        derivFilterCfg.Fs = LPFSampleFreqNode->valuedouble;
+    } else {
+        ESP_LOGW(ControlTuning::Name, "Unable to read LPF sample frequency from JSON");
         return PBRet::FAILURE;
     }
 
@@ -177,7 +193,7 @@ PBRet ControlCommand::deserialize(const cJSON *root)
     if (cJSON_IsNumber(fanStateNode)) {
         fanState = static_cast<ComponentState>(fanStateNode->valueint);
     } else {
-        ESP_LOGI(ControlCommand::Name, "Unable to read fanState from JSON");
+        ESP_LOGW(ControlCommand::Name, "Unable to read fanState from JSON");
         return PBRet::FAILURE;
     }
 
@@ -186,7 +202,7 @@ PBRet ControlCommand::deserialize(const cJSON *root)
     if (cJSON_IsNumber(LPElementNode)) {
         LPElementDutyCycle = LPElementNode->valuedouble;
     } else {
-        ESP_LOGI(ControlCommand::Name, "Unable to read LP Element duty cycle from JSON");
+        ESP_LOGW(ControlCommand::Name, "Unable to read LP Element duty cycle from JSON");
         return PBRet::FAILURE;
     }
 
@@ -195,7 +211,7 @@ PBRet ControlCommand::deserialize(const cJSON *root)
     if (cJSON_IsNumber(HPElementNode)) {
         HPElementDutyCycle = HPElementNode->valuedouble;
     } else {
-        ESP_LOGI(ControlCommand::Name, "Unable to read HP Element duty cycle from JSON");
+        ESP_LOGW(ControlCommand::Name, "Unable to read HP Element duty cycle from JSON");
         return PBRet::FAILURE;
     }
 
@@ -269,7 +285,7 @@ PBRet ControlSettings::deserialize(const cJSON *root)
     if (cJSON_IsNumber(refluxPumpModeNode)) {
         refluxPumpMode = static_cast<PumpMode>(refluxPumpModeNode->valueint);
     } else {
-        ESP_LOGI(ControlSettings::Name, "Unable to read reflux pump mode from JSON");
+        ESP_LOGW(ControlSettings::Name, "Unable to read reflux pump mode from JSON");
         return PBRet::FAILURE;
     }
 
@@ -278,7 +294,7 @@ PBRet ControlSettings::deserialize(const cJSON *root)
     if (cJSON_IsNumber(productPumpModeNode)) {
         productPumpMode = static_cast<PumpMode>(productPumpModeNode->valueint);
     } else {
-        ESP_LOGI(ControlSettings::Name, "Unable to read product pump mode from JSON");
+        ESP_LOGW(ControlSettings::Name, "Unable to read product pump mode from JSON");
         return PBRet::FAILURE;
     }
 
@@ -287,7 +303,7 @@ PBRet ControlSettings::deserialize(const cJSON *root)
     if (cJSON_IsNumber(refluxPumpManualSpeedNode)) {
         manualPumpSpeeds.refluxPumpSpeed = refluxPumpManualSpeedNode->valueint;
     } else {
-        ESP_LOGI(ControlSettings::Name, "Unable to read reflux pump manual speed from JSON");
+        ESP_LOGW(ControlSettings::Name, "Unable to read reflux pump manual speed from JSON");
         return PBRet::FAILURE;
     }
 
@@ -296,7 +312,7 @@ PBRet ControlSettings::deserialize(const cJSON *root)
     if (cJSON_IsNumber(productPumpManualSpeedNode)) {
         manualPumpSpeeds.productPumpSpeed = productPumpManualSpeedNode->valueint;
     } else {
-        ESP_LOGI(ControlSettings::Name, "Unable to read product pump manual speed from JSON");
+        ESP_LOGW(ControlSettings::Name, "Unable to read product pump manual speed from JSON");
         return PBRet::FAILURE;
     }
 
@@ -377,7 +393,7 @@ PBRet ControllerState::deserialize(const cJSON *root)
     if (cJSON_IsNumber(propTermNode)) {
         propOutput = propTermNode->valuedouble;
     } else {
-        ESP_LOGI(ControllerState::Name, "Unable to read proportional output from JSON");
+        ESP_LOGW(ControllerState::Name, "Unable to read proportional output from JSON");
         return PBRet::FAILURE;
     }
 
@@ -386,7 +402,7 @@ PBRet ControllerState::deserialize(const cJSON *root)
     if (cJSON_IsNumber(integralTermNode)) {
         integralOutput = integralTermNode->valuedouble;
     } else {
-        ESP_LOGI(ControllerState::Name, "Unable to read integral output from JSON");
+        ESP_LOGW(ControllerState::Name, "Unable to read integral output from JSON");
         return PBRet::FAILURE;
     }
 
@@ -395,7 +411,7 @@ PBRet ControllerState::deserialize(const cJSON *root)
     if (cJSON_IsNumber(derivTermNode)) {
         derivOutput = derivTermNode->valuedouble;
     } else {
-        ESP_LOGI(ControllerState::Name, "Unable to read derivative output from JSON");
+        ESP_LOGW(ControllerState::Name, "Unable to read derivative output from JSON");
         return PBRet::FAILURE;
     }
 
@@ -404,7 +420,7 @@ PBRet ControllerState::deserialize(const cJSON *root)
     if (cJSON_IsNumber(totalOutputNode)) {
         totalOutput = totalOutputNode->valuedouble;
     } else {
-        ESP_LOGI(ControllerState::Name, "Unable to read total output from JSON");
+        ESP_LOGW(ControllerState::Name, "Unable to read total output from JSON");
         return PBRet::FAILURE;
     }
 

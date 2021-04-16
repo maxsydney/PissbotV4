@@ -365,7 +365,8 @@ TEST_CASE("loadFromJSONInvlid", "[Controller]")
 
 TEST_CASE("ControlTuning serialization/deserialization", "[Controller]")
 {
-    ControlTuning ctrlTuningIn(50.0, 25.0, 10.0, 75.0, 5.0);
+    const IIRLowpassFilterConfig derivFilterCfg(5.0, 1.0);
+    const ControlTuning ctrlTuningIn(50.0, 25.0, 10.0, 75.0, derivFilterCfg);
     ControlTuning ctrlTuningOut {};
 
     // Test serialization
@@ -381,7 +382,8 @@ TEST_CASE("ControlTuning serialization/deserialization", "[Controller]")
     TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.PGain, ctrlTuningOut.PGain);
     TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.IGain, ctrlTuningOut.IGain);
     TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.DGain, ctrlTuningOut.DGain);
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.LPFCutoff, ctrlTuningOut.LPFCutoff);
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.derivFilterCfg.Fc, ctrlTuningOut.derivFilterCfg.Fc);
+    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.derivFilterCfg.Fs, ctrlTuningOut.derivFilterCfg.Fs);
 }
 
 TEST_CASE("ControlCommand serialization/deserialization", "[Controller]")

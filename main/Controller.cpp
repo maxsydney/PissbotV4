@@ -131,8 +131,9 @@ PBRet Controller::_controlTuningCB(std::shared_ptr<MessageBase> msg)
     _ctrlTuning = ControlTuning(*cmd);
 
     // Update filter
-    if (_derivFilter.setCutoffFreq(_ctrlTuning.LPFCutoff) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "Failed to update derivative filter");
+    _derivFilter = IIRLowpassFilter(_ctrlTuning.derivFilterCfg);
+    if (_derivFilter.isConfigured() == false) {
+        ESP_LOGW(Controller::Name, "Failed to configure derivative filter");
     }
 
     // Write controller tuning to file
@@ -642,12 +643,8 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
         ESP_LOGW(Controller::Name, "Unable to load controller tuning from file");
     }
 
-    // Initialize derivative filter
-    IIRLowpassFilterConfig filterConfig {};
-    filterConfig.Fs = 2.667;        // TODO: Store this in config
-    filterConfig.Fc = _ctrlTuning.LPFCutoff;
-    _derivFilter = IIRLowpassFilter(filterConfig);
-
+    // Initialize derivative filter from loaded tuning object
+    _derivFilter = IIRLowpassFilter(_ctrlTuning.derivFilterCfg);
     if (_derivFilter.isConfigured() == false) {
         ESP_LOGW(Controller::Name, "Unable to initialize derivative filter");
     }

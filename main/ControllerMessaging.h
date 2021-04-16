@@ -4,6 +4,7 @@
 #include "PBCommon.h"
 #include "MessageServer.h"
 #include "Pump.h"
+#include "Filter.h"
 #include "cJSON.h"
 
 // TODO: Should this be in Controller.h?
@@ -57,15 +58,16 @@ class ControlTuning : public MessageBase
     static constexpr const char *IGainStr = "IGain";
     static constexpr const char *DGainStr = "DGain";
     static constexpr const char *LPFCutoffStr = "LPFCutoff";
+    static constexpr const char *LPFSampleFreqStr = "LPFSampleFreq";
 
 public:
     ControlTuning(void) = default;
-    ControlTuning(double setpoint, double PGain, double IGain, double DGain, double LPFCutoff)
+    ControlTuning(double setpoint, double PGain, double IGain, double DGain, const IIRLowpassFilterConfig& derivFilterCfg)
         : MessageBase(ControlTuning::messageType, ControlTuning::Name, esp_timer_get_time()), setpoint(setpoint),
-          PGain(PGain), IGain(IGain), DGain(DGain), LPFCutoff(LPFCutoff) {}
+          PGain(PGain), IGain(IGain), DGain(DGain), derivFilterCfg(derivFilterCfg) {}
     ControlTuning(const ControlTuning &other)
         : MessageBase(ControlTuning::messageType, ControlTuning::Name, esp_timer_get_time()), setpoint(other.setpoint),
-          PGain(other.PGain), IGain(other.IGain), DGain(other.DGain), LPFCutoff(other.LPFCutoff) {}
+          PGain(other.PGain), IGain(other.IGain), DGain(other.DGain), derivFilterCfg(other.derivFilterCfg) {}
 
     PBRet serialize(std::string &JSONstr) const;
     PBRet deserialize(const cJSON *root);
@@ -74,7 +76,7 @@ public:
     double PGain = 0.0;
     double IGain = 0.0;
     double DGain = 0.0;
-    double LPFCutoff = 0.0;
+    IIRLowpassFilterConfig derivFilterCfg {};
 };
 
 class ControlCommand : public MessageBase
