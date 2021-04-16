@@ -54,6 +54,8 @@ class IIRLowpassFilterConfig
 {
     public:
         IIRLowpassFilterConfig(void) = default;
+        IIRLowpassFilterConfig(double samplingFreq, double cutoffFreq)
+            : Fs(samplingFreq), Fc(cutoffFreq) {}
 
         double Fs = 0.0;
         double Fc = 0.0;
@@ -74,11 +76,16 @@ class IIRLowpassFilter
         PBRet setCutoffFreq(double Fc);
         PBRet setSamplingFreq(double Fs);
 
+        // Getters
+        double getCutoffFreq(void) const { return _config.Fc; }
+        double getSamplingFreq(void) const { return _config.Fs; }
+
         // Utility
         static PBRet checkInputs(const IIRLowpassFilterConfig& config);
         static PBRet loadFromJSON(IIRLowpassFilterConfig& cfg, const cJSON* cfgRoot);
         bool isConfigured(void) const { return _configured; }
 
+        friend class IIRLowpassFilterUT;
     private:
 
         PBRet _initFromConfig(const IIRLowpassFilterConfig& config);

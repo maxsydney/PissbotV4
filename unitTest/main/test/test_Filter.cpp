@@ -19,6 +19,24 @@ static FilterConfig validConfig(void)
     return cfg;
 }
 
+static IIRLowpassFilterConfig validIIRConfig(void)
+{
+    IIRLowpassFilterConfig cfg {};
+    cfg.Fs = 5.0;
+    cfg.Fc = 1.0;
+
+    return cfg;
+}
+
+class IIRLowpassFilterUT
+{
+    public:
+        static PBRet computeFilterCoefficients(IIRLowpassFilter& lpf, double samplingFreq, double cutoffFreq, FilterConfig& filterConfig)
+        {
+            return lpf._computeFilterCoefficients(samplingFreq, cutoffFreq, filterConfig);
+        }
+};
+
 TEST_CASE("Constructor", "[Filter]")
 {
     // Default object not configured
@@ -186,6 +204,278 @@ TEST_CASE("filterValid", "[Filter]")
             double out = 0.0;
             TEST_ASSERT_EQUAL(PBRet::SUCCESS, filter.filter(input[i], out));
             TEST_ASSERT_DOUBLE_WITHIN(tol, filtered[i], out);
+        }
+    }
+}
+
+TEST_CASE("Constructor", "[IIRLowpassFilter]")
+{
+    // Default object not configured
+    {
+        IIRLowpassFilter filter {};
+        TEST_ASSERT_FALSE(filter.isConfigured());
+    }
+
+    // Valid params
+    {
+        IIRLowpassFilter filter(validIIRConfig());
+        TEST_ASSERT_TRUE(filter.isConfigured());
+    }
+
+    // Sampling frequency is zero
+    {
+        IIRLowpassFilterConfig config = validIIRConfig();
+        config.Fs = 0.0;
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_FALSE(filter.isConfigured());
+    }
+
+    // Sampling frequency is NaN
+    {
+        IIRLowpassFilterConfig config = validIIRConfig();
+        config.Fs = NAN;
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_FALSE(filter.isConfigured());
+    }
+
+    // Sampling frequency is inf
+    {
+        IIRLowpassFilterConfig config = validIIRConfig();
+        config.Fs = std::numeric_limits<double>::infinity();
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_FALSE(filter.isConfigured());
+    }
+
+    // Cutoff frequency is zero
+    {
+        IIRLowpassFilterConfig config = validIIRConfig();
+        config.Fc = 0.0;
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_FALSE(filter.isConfigured());
+    }
+
+    // Cutoff frequency above nyquist limit
+    {
+        IIRLowpassFilterConfig config = validIIRConfig();
+        config.Fs = 5.0;
+        config.Fc = 5.0;
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_FALSE(filter.isConfigured());
+    }
+
+    // Sampling frequency is NaN
+    {
+        IIRLowpassFilterConfig config = validIIRConfig();
+        config.Fc = NAN;
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_FALSE(filter.isConfigured());
+    }
+
+    // Sampling frequency is inf
+    {
+        IIRLowpassFilterConfig config = validIIRConfig();
+        config.Fc = std::numeric_limits<double>::infinity();
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_FALSE(filter.isConfigured());
+    }
+}
+
+TEST_CASE("filter", "[IIRLowpassFilter]")
+{
+    // LPF step response
+    IIRLowpassFilterConfig config {};
+    config.Fs = 5.0;
+    config.Fc = 0.5;
+    IIRLowpassFilter filter(config);
+    TEST_ASSERT_EQUAL(true, filter.isConfigured());
+    const double tol = 1e-9;
+
+    // Reference data
+    std::vector<double> input = {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+    std::vector<double> filtered = {0.0, 0.0, 0.0, 0.0, 0.06745228281719011, 0.27945007397817534, 0.5613607697619523, 0.7960651646253372, 0.9479602914230869, 1.0246941154756408, 1.0497024557750898, 1.04661419553378, 1.032762614635673, 1.018205875055514, 1.0072856302799666, 1.000812690316155, 0.9979217845891704, 0.9972893166828789, 0.9977596396528268, 0.9985582299416729};
+
+    for (size_t i = 0; i < input.size(); i++) {
+        double out = 0.0;
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, filter.filter(input[i], out));
+        TEST_ASSERT_DOUBLE_WITHIN(tol, filtered[i], out);
+    }
+}
+
+TEST_CASE("setCutoffFrequency", "[IIRLowpassFilter]")
+{
+    const IIRLowpassFilterConfig config = validIIRConfig();
+
+    // Valid cutoff frequency
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        const double cutoffFreq = 0.5;
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, filter.setCutoffFreq(cutoffFreq));
+        TEST_ASSERT_EQUAL(cutoffFreq, filter.getCutoffFreq());
+    }
+
+    // Negative cutoff frequency
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setCutoffFreq(-1.0));
+        TEST_ASSERT_EQUAL(config.Fc, filter.getCutoffFreq());
+    }
+
+    // Cutoff frequency is 0
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setCutoffFreq(0.0));
+        TEST_ASSERT_EQUAL(config.Fc, filter.getCutoffFreq());
+    }
+
+    // Cutoff frequency above nyquist limit
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setCutoffFreq(config.Fs));
+        TEST_ASSERT_EQUAL(config.Fc, filter.getCutoffFreq());
+    }
+
+    // Cutoff frequency is NAN
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setCutoffFreq(NAN));
+        TEST_ASSERT_EQUAL(config.Fc, filter.getCutoffFreq());
+    }
+}
+
+TEST_CASE("setSamplingFrequency", "[IIRLowpassFilter]")
+{
+    const IIRLowpassFilterConfig config = validIIRConfig();
+
+    // Valid cutoff frequency
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        const double samplingFrequency = 5.0;
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, filter.setSamplingFreq(samplingFrequency));
+        TEST_ASSERT_EQUAL(samplingFrequency, filter.getSamplingFreq());
+    }
+
+    // Negative sampling frequency
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSamplingFreq(-1.0));
+        TEST_ASSERT_EQUAL(config.Fs, filter.getSamplingFreq());
+    }
+
+    // Sampling frequency is 0
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSamplingFreq(0.0));
+        TEST_ASSERT_EQUAL(config.Fs, filter.getSamplingFreq());
+    }
+
+    // Sampling frequency puts cutoff freq above nyquist limit
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSamplingFreq(config.Fc));
+        TEST_ASSERT_EQUAL(config.Fs, filter.getSamplingFreq());
+    }
+
+    // Sampling frequency is NAN
+    {
+        IIRLowpassFilter filter(config);
+        TEST_ASSERT_TRUE(filter.isConfigured());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSamplingFreq(NAN));
+        TEST_ASSERT_EQUAL(config.Fs, filter.getSamplingFreq());
+    }
+}
+
+TEST_CASE("loadFromJSON", "[IIRLowpassFilter]")
+{
+    // TODO: Implement this
+}
+
+TEST_CASE("computeFilterCoefficients", "[IIRLowpassFilter]")
+{
+    // Compute the biquad filter coefficients
+    // Test cases generated at
+    // https://arachnoid.com/BiQuadDesigner/index.html
+    IIRLowpassFilter filter(validIIRConfig());
+    TEST_ASSERT_TRUE(filter.isConfigured());
+    const double tol = 1e-8;
+
+    // Fs = 5, Fc = 1
+    {
+        FilterConfig filterCfg {};
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, IIRLowpassFilterUT::computeFilterCoefficients(filter, 5.0, 1.0, filterCfg));
+
+        // Reference solution
+        std::vector<double> numExpected = {0.20655954, 0.41311908, 0.20655954};
+        std::vector<double> denExpected = {-0.36950494, 0.19574310};
+
+        for (size_t i = 0; i < numExpected.size(); i++) {
+            TEST_ASSERT_DOUBLE_WITHIN(tol, numExpected[i], filterCfg.num[i]);
+        }
+
+        for (size_t i = 0; i < denExpected.size(); i++) {
+            TEST_ASSERT_DOUBLE_WITHIN(tol, denExpected[i], filterCfg.den[i]);
+        }
+    }
+
+    // Fs = 5, Fc = 2.5
+    {
+        FilterConfig filterCfg {};
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, IIRLowpassFilterUT::computeFilterCoefficients(filter, 5.0, 2.5, filterCfg));
+
+        // Reference solution
+        std::vector<double> numExpected = {1.0, 2.0, 1.0};
+        std::vector<double> denExpected = {2.0, 1.0};
+
+        for (size_t i = 0; i < numExpected.size(); i++) {
+            TEST_ASSERT_DOUBLE_WITHIN(tol, numExpected[i], filterCfg.num[i]);
+        }
+
+        for (size_t i = 0; i < denExpected.size(); i++) {
+            TEST_ASSERT_DOUBLE_WITHIN(tol, denExpected[i], filterCfg.den[i]);
+        }
+    }
+
+    // Fs = 5, Fc = 0.2
+    {
+        FilterConfig filterCfg {};
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, IIRLowpassFilterUT::computeFilterCoefficients(filter, 5.0, 0.2, filterCfg));
+
+        // Reference solution
+        std::vector<double> numExpected = {0.01335890, 0.02671780, 0.01335890};
+        std::vector<double> denExpected = {-1.64742277, 0.70085836};
+
+        for (size_t i = 0; i < numExpected.size(); i++) {
+            TEST_ASSERT_DOUBLE_WITHIN(tol, numExpected[i], filterCfg.num[i]);
+        }
+
+        for (size_t i = 0; i < denExpected.size(); i++) {
+            TEST_ASSERT_DOUBLE_WITHIN(tol, denExpected[i], filterCfg.den[i]);
+        }
+    }
+
+    // Fs = 5000, Fc = 250
+    {
+        FilterConfig filterCfg {};
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, IIRLowpassFilterUT::computeFilterCoefficients(filter, 5000.0, 250, filterCfg));
+
+        // Reference solution
+        std::vector<double> numExpected = {0.02008282, 0.04016564, 0.02008282};
+        std::vector<double> denExpected = {-1.56097580, 0.64130708};
+
+        for (size_t i = 0; i < numExpected.size(); i++) {
+            TEST_ASSERT_DOUBLE_WITHIN(tol, numExpected[i], filterCfg.num[i]);
+        }
+
+        for (size_t i = 0; i < denExpected.size(); i++) {
+            TEST_ASSERT_DOUBLE_WITHIN(tol, denExpected[i], filterCfg.den[i]);
         }
     }
 }

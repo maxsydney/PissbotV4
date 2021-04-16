@@ -105,8 +105,6 @@ IIRLowpassFilter::IIRLowpassFilter(const IIRLowpassFilterConfig& config)
 
 PBRet IIRLowpassFilter::filter(double val, double& output)
 {
-    printf("Fs: %f - Fc: %f\n", _config.Fs, _config.Fc);
-
     if (_configured == false) {
         ESP_LOGE(IIRLowpassFilter::Name, "IIRLowpassFilter object was not configured");
         return PBRet::FAILURE;
@@ -122,49 +120,24 @@ PBRet IIRLowpassFilter::filter(double val, double& output)
 
 PBRet IIRLowpassFilter::setCutoffFreq(double Fc)
 {
-    IIRLowpassFilterConfig tempCfg {};
-    tempCfg.Fs = _config.Fs;
-    tempCfg.Fc = Fc;
+    // Create dummy config and check that it is valid
+    IIRLowpassFilterConfig filterConfig(_config.Fs, Fc);
 
     printf("Updating cutoff frequency\n");
-    printf("Fs: %f - Fc: %f\n", tempCfg.Fs, tempCfg.Fc);
+    printf("Fs: %f - Fc: %f\n", filterConfig.Fs, filterConfig.Fc);
 
-    if (checkInputs(tempCfg) == PBRet::FAILURE) {
-        ESP_LOGE(IIRLowpassFilter::Name, "Invalid inputs. Filter not updated");
-        return PBRet::FAILURE;
-    }
-
-    _config = tempCfg;
-
-    FilterConfig filterConfig {};
-    if (_computeFilterCoefficients(_config.Fs, _config.Fc, filterConfig) == PBRet::FAILURE) {
-        ESP_LOGE(IIRLowpassFilter::Name, "Failed to compute filter coefficients. Filter not updated");
-        return PBRet::FAILURE;
-    }
-
-    _filter = Filter(filterConfig);
-
-    return _filter.isConfigured() ? PBRet::SUCCESS : PBRet::FAILURE;
+    return _initFromConfig(filterConfig);
 }
 
 PBRet IIRLowpassFilter::setSamplingFreq(double Fs)
 {
-    _config.Fs = Fs;
-    // TODO: Fix this like setCutoffFreq
-    if (checkInputs(_config) == PBRet::FAILURE) {
-        ESP_LOGE(IIRLowpassFilter::Name, "Invalid inputs. Filter not updated");
-        return PBRet::FAILURE;
-    }
+    // Create dummy config and check that it is valid
+    IIRLowpassFilterConfig filterConfig(Fs, _config.Fc);
 
-    FilterConfig filterConfig {};
-    if (_computeFilterCoefficients(_config.Fs, _config.Fc, filterConfig) == PBRet::FAILURE) {
-        ESP_LOGE(IIRLowpassFilter::Name, "Failed to compute filter coefficients. Filter not updated");
-        return PBRet::FAILURE;
-    }
+    printf("Updating sampling frequency\n");
+    printf("Fs: %f - Fc: %f\n", filterConfig.Fs, filterConfig.Fc);
 
-    _filter = Filter(filterConfig);
-
-    return _filter.isConfigured() ? PBRet::SUCCESS : PBRet::FAILURE;
+    return _initFromConfig(filterConfig);
 }
 
 PBRet IIRLowpassFilter::checkInputs(const IIRLowpassFilterConfig& config)
@@ -183,6 +156,11 @@ PBRet IIRLowpassFilter::checkInputs(const IIRLowpassFilterConfig& config)
 
     if (Utilities::check(config.Fc) == false) {
         ESP_LOGE(IIRLowpassFilter::Name, "Cutoff frequency was inf or NaN");
+        err |= ESP_FAIL;
+    }
+
+    if (config.Fc <= 0) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Cutoff frequency was <= 0");
         err |= ESP_FAIL;
     }
 
@@ -206,7 +184,7 @@ PBRet IIRLowpassFilter::loadFromJSON(IIRLowpassFilterConfig& cfg, const cJSON* c
     if (cJSON_IsNumber(FsNode)) {
         cfg.Fs = FsNode->valuedouble;
     } else {
-        ESP_LOGI(IIRLowpassFilter::Name, "Unable to read sampling frequency from JSON");
+        ESP_LOGW(IIRLowpassFilter::Name, "Unable to read sampling frequency from JSON");
         return PBRet::FAILURE;
     }
 
@@ -215,7 +193,7 @@ PBRet IIRLowpassFilter::loadFromJSON(IIRLowpassFilterConfig& cfg, const cJSON* c
     if (cJSON_IsNumber(FcNode)) {
         cfg.Fs = FcNode->valuedouble;
     } else {
-        ESP_LOGI(IIRLowpassFilter::Name, "Unable to read cutoff frequency from JSON");
+        ESP_LOGW(IIRLowpassFilter::Name, "Unable to read cutoff frequency from JSON");
         return PBRet::FAILURE;
     }
 
@@ -229,21 +207,23 @@ PBRet IIRLowpassFilter::_initFromConfig(const IIRLowpassFilterConfig& config)
 
         FilterConfig filterConfig {};
         if (_computeFilterCoefficients(_config.Fs, _config.Fc, filterConfig) != PBRet::SUCCESS) {
-            ESP_LOGI(IIRLowpassFilter::Name, "Failed to compute filter coefficients");
+            ESP_LOGW(IIRLowpassFilter::Name, "Failed to compute filter coefficients. Filter was not configured");
             return PBRet::FAILURE;
         }
 
         _filter = Filter(filterConfig);
         if (_filter.isConfigured() == false) {
-            ESP_LOGI(IIRLowpassFilter::Name, "Failed to configure base filter object");
+            ESP_LOGW(IIRLowpassFilter::Name, "Failed to configure base filter object");
             return PBRet::FAILURE;
         }
 
         printf("IIR Filter configured\n");
         printf("Fs: %f - Fc: %f\n", _config.Fs, _config.Fc);
 
+        ESP_LOGW(IIRLowpassFilter::Name, "Invalid inputs. Filter was not configured");
         return PBRet::SUCCESS;
     }
+
 
     return PBRet::FAILURE;
 }
