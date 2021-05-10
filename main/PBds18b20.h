@@ -26,6 +26,8 @@ class Ds18b20Calibration
 class Ds18b20
 {
     static constexpr const char *Name = "Ds18b20";
+    static constexpr const char *calibrationStr = "calibration";
+    static constexpr const char *romCodeStr = "romCode";
 
     public:
         Ds18b20(void) = default;
@@ -35,7 +37,7 @@ class Ds18b20
                 const OneWireBus *bus);
 
         // Update
-        PBRet readTemp(float &temp) const;
+        PBRet readTemp(double &temp) const;
 
         // Utility
         PBRet serialize(cJSON *root) const;

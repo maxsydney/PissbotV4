@@ -41,7 +41,7 @@ PBRet Ds18b20::_initFromJSON(const cJSON* root, DS18B20_RESOLUTION res, const On
     }
 
     // Read ROM code
-    const cJSON* romCode = cJSON_GetObjectItemCaseSensitive(root, "romCode");
+    const cJSON* romCode = cJSON_GetObjectItemCaseSensitive(root, Ds18b20::romCodeStr);
     if (romCode == nullptr) {
         ESP_LOGW(Ds18b20::Name, "Failed to find romCode property of JSON object");
         return PBRet::FAILURE;
@@ -66,7 +66,7 @@ PBRet Ds18b20::_initFromJSON(const cJSON* root, DS18B20_RESOLUTION res, const On
     }
 
     // Read calibration
-    const cJSON* calNode = cJSON_GetObjectItemCaseSensitive(root, "calibration");
+    const cJSON* calNode = cJSON_GetObjectItemCaseSensitive(root, Ds18b20::calibrationStr);
     if (romCode == nullptr) {
         ESP_LOGW(Ds18b20::Name, "Failed to find calibration property of JSON object");
         return PBRet::FAILURE;
@@ -124,15 +124,22 @@ PBRet Ds18b20::checkInputs(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res,
     return PBRet::SUCCESS;
 }
 
-PBRet Ds18b20::readTemp(float& temp) const
+PBRet Ds18b20::readTemp(double& temp) const
 {
     if (_configured == false) {
         ESP_LOGW(Ds18b20::Name, "Sensor is not configured. Temperature read failed");
         return PBRet::FAILURE;
     }
 
-    if (ds18b20_read_temp(&_info, &temp) != DS18B20_OK) {
+    float rawTemp = 0.0;
+    if (ds18b20_read_temp(&_info, &rawTemp) != DS18B20_OK) {
         ESP_LOGW(Ds18b20::Name, "Temperature read failed");
+        return PBRet::FAILURE;
+    }
+
+    // Calibrate measurement
+    if (Utilities::polyVal(_cal.calCoeff, static_cast<double> (rawTemp), temp) != PBRet::SUCCESS) {
+        ESP_LOGW(Ds18b20::Name, "Failed to calibrate raw measurement");
         return PBRet::FAILURE;
     }
 
@@ -149,7 +156,7 @@ PBRet Ds18b20::serialize(cJSON* root) const
         return PBRet::FAILURE;
     }
 
-    // All we really need is the ROM code
+    // Write the ROM code
     cJSON* romCode = cJSON_CreateArray();
     if (romCode == nullptr) {
         ESP_LOGW(Ds18b20::Name, "Failed to create JSON array for sensor ROM code");
@@ -165,7 +172,26 @@ PBRet Ds18b20::serialize(cJSON* root) const
         }
         cJSON_AddItemToArray(romCode, byte);
     }
-    cJSON_AddItemToObject(root, "romCode", romCode);
+    cJSON_AddItemToObject(root, Ds18b20::romCodeStr, romCode);
+
+    // Write sensor calibration
+    cJSON* calCoeffs = cJSON_CreateArray();
+    if (calCoeffs == nullptr) {
+        ESP_LOGW(Ds18b20::Name, "Failed to create JSON array for sensor calibration coefficients");
+        return PBRet::FAILURE;
+    }
+
+    for (double coeff : _cal.calCoeff) {
+        cJSON* JSONcoeff = cJSON_CreateNumber(coeff);
+        if (JSONcoeff == nullptr) {
+            ESP_LOGW(Ds18b20::Name, "Error creating coefficient in calibration coefficient array");
+            cJSON_Delete(calCoeffs);
+            return PBRet::FAILURE;
+        }
+        cJSON_AddItemToArray(calCoeffs, JSONcoeff);
+    }
+
+    cJSON_AddItemToObject(root, Ds18b20::calibrationStr, calCoeffs);
 
     return PBRet::SUCCESS;
 }

@@ -162,12 +162,15 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
 {
     // Read all available temperature sensors
     
-    // TODO: Replace these with direct memory access
-    float headTemp = 0.0;
-    float refluxTemp = 0.0;
-    float productTemp = 0.0;
-    float radiatorTemp = 0.0;
-    float boilerTemp = 0.0;
+    // Temporary variables are required because TemperatureData object
+    // must be created with a valid timestamp. There are no guarantees about
+    // the creation time of the Tdata argument, so this function must create
+    // one.
+    double headTemp = 0.0;
+    double refluxTemp = 0.0;
+    double productTemp = 0.0;
+    double radiatorTemp = 0.0;
+    double boilerTemp = 0.0;
 
     if (_configured == false) {
         ESP_LOGW(PBOneWire::Name, "Cannot read temperatures before PBOneWireBuse is configured");
