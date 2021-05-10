@@ -137,29 +137,6 @@ PBRet PBOneWire::broadcastAvailableDevices(void)
     return _broadcastDeviceAddresses();
 }
 
-PBRet PBOneWire::initialiseTempSensors(void)
-{
-    // TODO:
-    // Attempt to connect to each sensor and check that they are responding
-    // 
-
-    // // Connect to sensors and create PBds18b20 object
-    // if (_connectedDevices == 0) {
-    //     ESP_LOGW(PBOneWire::Name, "No available devices");
-    //     return PBRet::FAILURE;
-    // }
-
-    // // NOTE: Just assigning the first for now. Assign properly from saved sensors JSON
-    // // Assign sensors
-    // if (_headTempSensor.isConfigured() == false) {
-    //     _headTempSensor = _availableSensors.at(0);
-    // }
-
-    // // Connect other devices here
-    
-    return PBRet::SUCCESS;
-}
-
 PBRet PBOneWire::_oneWireConvert(void) const
 {
     // Command all temperature sensors on the bus to convert temperatures.
@@ -274,12 +251,6 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
     }
     if (_connectedDevices <= 0) {
         ESP_LOGW(PBOneWire::Name, "No devices were found on OneWire bus");
-    }
-
-    // // This is a temporary method to load a temperature sensor into the headTemp channel
-    // // for testing
-    if (initialiseTempSensors() != PBRet::SUCCESS) {
-        ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
     }
 
     return PBRet::SUCCESS;

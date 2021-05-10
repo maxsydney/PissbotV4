@@ -42,9 +42,6 @@ public:
     PBOneWire(void) = default;
     explicit PBOneWire(const PBOneWireConfig &cfg);
 
-    // Initialisation
-    PBRet initialiseTempSensors(void);
-
     // Update
     PBRet readTempSensors(TemperatureData &Tdata) const;
 
