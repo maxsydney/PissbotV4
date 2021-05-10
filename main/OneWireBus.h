@@ -47,6 +47,7 @@ public:
 
     // Get/Set
     PBRet setTempSensor(SensorType type, const Ds18b20 &sensor);
+    PBRet getTempSensor(const OneWireBus_ROMCode& addr, Ds18b20& sensorOut);
     const OneWireBus *getOWB(void) const { return _owb; } // Probably not a great idea. Consider removing
 
     // Utility

@@ -115,10 +115,9 @@ PBRet SensorManager::_assignSensorCB(std::shared_ptr<MessageBase> msg)
     AssignSensorCommand cmd = *std::static_pointer_cast<AssignSensorCommand>(msg);
     ESP_LOGI(SensorManager::Name, "Assigning new temperature sensor");
 
-    // Create new sensor object
-    const Ds18b20 sensor(cmd.getAddress(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
-    if (sensor.isConfigured() == false) {
-        ESP_LOGW(SensorManager::Name, "Failed to create valid Ds18b20 sensor");
+    Ds18b20 sensor {};
+    if (_OWBus.getTempSensor(cmd.getAddress(), sensor) != PBRet::SUCCESS) {
+        ESP_LOGW(SensorManager::Name, "Failed to locate sensor in list of available sensors");
         return PBRet::FAILURE;
     }
 
@@ -264,8 +263,6 @@ PBRet SensorManager::_loadKnownDevices(const char* basePath, const char* partiti
     JSONBuffer << configIn.rdbuf();
 
     // Load JSON object
-    // Just load one sensor for now. Package into proper methods for loading all sensors once
-    // validated
     cJSON* configRoot = cJSON_Parse(JSONBuffer.str().c_str());
     if (configRoot == nullptr) {
         ESP_LOGW(SensorManager::Name, "Sensor config file was opened but could not be parsed");
@@ -273,7 +270,6 @@ PBRet SensorManager::_loadKnownDevices(const char* basePath, const char* partiti
     }
 
     // Load saved temperature sensors
-    // No longer required to check for null, as this check is performed in cJSON_GetObjectItemCaseSensitive
     const cJSON* tempSensors = cJSON_GetObjectItemCaseSensitive(configRoot, "TempSensors");
     if (_loadTempSensorsFromJSON(tempSensors) != PBRet::SUCCESS) {
         ESP_LOGW(SensorManager::Name, "No temperature sensor config data was available");

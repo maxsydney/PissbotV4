@@ -1,5 +1,7 @@
+#include <cstring>
 #include "OneWireBus.h"
 #include "SensorManager.h"
+
 
 PBOneWire::PBOneWire(const PBOneWireConfig& cfg)
 {
@@ -106,7 +108,8 @@ PBRet PBOneWire::_scanForDevices(void)
 
         owb_search_first(_owb, &search_state, &found);
         while (found) {
-            _availableSensors.emplace_back(Ds18b20(search_state.rom_code, _cfg.tempSensorResolution, _owb));
+            Ds18b20Calibration cal {};  // Load sensor with default calibration
+            _availableSensors.emplace_back(Ds18b20(search_state.rom_code, _cfg.tempSensorResolution, _owb, cal));
             _connectedDevices++;
             owb_search_next(_owb, &search_state, &found);
         }
@@ -407,6 +410,7 @@ PBRet PBOneWire::setTempSensor(SensorType type, const Ds18b20& sensor)
     // TODO: This function is very manual and could be tidied up a lot
     
     // First, we must "unassign" the sensor if it is already assigned
+    // TODO: Do we really have to do this? Probably not
     if (_headTempSensor == sensor) {
         _headTempSensor = Ds18b20();
     } else if (_refluxTempSensor == sensor) {
@@ -492,4 +496,19 @@ SensorType PBOneWire::mapSensorIDToType(int sensorID)
             return SensorType::Unknown;
         }
     }
+}
+
+PBRet PBOneWire::getTempSensor(const OneWireBus_ROMCode& addr, Ds18b20& sensorOut)
+{
+    // If a sensor with an address matching addr exists in the list of available
+    // sensors, make a copy of it and write it to sensor.
+
+    for (const Ds18b20& sensor : _availableSensors) {
+        if (std::memcmp(sensor.getROMCode(), &addr, 8) == 0) {
+            sensorOut = sensor;
+            return PBRet::SUCCESS;
+        }
+    }
+
+    return PBRet::FAILURE;
 }
