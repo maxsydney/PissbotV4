@@ -75,21 +75,17 @@ void SensorManager::taskMain(void)
 PBRet SensorManager::_generalMessageCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    ESP_LOGI(SensorManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
-
     return PBRet::SUCCESS;
 }
 
 PBRet SensorManager::_commandMessageCB(std::shared_ptr<MessageBase> msg)
 {
     SensorManagerCommand cmd = *std::static_pointer_cast<SensorManagerCommand>(msg);
-    ESP_LOGI(SensorManager::Name, "Got SensorManagerCommand message");
-
+    
     switch (cmd.getCommandType())
     {
         case (SensorManagerCmdType::BroadcastSensorsStart):
         {
-            ESP_LOGI(SensorManager::Name, "Broadcasting sensor adresses");
             return _broadcastSensors();
         }
         case (SensorManagerCmdType::None):

@@ -90,7 +90,6 @@ private:
     Ds18b20 _boilerTempSensor{};
 
     // Unassigned sensors
-    size_t _connectedDevices = 0;
     std::vector<Ds18b20> _availableSensors;
 
     // Class data

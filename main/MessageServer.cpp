@@ -6,7 +6,6 @@ std::vector<Subscriber> MessageServer::_subscribers {};
 
 PBRet MessageServer::registerTask(const Subscriber& subscriber)
 {
-    // TODO: How to check if queue is initialized? Write C++ wrapper?
     _subscribers.push_back(subscriber);
 
     ESP_LOGI(MessageServer::Name, "Registered new subscriber: %s", subscriber.getName());
@@ -27,7 +26,6 @@ PBRet MessageServer::broadcastMessage(const std::shared_ptr<MessageBase>& messag
 
     for (const Subscriber& subscriber: _subscribers) {
         if (subscriber.isSubscribed(msgType)) {
-            // TODO: Ensure this is deleted.
             subscriber.getQueueHandle().push(message);
         }
     }

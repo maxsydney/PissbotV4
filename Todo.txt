@@ -14,3 +14,4 @@
 - Implement heap monitoring in distillerManager
 - Implement handling for failure modes
 - DS10B20 calibration
+- Handle message loopback

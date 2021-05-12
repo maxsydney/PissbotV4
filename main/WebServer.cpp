@@ -141,8 +141,6 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
     memset(socketMsg, 0, len+1);
     memcpy(socketMsg, data, len);
 
-    ESP_LOGI(Webserver::Name, "Message: %s", socketMsg);
-
     cJSON* root = cJSON_Parse(socketMsg);
     if (root == nullptr) {
         ESP_LOGW(Webserver::Name, "Failed to parse JSON string");
@@ -213,8 +211,7 @@ PBRet Webserver::_startupWebserver(const WebserverConfig& cfg)
 	                  cfg.maxConnections,
 	                  HTTPD_FLAG_NONE);
 	httpdFreertosStart(&_httpdFreertosInstance);
-
-    ESP_LOGI(Webserver::Name, "Webserver initialized");
+    
     return PBRet::SUCCESS;
 }
 
@@ -389,7 +386,7 @@ PBRet Webserver::_deviceDataCB(std::shared_ptr<MessageBase> msg)
     // Serialize the device data message and broadcast to all connected
     // websockets
 
-    // Get controlTuning object
+    // Get DeviceData object
     DeviceData deviceData = *std::static_pointer_cast<DeviceData>(msg);
 
     // Serialize the device addresses
@@ -406,11 +403,19 @@ PBRet Webserver::_deviceDataCB(std::shared_ptr<MessageBase> msg)
         return PBRet::FAILURE;
     }
 
-    cJSON_AddStringToObject(root, "type", "sensorID");
+    cJSON_AddStringToObject(root, "type", "availableSensors");
     cJSON_AddItemToObject(root, "sensors", sensors);
 
     for (const Ds18b20& sensor: deviceData.getDevices()) {
-        sensor.serialize(sensors);
+        cJSON* sensorObj = cJSON_CreateObject();
+        if (sensor.serialize(sensorObj) != PBRet::SUCCESS) {
+            ESP_LOGW(Webserver::Name, "Failed to serialize sensor to deviceData packet");
+            cJSON_Delete(sensorObj);
+            cJSON_Delete(root);
+            return PBRet::FAILURE;
+        }
+
+        cJSON_AddItemToArray(sensors, sensorObj);
     }
 
     char* deviceDataJSON = cJSON_Print(root);
@@ -448,7 +453,6 @@ PBRet Webserver::_processControlTuningMessage(cJSON* msgRoot)
 
     std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (ctrlTuning);
 
-    ESP_LOGI(Webserver::Name, "Broadcasting controller tuning");
     return MessageServer::broadcastMessage(msg);
 }
 
@@ -472,8 +476,6 @@ PBRet Webserver::_processControlSettingsMessage(cJSON* msgRoot)
     }
 
     std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (ctrlSettingsMsg);
-
-    ESP_LOGI(Webserver::Name, "Broadcasting controller settings");
     return MessageServer::broadcastMessage(msg);
 }
 
@@ -497,7 +499,6 @@ PBRet Webserver::_processCommandMessage(cJSON* msgRoot)
     if (subtypeStr == Webserver::BroadcastDevices) {
         // Send message to trigger scan of sensor bus
         std::shared_ptr<SensorManagerCommand> msg = std::make_shared<SensorManagerCommand> (SensorManagerCmdType::BroadcastSensorsStart);
-        ESP_LOGI(Webserver::Name, "Sending message to start sensor assign task");
         return MessageServer::broadcastMessage(msg);
     } else if (subtypeStr == Webserver::AssignSensor) {
         return _processAssignSensorMessage(msgRoot);
@@ -527,8 +528,6 @@ PBRet Webserver::_processPeripheralStateMessage(cJSON* msgRoot)
     }
 
     std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (ctrlCommand);
-
-    ESP_LOGI(Webserver::Name, "Broadcasting controller command");
     return MessageServer::broadcastMessage(msg);
 }
 

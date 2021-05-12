@@ -59,8 +59,6 @@ void DistillerManager::taskMain(void)
 PBRet DistillerManager::_generalMessagCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    ESP_LOGI(DistillerManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
-
     return PBRet::SUCCESS;
 }
 

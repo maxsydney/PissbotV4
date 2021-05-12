@@ -77,8 +77,6 @@ void Controller::taskMain(void)
 PBRet Controller::_generalMessageCB(std::shared_ptr<MessageBase> msg)
 {
     std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    ESP_LOGI(Controller::Name, "Received general message: %s", genMsg->getMessage().c_str());  
-
     return PBRet::SUCCESS;
 }
 PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
@@ -149,9 +147,6 @@ PBRet Controller::_controlTuningCB(std::shared_ptr<MessageBase> msg)
 PBRet Controller::_controlDataRequestCB(std::shared_ptr<MessageBase> msg)
 {
     // Broadcast the requested data
-    //
-
-    ESP_LOGI(Controller::Name, "Got request for data");
 
     ControllerDataRequest request = *std::static_pointer_cast<ControllerDataRequest>(msg);
 
@@ -203,8 +198,6 @@ PBRet Controller::_broadcastControllerTuning(void) const
 {
     // Send a temperature data message to the queue
     std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (_ctrlTuning);
-
-    ESP_LOGI(Controller::Name, "Broadcasting controller tuning");
     return MessageServer::broadcastMessage(msg);
 }
 
@@ -212,8 +205,6 @@ PBRet Controller::_broadcastControllerSettings(void) const
 {
     // Send a temperature data message to the queue
     std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (_ctrlSettings);
-
-    ESP_LOGI(Controller::Name, "Broadcasting controller settings");
     return MessageServer::broadcastMessage(msg);
 }
 
@@ -223,8 +214,6 @@ PBRet Controller::_broadcastControllerPeripheralState(void) const
     // TODO: Does this loopback?
 
     std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (_peripheralState);
-
-    ESP_LOGI(Controller::Name, "Broadcasting peripheral state");
     return MessageServer::broadcastMessage(msg);
 }
 

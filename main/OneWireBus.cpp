@@ -103,19 +103,18 @@ PBRet PBOneWire::_scanForDevices(void)
     if (xSemaphoreTake(_OWBMutex, 250 / portTICK_PERIOD_MS) == pdTRUE) {
         OneWireBus_SearchState search_state {};
         bool found = false;
-        _connectedDevices = 0;
         _availableSensors.clear();
 
         owb_search_first(_owb, &search_state, &found);
         while (found) {
             Ds18b20Calibration cal {};  // Load sensor with default calibration
             _availableSensors.emplace_back(Ds18b20(search_state.rom_code, _cfg.tempSensorResolution, _owb, cal));
-            _connectedDevices++;
             owb_search_next(_owb, &search_state, &found);
         }
+
         xSemaphoreGive(_OWBMutex);
     } else {
-        ESP_LOGW(PBOneWire::Name, "(_scanForDevices) Unable to access PBOneWire shared resource");
+        ESP_LOGW(PBOneWire::Name, "Unable to access PBOneWire shared resource");
         return PBRet::FAILURE;
     }
 
@@ -147,7 +146,7 @@ PBRet PBOneWire::_oneWireConvert(void) const
     //       this method, it is your responsibility to make sure that the bus
     //       is not locked out
 
-    if (_connectedDevices == 0) {
+    if (_availableSensors.size() == 0) {
         ESP_LOGW(PBOneWire::Name, "No available devices. Cannot convert temperatures");
         return PBRet::FAILURE;
     }
@@ -255,7 +254,7 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
     if (_scanForDevices() != PBRet::SUCCESS) {
         ESP_LOGW(PBOneWire::Name, "Failed to scan OneWire bus for deveices");
     }
-    if (_connectedDevices <= 0) {
+    if (_availableSensors.size() <= 0) {
         ESP_LOGW(PBOneWire::Name, "No devices were found on OneWire bus");
     }
 
@@ -412,8 +411,8 @@ PBRet PBOneWire::setTempSensor(SensorType type, const Ds18b20& sensor)
 {
     // TODO: This function is very manual and could be tidied up a lot
     
-    // First, we must "unassign" the sensor if it is already assigned
-    // TODO: Do we really have to do this? Probably not
+    // First, we must "unassign" from its previous task before assigning
+    // to a new one
     if (_headTempSensor == sensor) {
         _headTempSensor = Ds18b20();
     } else if (_refluxTempSensor == sensor) {
