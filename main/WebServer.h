@@ -27,6 +27,7 @@ class Webserver : public Task
     static constexpr const char* BroadcastDevices = "BroadcastDevices";
     static constexpr const char* AssignSensor = "AssignSensor";
     static constexpr const char* PeripheralState = "PeripheralState";
+    static constexpr const char* CalibrateSensor = "calibrateSensor";
 
     public:
         Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg);
@@ -68,13 +69,14 @@ class Webserver : public Task
         static PBRet _processControlSettingsMessage(cJSON* msgRoot);
         static PBRet _processCommandMessage(cJSON* msgRoot);
         static PBRet _processPeripheralStateMessage(cJSON* msgRoot);
+        static PBRet _processAssignSensorMessage(cJSON* root);
+        static PBRet _processCalibrateSensorMessage(cJSON* root);
 
         // Utility methods
         static PBRet _requestControllerTuning(void);
         static PBRet _requestControllerSettings(void);
         static PBRet _requestControllerPeripheralState(void);
-        static PBRet _processAssignSensorMessage(cJSON* root);
-
+        
         // Websocket methods
         PBRet _sendToAll(const std::string& msg);
 

@@ -68,6 +68,7 @@ private:
     PBRet _generalMessageCB(std::shared_ptr<MessageBase> msg);
     PBRet _commandMessageCB(std::shared_ptr<MessageBase> msg);
     PBRet _assignSensorCB(std::shared_ptr<MessageBase> msg);
+    PBRet _calibrateSensorCB(std::shared_ptr<MessageBase> msg);
 
     // SensorManager data
     SensorManagerConfig _cfg{};

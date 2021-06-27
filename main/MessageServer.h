@@ -33,6 +33,7 @@ enum class MessageType {
     SensorManagerCmd,
     DeviceData,
     AssignSensor,
+    CalibrateSensor,
     ConcentrationData,
     ControllerState,
     SocketLog

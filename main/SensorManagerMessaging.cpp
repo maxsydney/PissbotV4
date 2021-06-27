@@ -84,3 +84,66 @@ PBRet ConcentrationData::serialize(std::string& JSONStr) const
 
     return PBRet::SUCCESS;
 }
+
+CalibrateSensorCommand::CalibrateSensorCommand(cJSON* root)
+    : MessageBase(CalibrateSensorCommand::messageType, CalibrateSensorCommand::Name, esp_timer_get_time())
+{
+    if (deserialize(root) == PBRet::SUCCESS) {
+        _valid = true;
+    } else {
+        ESP_LOGW(CalibrateSensorCommand::Name, "Failed to deserialize CalibrateSensorCommand");
+    }
+
+    cJSON_free(root);
+}
+
+PBRet CalibrateSensorCommand::deserialize(const cJSON *root)
+{
+    if (root == nullptr) {
+        ESP_LOGW(CalibrateSensorCommand::Name, "Unable to parse assign sensor message. cJSON object was null");
+        return PBRet::FAILURE;
+    }
+
+    ESP_LOGI(CalibrateSensorCommand::Name, "Decoding calibrate sensor command");
+
+    cJSON* sensorData = cJSON_GetObjectItemCaseSensitive(root, "data");
+    if (sensorData == nullptr) {
+        ESP_LOGW(CalibrateSensorCommand::Name, "Unable to parse sensor data from calibrate sensor command");
+        return PBRet::FAILURE;
+    }
+
+    cJSON* sensorAddr = cJSON_GetObjectItemCaseSensitive(sensorData, "addr");
+    if (sensorAddr == nullptr) {
+        ESP_LOGW(CalibrateSensorCommand::Name, "Unable to parse sensor address from calibrate sensor command");
+        return PBRet::FAILURE;
+    }
+
+    // Read address from JSON
+    cJSON* byte = nullptr;
+    int i = 0;
+    cJSON_ArrayForEach(byte, sensorAddr)
+    {
+        if (cJSON_IsNumber(byte) == false) {
+            ESP_LOGW(CalibrateSensorCommand::Name, "Unable to decode sensor address. Address byte was not a number");
+            return PBRet::FAILURE;
+        }
+        address.bytes[i++] = byte->valueint;
+    }
+
+    // Read read assigned sensor calibration
+    cJSON* calCoeffA = cJSON_GetObjectItemCaseSensitive(sensorData, "calCoeffA");
+    if (calCoeffA == nullptr) {
+        ESP_LOGW(CalibrateSensorCommand::Name, "Unable to parse linear scaling coefficient from calibrate sensor command");
+        return PBRet::FAILURE;
+    }
+    cal.A = calCoeffA->valuedouble;
+
+    cJSON* calCoeffB = cJSON_GetObjectItemCaseSensitive(sensorData, "calCoeffB");
+    if (calCoeffB == nullptr) {
+        ESP_LOGW(CalibrateSensorCommand::Name, "Unable to parse constant offset coefficient from calibrate sensor command");
+        return PBRet::FAILURE;
+    }
+    cal.B = calCoeffB->valuedouble;
+
+    return PBRet::SUCCESS;
+}

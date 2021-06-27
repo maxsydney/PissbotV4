@@ -502,6 +502,8 @@ PBRet Webserver::_processCommandMessage(cJSON* msgRoot)
         return MessageServer::broadcastMessage(msg);
     } else if (subtypeStr == Webserver::AssignSensor) {
         return _processAssignSensorMessage(msgRoot);
+    } else if (subtypeStr == Webserver::CalibrateSensor) {
+        return _processCalibrateSensorMessage(msgRoot);
     } else {
         ESP_LOGW(Webserver::Name, "Unable to parse command message with subtype %s", subtypeStr.c_str());
         return PBRet::FAILURE;
@@ -576,6 +578,18 @@ PBRet Webserver::_processAssignSensorMessage(cJSON* root)
 
     std::shared_ptr<AssignSensorCommand> msg = std::make_shared<AssignSensorCommand> (romCode, sensorType);
     return MessageServer::broadcastMessage(msg);
+}
+
+PBRet Webserver::_processCalibrateSensorMessage(cJSON* root)
+{
+    std::shared_ptr<CalibrateSensorCommand> msg = std::make_shared<CalibrateSensorCommand> (root);
+
+    if (msg->isValid()) {
+        return MessageServer::broadcastMessage(msg);
+    } else {
+        ESP_LOGW(Webserver::Name, "Failed to process calibrate sensor message");
+        return PBRet::FAILURE;
+    }
 }
 
 PBRet Webserver::_sendToAll(const std::string& msg)

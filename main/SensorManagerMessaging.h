@@ -89,4 +89,27 @@ private:
     SensorType _sensorType = SensorType::Unknown;
 };
 
+class CalibrateSensorCommand : public MessageBase
+{
+    static constexpr MessageType messageType = MessageType::CalibrateSensor;
+    static constexpr const char *Name = "Calibrate Sensor";
+
+    public:
+        CalibrateSensorCommand(void) = default;
+        explicit CalibrateSensorCommand(const Ds18b20Calibration& cal)
+            : MessageBase(CalibrateSensorCommand::messageType, CalibrateSensorCommand::Name, esp_timer_get_time()),
+              cal(cal), _valid(true) {}
+        explicit CalibrateSensorCommand(cJSON* root);
+
+        PBRet deserialize(const cJSON *root);
+        bool isValid(void) const { return _valid; }
+
+        OneWireBus_ROMCode address{};
+        Ds18b20Calibration cal {};
+
+    private:
+        bool _valid = false;
+
+};
+
 #endif // MAIN_SENSORMANAGER_MESSAGING_H

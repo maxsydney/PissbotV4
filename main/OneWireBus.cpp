@@ -514,3 +514,10 @@ PBRet PBOneWire::getTempSensor(const OneWireBus_ROMCode& addr, Ds18b20& sensorOu
 
     return PBRet::FAILURE;
 }
+
+PBRet PBOneWire::updateSensorCalibration(const OneWireBus_ROMCode& addr, const Ds18b20Calibration& cal)
+{
+    // Locate the sensor with corresponding addr and update the calibration model
+
+    return PBRet::SUCCESS;
+}

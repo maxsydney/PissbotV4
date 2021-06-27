@@ -29,7 +29,8 @@ void SensorManager::taskMain(void)
     std::set<MessageType> subscriptions = { 
         MessageType::General,
         MessageType::SensorManagerCmd,
-        MessageType::AssignSensor
+        MessageType::AssignSensor,
+        MessageType::CalibrateSensor
     };
     Subscriber sub(SensorManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -127,12 +128,23 @@ PBRet SensorManager::_assignSensorCB(std::shared_ptr<MessageBase> msg)
     return _writeSensorConfigToFile();
 }
 
+PBRet SensorManager::_calibrateSensorCB(std::shared_ptr<MessageBase> msg)
+{
+    // Update the calibration for the selected sensor 
+
+    CalibrateSensorCommand cmd = *std::static_pointer_cast<CalibrateSensorCommand>(msg);
+    ESP_LOGI(SensorManager::Name, "Updating sensor calibration");
+
+    return _OWBus.updateSensorCalibration(cmd.address, cmd.cal);
+}
+
 PBRet SensorManager::_setupCBTable(void)
 {
     _cbTable = std::map<MessageType, queueCallback> {
         {MessageType::General, std::bind(&SensorManager::_generalMessageCB, this, std::placeholders::_1)},
         {MessageType::SensorManagerCmd, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)},
-        {MessageType::AssignSensor, std::bind(&SensorManager::_assignSensorCB, this, std::placeholders::_1)}
+        {MessageType::AssignSensor, std::bind(&SensorManager::_assignSensorCB, this, std::placeholders::_1)},
+        {MessageType::CalibrateSensor, std::bind(&SensorManager::_calibrateSensorCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
