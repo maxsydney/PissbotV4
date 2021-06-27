@@ -72,24 +72,27 @@ PBRet Ds18b20::_initFromJSON(const cJSON* root, DS18B20_RESOLUTION res, const On
         return PBRet::FAILURE;
     }
 
-    std::vector<double> calCoeff {};
-    const cJSON* coeff = nullptr;
-    cJSON_ArrayForEach(coeff, calNode)
-    {
-        if (coeff == nullptr) {
-            ESP_LOGW(Ds18b20::Name, "Failed to read coeff from calibration coefficient array");
-            return PBRet::FAILURE;
-        }
-
-        if (cJSON_IsNumber(coeff) == false) {
-            ESP_LOGW(Ds18b20::Name, "coeff in calibration coefficient array was not of cJSON type number");
-            return PBRet::FAILURE;
-        }
-
-        calCoeff.push_back(coeff->valuedouble);
+    // Read linear scaling coefficient
+    double calCoeffA = 0.0;
+    const cJSON* calCoeffANode = cJSON_GetObjectItem(calNode, Ds18b20::calCoeffAStr);
+    if (cJSON_IsNumber(calCoeffANode)) {
+        calCoeffA = calCoeffANode->valuedouble;
+    } else {
+        ESP_LOGW(Ds18b20::Name, "Unable to read linear scaling calibration coefficient");
+        return PBRet::FAILURE;
     }
 
-    Ds18b20Calibration cal(calCoeff);
+    // Read linear scaling coefficient
+    double calCoeffB = 0.0;
+    const cJSON* calCoeffBNode = cJSON_GetObjectItem(calNode, Ds18b20::calCoeffBStr);
+    if (cJSON_IsNumber(calCoeffBNode)) {
+        calCoeffB = calCoeffBNode->valuedouble;
+    } else {
+        ESP_LOGW(Ds18b20::Name, "Unable to read constant offset calibration coefficient");
+        return PBRet::FAILURE;
+    }
+
+    Ds18b20Calibration cal(calCoeffA, calCoeffB);
     return _initFromParams(romCodeIn, res, bus, cal);
 }
 
@@ -106,18 +109,13 @@ PBRet Ds18b20::checkInputs(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res,
     // TODO: Check resolution
 
     // Check calibration
-    if (cal.calCoeff.size() == 0) {
-        ESP_LOGW(Ds18b20::Name, "Calibration coefficients were empty");
+    if (Utilities::check(cal.A) == false) {
+        ESP_LOGW(Ds18b20::Name, "Calibration linear scaling coefficient was invalid");
         return PBRet::FAILURE;
     }
 
-    if (Utilities::check(cal.calCoeff) == false) {
-        ESP_LOGW(Ds18b20::Name, "One or more calibration coefficients were invalid");
-        return PBRet::FAILURE;
-    }
-
-    if (cal.calCoeff.size() > Ds18b20Calibration::MAX_CAL_LEN) {
-        ESP_LOGW(Ds18b20::Name, "Calibration models larger than cubic are not allowed");
+    if (Utilities::check(cal.B) == false) {
+        ESP_LOGW(Ds18b20::Name, "Calibration constant offset coefficient was invalid");
         return PBRet::FAILURE;
     }
 
@@ -138,10 +136,7 @@ PBRet Ds18b20::readTemp(double& temp) const
     }
 
     // Calibrate measurement
-    if (Utilities::polyVal(_cal.calCoeff, static_cast<double> (rawTemp), temp) != PBRet::SUCCESS) {
-        ESP_LOGW(Ds18b20::Name, "Failed to calibrate raw measurement");
-        return PBRet::FAILURE;
-    }
+    temp = _cal.A * rawTemp + _cal.B;
 
     return PBRet::SUCCESS;
 }
@@ -175,23 +170,27 @@ PBRet Ds18b20::serialize(cJSON* root) const
     cJSON_AddItemToObject(root, Ds18b20::romCodeStr, romCode);
 
     // Write sensor calibration
-    cJSON* calCoeffs = cJSON_CreateArray();
-    if (calCoeffs == nullptr) {
-        ESP_LOGW(Ds18b20::Name, "Failed to create JSON array for sensor calibration coefficients");
+    cJSON* calibNode = cJSON_CreateObject();
+    if (calibNode == nullptr) {
+        ESP_LOGW(Ds18b20::Name, "Failed to create JSON object for calibration coefficients");
         return PBRet::FAILURE;
     }
 
-    for (double coeff : _cal.calCoeff) {
-        cJSON* JSONcoeff = cJSON_CreateNumber(coeff);
-        if (JSONcoeff == nullptr) {
-            ESP_LOGW(Ds18b20::Name, "Error creating coefficient in calibration coefficient array");
-            cJSON_Delete(calCoeffs);
-            return PBRet::FAILURE;
-        }
-        cJSON_AddItemToArray(calCoeffs, JSONcoeff);
+    if (cJSON_AddNumberToObject(calibNode, Ds18b20::calCoeffAStr, _cal.A) == nullptr) {
+        ESP_LOGW(Ds18b20::Name, "Unable to write linear scaling calibration coefficient to JSON");
+        cJSON_Delete(root);
+        cJSON_Delete(calibNode);
+        return PBRet::FAILURE;
     }
 
-    cJSON_AddItemToObject(root, Ds18b20::calibrationStr, calCoeffs);
+    if (cJSON_AddNumberToObject(calibNode, Ds18b20::calCoeffBStr, _cal.B) == nullptr) {
+        ESP_LOGW(Ds18b20::Name, "Unable to write constant offset calibration coefficient to JSON");
+        cJSON_Delete(root);
+        cJSON_Delete(calibNode);
+        return PBRet::FAILURE;
+    }
+
+    cJSON_AddItemToObject(root, Ds18b20::calibrationStr, calibNode);
 
     return PBRet::SUCCESS;
 }

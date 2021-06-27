@@ -7,27 +7,26 @@
 #include "cJSON.h"
 
 //
-// Calibration for a Ds18b20 sensor. Calibration is stored
-// as a set of polynomial coefficients to allow for nonlinear
-// calibration if required
+// Linear calibration for a Ds18b20 sensor
 //
 class Ds18b20Calibration
 {
     public:
         Ds18b20Calibration(void) = default;
-        Ds18b20Calibration(const std::vector<double>& calCoeff)
-            : calCoeff(calCoeff) {}
+        Ds18b20Calibration(double A, double B)
+            : A(A), B(B) {}
 
-        std::vector<double> calCoeff = {1.0, 0.0};       // Calibration coefficients
-
-        static constexpr uint8_t MAX_CAL_LEN = 4;   // Up to cubic only
+        double A = 1.0;     // Linear scaling coefficient
+        double B = 0.0;     // Offset coefficient
 };
 
 class Ds18b20
 {
-    static constexpr const char *Name = "Ds18b20";
-    static constexpr const char *calibrationStr = "calibration";
-    static constexpr const char *romCodeStr = "romCode";
+    static constexpr const char* Name = "Ds18b20";
+    static constexpr const char* calibrationStr = "calibration";
+    static constexpr const char* romCodeStr = "romCode";
+    static constexpr const char* calCoeffAStr = "calCoeffA";
+    static constexpr const char* calCoeffBStr = "calCoeffB";
 
     public:
         Ds18b20(void) = default;
