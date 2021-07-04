@@ -301,17 +301,21 @@ PBRet Webserver::_controllerStateCB(std::shared_ptr<MessageBase> msg)
     // Serialize the ControllerState message and broadcast it to all connected
     // websockets
 
-    ControllerState ctrlState = *std::static_pointer_cast<ControllerState>(msg);
-    std::string controllerStateMessage {};
+    // TODO: Use protobuf serialization here
 
-    // Serialize to JSON string
-    if (ctrlState.serialize(controllerStateMessage) != PBRet::SUCCESS)
-    {
-        ESP_LOGW(Webserver::Name, "Error writing ControllerState object to JSON string. Deleting");
-        return PBRet::FAILURE;
-    }
+    // ControllerState ctrlState = *std::static_pointer_cast<ControllerState>(msg);
+    // std::string controllerStateMessage {};
 
-    return _sendToAll(controllerStateMessage); 
+    // // Serialize to JSON string
+    // if (ctrlState.serialize(controllerStateMessage) != PBRet::SUCCESS)
+    // {
+    //     ESP_LOGW(Webserver::Name, "Error writing ControllerState object to JSON string. Deleting");
+    //     return PBRet::FAILURE;
+    // }
+
+    // return _sendToAll(controllerStateMessage); 
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Webserver::_socketLogMessageCB(std::shared_ptr<MessageBase> msg)

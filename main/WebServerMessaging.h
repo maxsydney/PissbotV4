@@ -17,7 +17,8 @@ public:
         : MessageBase(SocketLogMessage::messageType, SocketLogMessage::Name, esp_timer_get_time()),
           msg(msg) {}
 
-    PBRet serialize(std::string &JSONStr) const;
+    PBRet serialize(std::string &JSONStr) const override;
+    PBRet deserialize(const cJSON *root) override { return PBRet::FAILURE; }
     
     std::string msg {};
 };

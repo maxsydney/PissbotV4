@@ -19,6 +19,7 @@
 #include <set>
 #include <memory>
 #include <queue>
+#include "cJSON.h"
 #include "PBCommon.h"
 
 enum class MessageType {
@@ -50,6 +51,10 @@ class MessageBase
         bool isValid(void) const { return _valid; }
         const std::string& getName(void) const { return _name; }
         int64_t getTimeStamp(void) const { return _timeStamp; }
+
+        // Serialization/deserialization
+        virtual PBRet serialize(std::string &JSONStr) const = 0;
+        virtual PBRet deserialize(const cJSON *root) = 0;
 
     protected:
         static constexpr const char* TimeStampStr = "timestamp";

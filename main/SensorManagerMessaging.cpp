@@ -46,6 +46,15 @@ PBRet FlowrateData::serialize(std::string& JSONStr) const
     return PBRet::SUCCESS;
 }
 
+PBRet FlowrateData::deserialize(const cJSON *root)
+{
+    // TODO: Implement me
+
+    ESP_LOGW(FlowrateData::Name, "FlowrateData deserialization not implemented");
+
+    return PBRet::FAILURE;
+}
+
 // TODO: Unit test me
 PBRet ConcentrationData::serialize(std::string& JSONStr) const
 {
@@ -83,4 +92,49 @@ PBRet ConcentrationData::serialize(std::string& JSONStr) const
     free(stringPtr);
 
     return PBRet::SUCCESS;
+}
+
+PBRet ConcentrationData::deserialize(const cJSON *root)
+{
+    // TODO: Implement me
+
+    ESP_LOGW(ConcentrationData::Name, "ConcentrationData deserialization not implemented");
+
+    return PBRet::FAILURE;
+}
+
+PBRet AssignSensorCommand::serialize(std::string &JSONStr) const
+{
+    // TODO: Implement me
+
+    ESP_LOGW(AssignSensorCommand::Name, "AssignSensorCommand serialization not implemented");
+
+    return PBRet::FAILURE;
+}
+
+PBRet AssignSensorCommand::deserialize(const cJSON *root)
+{
+    // TODO: Implement me
+
+    ESP_LOGW(AssignSensorCommand::Name, "AssignSensorCommand deserialization not implemented");
+
+    return PBRet::FAILURE;
+}
+
+PBRet SensorManagerCommand::serialize(std::string &JSONStr) const
+{
+    // TODO: Implement me
+
+    ESP_LOGW(SensorManagerCommand::Name, "SensorManagerCommand serialization not implemented");
+
+    return PBRet::FAILURE;
+}
+
+PBRet SensorManagerCommand::deserialize(const cJSON *root)
+{
+    // TODO: Implement me
+
+    ESP_LOGW(SensorManagerCommand::Name, "SensorManagerCommand serialization not implemented");
+
+    return PBRet::FAILURE;
 }

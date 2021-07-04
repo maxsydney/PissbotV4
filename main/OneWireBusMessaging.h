@@ -47,6 +47,9 @@ public:
 
     const std::vector<Ds18b20> &getDevices(void) const { return _devices; }
 
+    PBRet serialize(std::string &JSONStr) const override { return PBRet::FAILURE; }
+    PBRet deserialize(const cJSON *root) override { return PBRet::FAILURE; }
+
 private:
     std::vector<Ds18b20> _devices{};
 };

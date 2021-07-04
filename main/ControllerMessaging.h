@@ -6,6 +6,7 @@
 #include "Pump.h"
 #include "Filter.h"
 #include "cJSON.h"
+#include "/Users/maxsydney/esp/PissbotV4/lib/PBProtoBuf/Generated/ControllerMessaging.h"
 
 // TODO: Should this be in Controller.h?
 enum class ComponentState
@@ -110,29 +111,15 @@ class ControllerState : public MessageBase
     static constexpr MessageType messageType = MessageType::ControllerState;
     static constexpr const char *Name = "Controller State";
 
-    static constexpr const char *proportionalStr = "PropOutput";
-    static constexpr const char *integralStr = "IntegralOutput";
-    static constexpr const char *derivativeStr = "DerivOutput";
-    static constexpr const char *totalOutputStr = "TotalOutput";
-    static constexpr const char *UptimeStr = "Uptime";
-
     public:
         // Constructors
-        ControllerState(void) = default;
-        ControllerState(double propOutput, double integralOutput, double derivOutput, double totalOutput)
-            : MessageBase(ControllerState::messageType, ControllerState::Name, esp_timer_get_time()), propOutput(propOutput),
-              integralOutput(integralOutput), derivOutput(derivOutput), totalOutput(totalOutput) {};
-        ControllerState(const ControllerState& other)
-            : MessageBase(ControllerState::messageType, ControllerState::Name, esp_timer_get_time()), propOutput(other.propOutput),
-              integralOutput(other.integralOutput), derivOutput(other.derivOutput), totalOutput(other.totalOutput) {};
+        ControllerState(void)
+            : MessageBase(ControllerState::messageType, ControllerState::Name, esp_timer_get_time()) {}
 
-    PBRet serialize(std::string &JSONStr) const;
-    PBRet deserialize(const cJSON *root);
+        PBRet serialize(std::string &JSONStr) const override;
+        PBRet deserialize(const cJSON *root) override;
 
-    double propOutput = 0.0;
-    double integralOutput = 0.0;
-    double derivOutput = 0.0;
-    double totalOutput = 0.0;
+        ControllerStateMessage message {};
 };
 
 class ControllerDataRequest : public MessageBase
@@ -147,6 +134,9 @@ public:
           _requestType(requestType) {}
 
     ControllerDataRequestType getType(void) const { return _requestType; }
+
+    PBRet serialize(std::string &JSONStr) const override;
+    PBRet deserialize(const cJSON *root) override;
 
 private:
     ControllerDataRequestType _requestType = ControllerDataRequestType::None;

@@ -231,7 +231,7 @@ PBRet Controller::_broadcastControllerPeripheralState(void) const
 PBRet Controller::_broadcastControllerState(void) const
 {
     // Send a ControllerState message to the queue
-    std::shared_ptr<ControllerState> msg = std::make_shared<ControllerState> (_proportional, _integral, _derivative, _currentOutput);
+    std::shared_ptr<ControllerState> msg = std::make_shared<ControllerState> ();
     return MessageServer::broadcastMessage(msg);
 }
 

@@ -27,6 +27,9 @@ public:
 
     SensorManagerCmdType getCommandType(void) const { return _cmdType; }
 
+    PBRet serialize(std::string &JSONStr) const override;
+    PBRet deserialize(const cJSON *root) override;
+
 private:
     SensorManagerCmdType _cmdType = SensorManagerCmdType::None;
 };
@@ -45,7 +48,9 @@ public:
         : MessageBase(FlowrateData::messageType, FlowrateData::Name, esp_timer_get_time()), refluxFlowrate(refluxFlowrate),
           productFlowrate(productFlowrate) {}
 
-    PBRet serialize(std::string &JSONStr) const;
+    PBRet serialize(std::string &JSONStr) const override;
+    PBRet deserialize(const cJSON *root) override;
+
     double refluxFlowrate = 0.0;  // [kg / s]
     double productFlowrate = 0.0; // [kg / s]
 };
@@ -64,7 +69,8 @@ public:
         : MessageBase(ConcentrationData::messageType, ConcentrationData::Name, esp_timer_get_time()), 
           vapourConcentration(vapourConc), boilerConcentration(boilerConc) {}
     
-    PBRet serialize(std::string& JSONStr) const;
+    PBRet serialize(std::string& JSONStr) const override;
+    PBRet deserialize(const cJSON *root) override;
 
     double vapourConcentration = 0.0;
     double boilerConcentration = 0.0;
@@ -83,6 +89,9 @@ public:
 
     const OneWireBus_ROMCode &getAddress(void) const { return _address; }
     SensorType getSensorType(void) const { return _sensorType; }
+
+    PBRet serialize(std::string &JSONStr) const override;
+    PBRet deserialize(const cJSON *root) override;
 
 private:
     OneWireBus_ROMCode _address{};
