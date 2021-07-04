@@ -8,8 +8,8 @@ set(DEPENDENCIES
 )
 
 idf_component_register(
-    SRC_DIRS "." "../lib/EmbeddedProto/src"
-    INCLUDE_DIRS "../lib/EmbeddedProto/src"
+    SRC_DIRS "." "../lib/EmbeddedProto/src" "../lib/PBProtoBuf/IO/"
+    INCLUDE_DIRS "../lib/EmbeddedProto/src" "../lib/PBProtoBuf/IO/"
     REQUIRES ${DEPENDENCIES}
 )
 
