@@ -603,7 +603,7 @@ PBRet Webserver::_requestControllerTuning(void)
     // Request controller tuning settings
     // 
 
-    std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::Tuning);
+    std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::TUNING);
 
     return MessageServer::broadcastMessage(msg);
 }
@@ -613,7 +613,7 @@ PBRet Webserver::_requestControllerSettings(void)
     // Request controller settings
     // 
 
-    std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::Settings);
+    std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::SETTINGS);
 
     return MessageServer::broadcastMessage(msg);
 }
@@ -623,7 +623,7 @@ PBRet Webserver::_requestControllerPeripheralState(void)
     // Request controller settings
     // 
 
-    std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::PeripheralState);
+    std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::PERIPHERAL_STATE);
 
     return MessageServer::broadcastMessage(msg);
 }

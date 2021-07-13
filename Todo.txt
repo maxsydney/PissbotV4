@@ -13,3 +13,4 @@
 - Queue operations are not atomic and could cause concurrency problems
 - Implement heap monitoring in distillerManager
 - Implement handling for failure modes
+- Build PBProtoBuf IO classes as library and link with main application

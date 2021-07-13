@@ -157,19 +157,19 @@ PBRet Controller::_controlDataRequestCB(std::shared_ptr<MessageBase> msg)
 
     switch (request.getType())
     {
-        case (ControllerDataRequestType::Tuning):
+        case (ControllerDataRequestType::TUNING):
         {
             return _broadcastControllerTuning();
         }
-        case (ControllerDataRequestType::Settings):
+        case (ControllerDataRequestType::SETTINGS):
         {
             return _broadcastControllerSettings();
         }
-        case (ControllerDataRequestType::PeripheralState):
+        case (ControllerDataRequestType::PERIPHERAL_STATE):
         {
             return _broadcastControllerPeripheralState();
         }
-        case (ControllerDataRequestType::None):
+        case (ControllerDataRequestType::NONE):
         {
             ESP_LOGW(Controller::Name, "Cannot respond to request for data None");
             break;
@@ -305,8 +305,8 @@ PBRet Controller::_initPumps(const PumpConfig& refluxPumpConfig, const PumpConfi
     }
 
     // Set pumps to off until Controller is configured
-    _ctrlSettings.refluxPumpMode = PumpMode::Off;
-    _ctrlSettings.productPumpMode = PumpMode::Off;
+    _ctrlSettings.refluxPumpMode = PumpMode::PUMP_OFF;
+    _ctrlSettings.productPumpMode = PumpMode::PUMP_OFF;
 
     return PBRet::SUCCESS;
 }
@@ -404,12 +404,12 @@ PBRet Controller::_updatePumps(void)
 PBRet Controller::_updateRefluxPump(void)
 {
     // Update the reflux pump speed
-    if (_ctrlSettings.refluxPumpMode == PumpMode::ActiveControl) {
+    if (_ctrlSettings.refluxPumpMode == PumpMode::ACTIVE_CONTROL) {
         if (_refluxPump.updatePumpSpeed(_currentOutput) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in active mode");
             return PBRet::FAILURE;
         }
-    } else if (_ctrlSettings.refluxPumpMode == PumpMode::ManualControl) {
+    } else if (_ctrlSettings.refluxPumpMode == PumpMode::MANUAL_CONTROL) {
         if (_refluxPump.updatePumpSpeed(_ctrlSettings.manualPumpSpeeds.refluxPumpSpeed) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in manual mode");
             return PBRet::FAILURE;
@@ -427,7 +427,7 @@ PBRet Controller::_updateRefluxPump(void)
 
 PBRet Controller::_updateProductPump(double temp)
 {
-    if (_ctrlSettings.productPumpMode == PumpMode::ActiveControl) {
+    if (_ctrlSettings.productPumpMode == PumpMode::ACTIVE_CONTROL) {
         // Control pump speed based on head temperature
         if (temp >= Controller::HYSTERESIS_BOUND_UPPER) {
             if (_productPump.updatePumpSpeed(Pump::FLUSH_SPEED) != PBRet::SUCCESS) {
@@ -440,7 +440,7 @@ PBRet Controller::_updateProductPump(double temp)
                 return PBRet::FAILURE;
             }
         }
-    } else if (_ctrlSettings.productPumpMode == PumpMode::ManualControl) {
+    } else if (_ctrlSettings.productPumpMode == PumpMode::MANUAL_CONTROL) {
         if (_productPump.updatePumpSpeed(_ctrlSettings.manualPumpSpeeds.productPumpSpeed) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in manual mode");
             return PBRet::FAILURE;
@@ -650,8 +650,8 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
     }
 
     // Set pumps to active control
-    _ctrlSettings.refluxPumpMode = PumpMode::ActiveControl;
-    _ctrlSettings.productPumpMode = PumpMode::ActiveControl;
+    _ctrlSettings.refluxPumpMode = PumpMode::ACTIVE_CONTROL;
+    _ctrlSettings.productPumpMode = PumpMode::ACTIVE_CONTROL;
     _cfg = cfg;
 
     return PBRet::SUCCESS;

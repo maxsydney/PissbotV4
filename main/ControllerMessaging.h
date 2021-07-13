@@ -8,20 +8,20 @@
 #include "cJSON.h"
 #include "/Users/maxsydney/esp/PissbotV4/lib/PBProtoBuf/Generated/ControllerMessaging.h"
 
-// TODO: Should this be in Controller.h?
-enum class ComponentState
-{
-    OFF,
-    ON
-};
+// // TODO: Should this be in Controller.h?
+// enum class ComponentState
+// {
+//     OFF,
+//     ON
+// };
 
-enum class ControllerDataRequestType
-{
-    None,
-    Tuning,
-    Settings,
-    PeripheralState
-};
+// enum class ControllerDataRequestType
+// {
+//     None,
+//     Tuning,
+//     Settings,
+//     PeripheralState
+// };
 
 class ControlSettings : public MessageBase
 {
@@ -44,8 +44,8 @@ public:
     PBRet serialize(std::string &JSONstr) const;
     PBRet deserialize(const cJSON *root);
 
-    PumpMode refluxPumpMode = PumpMode::Off;
-    PumpMode productPumpMode = PumpMode::Off;
+    PumpMode refluxPumpMode = PumpMode::PUMP_OFF;
+    PumpMode productPumpMode = PumpMode::PUMP_OFF;
     PumpSpeeds manualPumpSpeeds{};
 };
 
@@ -101,7 +101,7 @@ public:
     PBRet serialize(std::string &JSONStr) const;
     PBRet deserialize(const cJSON *root);
 
-    ComponentState fanState = ComponentState::OFF;
+    ComponentState fanState = ComponentState::OFF_STATE;
     double LPElementDutyCycle = 0.0;
     double HPElementDutyCycle = 0.0;
 };
@@ -139,7 +139,7 @@ public:
     PBRet deserialize(const cJSON *root) override;
 
 private:
-    ControllerDataRequestType _requestType = ControllerDataRequestType::None;
+    ControllerDataRequestType _requestType = ControllerDataRequestType::NONE;
 };
 
 #endif // MAIN_CONTROLLER_MESSAGING_H

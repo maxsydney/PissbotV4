@@ -5,11 +5,11 @@
 #include "cJSON.h"
 #include <driver/ledc.h>
 
-enum class PumpMode {
-    Off,
-    ActiveControl,
-    ManualControl
-};
+// enum class PumpMode {
+//     Off,
+//     ActiveControl,
+//     ManualControl
+// };
 
 class PumpConfig
 {
