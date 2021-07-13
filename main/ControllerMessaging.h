@@ -8,21 +8,6 @@
 #include "cJSON.h"
 #include "/Users/maxsydney/esp/PissbotV4/lib/PBProtoBuf/Generated/ControllerMessaging.h"
 
-// // TODO: Should this be in Controller.h?
-// enum class ComponentState
-// {
-//     OFF,
-//     ON
-// };
-
-// enum class ControllerDataRequestType
-// {
-//     None,
-//     Tuning,
-//     Settings,
-//     PeripheralState
-// };
-
 class ControlSettings : public MessageBase
 {
     static constexpr MessageType messageType = MessageType::ControlSettings;
