@@ -10,7 +10,7 @@
 
 class ControlSettings : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::ControlSettings;
+    static constexpr PBMessageType messageType = PBMessageType::ControllerSettings;
     static constexpr const char *Name = "Controller settings";
     static constexpr const char *refluxPumpModeStr = "refluxPumpMode";
     static constexpr const char *productPumpModeStr = "productPumpMode";
@@ -36,7 +36,7 @@ public:
 
 class ControlTuning : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::ControlTuning;
+    static constexpr PBMessageType messageType = PBMessageType::ControllerTuning;
     static constexpr const char *Name = "Controller tuning";
 
     static constexpr const char *SetpointStr = "Setpoint";
@@ -67,7 +67,7 @@ public:
 
 class ControlCommand : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::ControlCommand;
+    static constexpr PBMessageType messageType = PBMessageType::ControllerCommand;
     static constexpr const char *Name = "Controller command";
 
     static constexpr const char *FanStateStr = "fanState";
@@ -93,7 +93,7 @@ public:
 
 class ControllerState : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::ControllerState;
+    static constexpr PBMessageType messageType = PBMessageType::ControllerState;
     static constexpr const char *Name = "Controller State";
 
     public:
@@ -109,7 +109,7 @@ class ControllerState : public MessageBase
 
 class ControllerDataRequest : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::ControllerDataRequest;
+    static constexpr PBMessageType messageType = PBMessageType::ControllerDataRequest;
     static constexpr const char *Name = "Controller data request";
 
 public:

@@ -16,7 +16,7 @@ enum class SensorManagerCmdType
 
 class SensorManagerCommand : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::SensorManagerCmd;
+    static constexpr PBMessageType messageType = PBMessageType::SensorManagerCommand;
     static constexpr const char *Name = "Sensor Manager Command";
 
 public:
@@ -36,7 +36,7 @@ private:
 
 class FlowrateData : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::FlowrateData;
+    static constexpr PBMessageType messageType = PBMessageType::FlowrateData;
     static constexpr const char *Name = "Flowrate Data";
 
     static constexpr const char *RefluxFlowrateStr = "refluxFlowrate";
@@ -57,7 +57,7 @@ public:
 
 class ConcentrationData : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::ConcentrationData;
+    static constexpr PBMessageType messageType = PBMessageType::ConcentrationData;
     static constexpr const char *Name = "Concentration Data";
 
     static constexpr const char *VapourConcStr = "vapourConc";
@@ -66,10 +66,10 @@ class ConcentrationData : public MessageBase
 public:
     ConcentrationData(void) = default;
     ConcentrationData(double vapourConc, double boilerConc)
-        : MessageBase(ConcentrationData::messageType, ConcentrationData::Name, esp_timer_get_time()), 
+        : MessageBase(ConcentrationData::messageType, ConcentrationData::Name, esp_timer_get_time()),
           vapourConcentration(vapourConc), boilerConcentration(boilerConc) {}
-    
-    PBRet serialize(std::string& JSONStr) const override;
+
+    PBRet serialize(std::string &JSONStr) const override;
     PBRet deserialize(const cJSON *root) override;
 
     double vapourConcentration = 0.0;
@@ -78,7 +78,7 @@ public:
 
 class AssignSensorCommand : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::AssignSensor;
+    static constexpr PBMessageType messageType = PBMessageType::AssignSensor;
     static constexpr const char *Name = "Assign Sensor";
 
 public:

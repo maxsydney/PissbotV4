@@ -21,6 +21,10 @@
 #include <queue>
 #include "cJSON.h"
 #include "PBCommon.h"
+#include "Generated/MessageBase.h"
+
+static constexpr uint32_t MESSAGE_SIZE = 256;
+using PBMessageWrapper = MessageWrapper<MESSAGE_SIZE>;
 
 enum class MessageType {
     Unknown,
@@ -44,10 +48,10 @@ class MessageBase
 {   
     public:
         MessageBase(void) = default;
-        MessageBase(MessageType msgType, const std::string& name, int64_t timeStamp)
+        MessageBase(PBMessageType msgType, const std::string& name, int64_t timeStamp)
             : _type(msgType), _name(name), _timeStamp(timeStamp), _valid(true) {}
 
-        MessageType getType(void) const { return _type; }
+        PBMessageType getType(void) const { return _type; }
         bool isValid(void) const { return _valid; }
         const std::string& getName(void) const { return _name; }
         int64_t getTimeStamp(void) const { return _timeStamp; }
@@ -58,7 +62,7 @@ class MessageBase
 
     protected:
         static constexpr const char* TimeStampStr = "timestamp";
-        MessageType _type = MessageType::Unknown;
+        PBMessageType _type = PBMessageType::Unknown;
         std::string _name {};
         int64_t _timeStamp = 0;             // [uS]
         bool _valid = false;
@@ -68,17 +72,18 @@ class MessageBase
 class Subscriber
 {
     public:
-        Subscriber(const char* name, std::queue<std::shared_ptr<MessageBase>>& taskQueue, const std::set<MessageType>& subscriptions)
+        Subscriber(const char* name, std::queue<std::shared_ptr<PBMessageWrapper>>& taskQueue, const std::set<PBMessageType>& subscriptions)
             : _name(name), _taskQueue(taskQueue), _subscriptions(subscriptions) {}
 
-        bool isSubscribed(MessageType msgType) const;                       // Returns true if subscriber is subscribed to msgType
+        bool isSubscribed(PBMessageType msgType) const;                       // Returns true if subscriber is subscribed to msgType
         const char* getName(void) const { return _name; }
-        std::queue<std::shared_ptr<MessageBase>>& getQueueHandle(void) const { return _taskQueue; }
+        std::queue<std::shared_ptr<PBMessageWrapper>>& getQueueHandle(void) const { return _taskQueue; }
         
     private:
         const char* _name = nullptr;
-        std::queue<std::shared_ptr<MessageBase>>& _taskQueue;       // TODO: Is this legit?
-        std::set<MessageType> _subscriptions;
+        std::queue<std::shared_ptr<PBMessageWrapper>>& _taskQueue;       // TODO: Is this legit?
+        std::set<PBMessageType> _subscriptions;
+        PBMessageWrapper _wrapper {};
 };
 
 class MessageServer
@@ -87,7 +92,7 @@ class MessageServer
 
     public:
         static PBRet registerTask(const Subscriber& subscriber);
-        static PBRet broadcastMessage(const std::shared_ptr<MessageBase>& message);
+        static PBRet broadcastMessage(const std::shared_ptr<PBMessageWrapper>& message);
 
     private:
         static std::vector<Subscriber> _subscribers;

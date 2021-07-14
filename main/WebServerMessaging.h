@@ -7,7 +7,7 @@
 
 class SocketLogMessage : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::SocketLog;
+    static constexpr PBMessageType messageType = PBMessageType::SocketLog;
     static constexpr const char* Name = "Socket Log";
     static constexpr const char* SocketLogStr = "Log";
 

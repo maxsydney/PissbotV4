@@ -8,6 +8,7 @@
 #include "SlowPWM.h"
 #include "Filter.h"
 #include "ControllerMessaging.h"
+#include "Generated/MessageBase.h"
 
 struct ControllerConfig
 {
@@ -81,12 +82,12 @@ private:
     PBRet loadTuningFromFile(void);
 
     // Queue callbacks
-    PBRet _generalMessageCB(std::shared_ptr<MessageBase> msg);
-    PBRet _temperatureDataCB(std::shared_ptr<MessageBase> msg);
-    PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
-    PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
-    PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
-    PBRet _controlDataRequestCB(std::shared_ptr<MessageBase> msg);
+    PBRet _generalMessageCB(std::shared_ptr<PBMessageWrapper> msg);
+    PBRet _temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg);
+    PBRet _controlCommandCB(std::shared_ptr<PBMessageWrapper> msg);
+    PBRet _controlSettingsCB(std::shared_ptr<PBMessageWrapper> msg);
+    PBRet _controlTuningCB(std::shared_ptr<PBMessageWrapper> msg);
+    PBRet _controlDataRequestCB(std::shared_ptr<PBMessageWrapper> msg);
 
     // Data broadcast
     PBRet _broadcastControllerTuning(void) const;

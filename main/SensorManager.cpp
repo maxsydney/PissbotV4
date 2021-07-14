@@ -26,10 +26,10 @@ SensorManager::SensorManager(UBaseType_t priority, UBaseType_t stackDepth, BaseT
 void SensorManager::taskMain(void)
 {
     // Subscribe to messages
-    std::set<MessageType> subscriptions = { 
-        MessageType::General,
-        MessageType::SensorManagerCmd,
-        MessageType::AssignSensor
+    std::set<PBMessageType> subscriptions = { 
+        PBMessageType::General,
+        PBMessageType::SensorManagerCommand,
+        PBMessageType::AssignSensor
     };
     Subscriber sub(SensorManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -72,61 +72,61 @@ void SensorManager::taskMain(void)
     }
 }
 
-PBRet SensorManager::_generalMessageCB(std::shared_ptr<MessageBase> msg)
+PBRet SensorManager::_generalMessageCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    ESP_LOGI(SensorManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
+    // std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
+    // ESP_LOGI(SensorManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
 
     return PBRet::SUCCESS;
 }
 
-PBRet SensorManager::_commandMessageCB(std::shared_ptr<MessageBase> msg)
+PBRet SensorManager::_commandMessageCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    SensorManagerCommand cmd = *std::static_pointer_cast<SensorManagerCommand>(msg);
-    ESP_LOGI(SensorManager::Name, "Got SensorManagerCommand message");
+    // SensorManagerCommand cmd = *std::static_pointer_cast<SensorManagerCommand>(msg);
+    // ESP_LOGI(SensorManager::Name, "Got SensorManagerCommand message");
 
-    switch (cmd.getCommandType())
-    {
-        case (SensorManagerCmdType::BroadcastSensorsStart):
-        {
-            ESP_LOGI(SensorManager::Name, "Broadcasting sensor adresses");
-            return _broadcastSensors();
-        }
-        case (SensorManagerCmdType::None):
-        {
-            ESP_LOGW(SensorManager::Name, "Received command None");
-            break;
-        }
-        default:
-        {
-            ESP_LOGW(SensorManager::Name, "Unsupported command");
-            break;
-        }
-    } 
+    // switch (cmd.getCommandType())
+    // {
+    //     case (SensorManagerCmdType::BroadcastSensorsStart):
+    //     {
+    //         ESP_LOGI(SensorManager::Name, "Broadcasting sensor adresses");
+    //         return _broadcastSensors();
+    //     }
+    //     case (SensorManagerCmdType::None):
+    //     {
+    //         ESP_LOGW(SensorManager::Name, "Received command None");
+    //         break;
+    //     }
+    //     default:
+    //     {
+    //         ESP_LOGW(SensorManager::Name, "Unsupported command");
+    //         break;
+    //     }
+    // } 
 
     return PBRet::SUCCESS;
 }
 
-PBRet SensorManager::_assignSensorCB(std::shared_ptr<MessageBase> msg)
+PBRet SensorManager::_assignSensorCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Create a new sensor object and assign it to the requested task. Write
     // new sensor configuration to filesystem
 
-    AssignSensorCommand cmd = *std::static_pointer_cast<AssignSensorCommand>(msg);
-    ESP_LOGI(SensorManager::Name, "Assigning new temperature sensor");
+    // AssignSensorCommand cmd = *std::static_pointer_cast<AssignSensorCommand>(msg);
+    // ESP_LOGI(SensorManager::Name, "Assigning new temperature sensor");
 
-    // Create new sensor object
-    const Ds18b20 sensor(cmd.getAddress(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
-    if (sensor.isConfigured() == false) {
-        ESP_LOGW(SensorManager::Name, "Failed to create valid Ds18b20 sensor");
-        return PBRet::FAILURE;
-    }
+    // // Create new sensor object
+    // const Ds18b20 sensor(cmd.getAddress(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
+    // if (sensor.isConfigured() == false) {
+    //     ESP_LOGW(SensorManager::Name, "Failed to create valid Ds18b20 sensor");
+    //     return PBRet::FAILURE;
+    // }
 
-    // Assign sensor to requested task
-    if (_OWBus.setTempSensor(cmd.getSensorType(), sensor) != PBRet::SUCCESS) {
-        ESP_LOGW(SensorManager::Name, "Failed to assign sensor");
-        return PBRet::FAILURE;
-    }
+    // // Assign sensor to requested task
+    // if (_OWBus.setTempSensor(cmd.getSensorType(), sensor) != PBRet::SUCCESS) {
+    //     ESP_LOGW(SensorManager::Name, "Failed to assign sensor");
+    //     return PBRet::FAILURE;
+    // }
 
     // Write new sensor configuration to file
     return _writeSensorConfigToFile();
@@ -134,10 +134,10 @@ PBRet SensorManager::_assignSensorCB(std::shared_ptr<MessageBase> msg)
 
 PBRet SensorManager::_setupCBTable(void)
 {
-    _cbTable = std::map<MessageType, queueCallback> {
-        {MessageType::General, std::bind(&SensorManager::_generalMessageCB, this, std::placeholders::_1)},
-        {MessageType::SensorManagerCmd, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)},
-        {MessageType::AssignSensor, std::bind(&SensorManager::_assignSensorCB, this, std::placeholders::_1)}
+    _cbTable = std::map<PBMessageType, queueCallback> {
+        {PBMessageType::General, std::bind(&SensorManager::_generalMessageCB, this, std::placeholders::_1)},
+        {PBMessageType::SensorManagerCommand, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)},
+        {PBMessageType::AssignSensor, std::bind(&SensorManager::_assignSensorCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -190,7 +190,9 @@ PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
     // Send a temperature data message to the queue
     std::shared_ptr<TemperatureData> msg = std::make_shared<TemperatureData> (Tdata);
 
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet SensorManager::_broadcastFlowrates(const FlowrateData& flowData) const
@@ -198,7 +200,9 @@ PBRet SensorManager::_broadcastFlowrates(const FlowrateData& flowData) const
     // Send a temperature data message to the queue
     std::shared_ptr<FlowrateData> msg = std::make_shared<FlowrateData> (flowData);
 
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet SensorManager::_broadcastConcentrations(const ConcentrationData& concData) const
@@ -206,7 +210,9 @@ PBRet SensorManager::_broadcastConcentrations(const ConcentrationData& concData)
     // Send a temperature data message to the queue
     std::shared_ptr<ConcentrationData> msg = std::make_shared<ConcentrationData> (concData);
 
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet SensorManager::checkInputs(const SensorManagerConfig& cfg)

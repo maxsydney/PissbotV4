@@ -65,9 +65,9 @@ private:
     void taskMain(void) override;
 
     // Queue callbacks
-    PBRet _generalMessageCB(std::shared_ptr<MessageBase> msg);
-    PBRet _commandMessageCB(std::shared_ptr<MessageBase> msg);
-    PBRet _assignSensorCB(std::shared_ptr<MessageBase> msg);
+    PBRet _generalMessageCB(std::shared_ptr<PBMessageWrapper> msg);
+    PBRet _commandMessageCB(std::shared_ptr<PBMessageWrapper> msg);
+    PBRet _assignSensorCB(std::shared_ptr<PBMessageWrapper> msg);
 
     // SensorManager data
     SensorManagerConfig _cfg{};

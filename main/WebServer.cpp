@@ -30,16 +30,16 @@ Webserver::Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t co
 void Webserver::taskMain(void)
 {
     // Subscribe to messages
-    std::set<MessageType> subscriptions = { 
-        MessageType::TemperatureData,
-        MessageType::ControlTuning,
-        MessageType::ControlCommand,
-        MessageType::ControlSettings,
-        MessageType::DeviceData,
-        MessageType::FlowrateData,
-        MessageType::ConcentrationData,
-        MessageType::ControllerState,
-        MessageType::SocketLog
+    std::set<PBMessageType> subscriptions = { 
+        PBMessageType::TemperatureData,
+        PBMessageType::ControllerTuning,
+        PBMessageType::ControllerCommand,
+        PBMessageType::ControllerSettings,
+        PBMessageType::DeviceData,
+        PBMessageType::FlowrateData,
+        PBMessageType::ConcentrationData,
+        PBMessageType::ControllerState,
+        PBMessageType::SocketLog
     };
     Subscriber sub(Webserver::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -220,22 +220,22 @@ PBRet Webserver::_startupWebserver(const WebserverConfig& cfg)
 
 PBRet Webserver::_setupCBTable(void)
 {
-    _cbTable = std::map<MessageType, queueCallback> {
-        {MessageType::TemperatureData, std::bind(&Webserver::_temperatureDataCB, this, std::placeholders::_1)},
-        {MessageType::ControlSettings, std::bind(&Webserver::_controlSettingsCB, this, std::placeholders::_1)},
-        {MessageType::ControlTuning, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)},
-        {MessageType::DeviceData, std::bind(&Webserver::_deviceDataCB, this, std::placeholders::_1)},
-        {MessageType::FlowrateData, std::bind(&Webserver::_flowrateDataCB, this, std::placeholders::_1)},
-        {MessageType::ControlCommand, std::bind(&Webserver::_controlCommandCB, this, std::placeholders::_1)},
-        {MessageType::ConcentrationData, std::bind(&Webserver::_concentrationDataCB, this, std::placeholders::_1)},
-        {MessageType::ControllerState, std::bind(&Webserver::_controllerStateCB, this, std::placeholders::_1)},
-        {MessageType::SocketLog, std::bind(&Webserver::_socketLogMessageCB, this, std::placeholders::_1)}
+    _cbTable = std::map<PBMessageType, queueCallback> {
+        {PBMessageType::TemperatureData, std::bind(&Webserver::_temperatureDataCB, this, std::placeholders::_1)},
+        {PBMessageType::ControllerSettings, std::bind(&Webserver::_controlSettingsCB, this, std::placeholders::_1)},
+        {PBMessageType::ControllerTuning, std::bind(&Webserver::_controlTuningCB, this, std::placeholders::_1)},
+        {PBMessageType::DeviceData, std::bind(&Webserver::_deviceDataCB, this, std::placeholders::_1)},
+        {PBMessageType::FlowrateData, std::bind(&Webserver::_flowrateDataCB, this, std::placeholders::_1)},
+        {PBMessageType::ControllerCommand, std::bind(&Webserver::_controlCommandCB, this, std::placeholders::_1)},
+        {PBMessageType::ConcentrationData, std::bind(&Webserver::_concentrationDataCB, this, std::placeholders::_1)},
+        {PBMessageType::ControllerState, std::bind(&Webserver::_controllerStateCB, this, std::placeholders::_1)},
+        {PBMessageType::SocketLog, std::bind(&Webserver::_socketLogMessageCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
+PBRet Webserver::_temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Take the temperature data and broadcast it to all available
     // websocket connections.
@@ -243,60 +243,66 @@ PBRet Webserver::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
     // Temperature data is serialized to JSON and broadcast over websockets
     // to the browser client
 
-    // Get TemperatureData object
-    TemperatureData TData = *std::static_pointer_cast<TemperatureData>(msg);
-    std::string temperatureMessage {};
+    // // Get TemperatureData object
+    // TemperatureData TData = *std::static_pointer_cast<TemperatureData>(msg);
+    // std::string temperatureMessage {};
 
-    // Serialize to TemperatureData JSON string memory
-    if (TData.serialize(temperatureMessage) != PBRet::SUCCESS)
-    {
-        ESP_LOGW(Webserver::Name, "Error writing TemperatureData object to JSON string. Deleting");
-        return PBRet::FAILURE;
-    }
+    // // Serialize to TemperatureData JSON string memory
+    // if (TData.serialize(temperatureMessage) != PBRet::SUCCESS)
+    // {
+    //     ESP_LOGW(Webserver::Name, "Error writing TemperatureData object to JSON string. Deleting");
+    //     return PBRet::FAILURE;
+    // }
 
-    return _sendToAll(temperatureMessage);   
+    // return _sendToAll(temperatureMessage);  
+
+    return PBRet::SUCCESS; 
 }
 
-PBRet Webserver::_flowrateDataCB(std::shared_ptr<MessageBase> msg)
+PBRet Webserver::_flowrateDataCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Take the flowrate data and broadcast it to all available
     // websocket connections.
     // Flowrate data is serialized to JSON and broadcast over websockets
     // to the browser client
 
-    // Get FlowrateData object
-    FlowrateData flowrateData = *std::static_pointer_cast<FlowrateData>(msg);
-    std::string flowrateMessage {};
+    // // Get FlowrateData object
+    // FlowrateData flowrateData = *std::static_pointer_cast<FlowrateData>(msg);
+    // std::string flowrateMessage {};
 
-    // Serialize to TemperatureData JSON string memory
-    if (flowrateData.serialize(flowrateMessage) != PBRet::SUCCESS)
-    {
-        ESP_LOGW(Webserver::Name, "Error writing FlowrateData object to JSON string. Deleting");
-        return PBRet::FAILURE;
-    }
+    // // Serialize to TemperatureData JSON string memory
+    // if (flowrateData.serialize(flowrateMessage) != PBRet::SUCCESS)
+    // {
+    //     ESP_LOGW(Webserver::Name, "Error writing FlowrateData object to JSON string. Deleting");
+    //     return PBRet::FAILURE;
+    // }
 
-    return _sendToAll(flowrateMessage);   
+    // return _sendToAll(flowrateMessage);   
+
+    return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_concentrationDataCB(std::shared_ptr<MessageBase> msg)
+PBRet Webserver::_concentrationDataCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Take the concentration data and broadcast it to all connected
     // websockets
 
-    ConcentrationData concData = *std::static_pointer_cast<ConcentrationData>(msg);
-    std::string concentrationMessage {};
+    // ConcentrationData concData = *std::static_pointer_cast<ConcentrationData>(msg);
+    // std::string concentrationMessage {};
 
-    // Serialize to JSON string
-    if (concData.serialize(concentrationMessage) != PBRet::SUCCESS)
-    {
-        ESP_LOGW(Webserver::Name, "Error writing ConcentrationData object to JSON string. Deleting");
-        return PBRet::FAILURE;
-    }
+    // // Serialize to JSON string
+    // if (concData.serialize(concentrationMessage) != PBRet::SUCCESS)
+    // {
+    //     ESP_LOGW(Webserver::Name, "Error writing ConcentrationData object to JSON string. Deleting");
+    //     return PBRet::FAILURE;
+    // }
 
-    return _sendToAll(concentrationMessage); 
+    // return _sendToAll(concentrationMessage); 
+
+    return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_controllerStateCB(std::shared_ptr<MessageBase> msg)
+PBRet Webserver::_controllerStateCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Serialize the ControllerState message and broadcast it to all connected
     // websockets
@@ -318,115 +324,123 @@ PBRet Webserver::_controllerStateCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_socketLogMessageCB(std::shared_ptr<MessageBase> msg)
+PBRet Webserver::_socketLogMessageCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    SocketLogMessage logMsg = *std::static_pointer_cast<SocketLogMessage>(msg);
+    // SocketLogMessage logMsg = *std::static_pointer_cast<SocketLogMessage>(msg);
 
-    std::string logMsgOut {};
-    if (logMsg.serialize(logMsgOut) != PBRet::SUCCESS) {
-        ESP_LOGW(Webserver::Name, "Error writing SocketLogMessage object to JSON string");
-        return PBRet::FAILURE;
-    }
+    // std::string logMsgOut {};
+    // if (logMsg.serialize(logMsgOut) != PBRet::SUCCESS) {
+    //     ESP_LOGW(Webserver::Name, "Error writing SocketLogMessage object to JSON string");
+    //     return PBRet::FAILURE;
+    // }
 
-    return _sendToAll(logMsgOut);
+    // return _sendToAll(logMsgOut);
+
+    return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
+PBRet Webserver::_controlSettingsCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Serialize the controller settings and broadcast to all 
     // connected websockets
 
-    // Get controlTuning object
-    ControlSettings ctrlSettings = *std::static_pointer_cast<ControlSettings>(msg);
-    std::string ctrlSettingsMessage {};
+    // // Get controlTuning object
+    // ControlSettings ctrlSettings = *std::static_pointer_cast<ControlSettings>(msg);
+    // std::string ctrlSettingsMessage {};
 
-    // Serialize to ControlTuning JSON string memory
-    if (ctrlSettings.serialize(ctrlSettingsMessage) != PBRet::SUCCESS)
-    {
-        ESP_LOGW(Webserver::Name, "Error writing ControlSettings object to JSON string. Deleting");
-        return PBRet::FAILURE;
-    }
+    // // Serialize to ControlTuning JSON string memory
+    // if (ctrlSettings.serialize(ctrlSettingsMessage) != PBRet::SUCCESS)
+    // {
+    //     ESP_LOGW(Webserver::Name, "Error writing ControlSettings object to JSON string. Deleting");
+    //     return PBRet::FAILURE;
+    // }
 
-    return _sendToAll(ctrlSettingsMessage);
+    // return _sendToAll(ctrlSettingsMessage);
+
+    return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_controlTuningCB(std::shared_ptr<MessageBase> msg)
+PBRet Webserver::_controlTuningCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Serialize the controller tuning parameters and broadcast to all 
     // connected websockets
 
-    // Get controlTuning object
-    ControlTuning ctrlTuning = *std::static_pointer_cast<ControlTuning>(msg);
-    std::string ctrlTuningMessage {};
+    // // Get controlTuning object
+    // ControlTuning ctrlTuning = *std::static_pointer_cast<ControlTuning>(msg);
+    // std::string ctrlTuningMessage {};
 
-    // Serialize to ControlTuning JSON string memory
-    if (ctrlTuning.serialize(ctrlTuningMessage) != PBRet::SUCCESS)
-    {
-        ESP_LOGW(Webserver::Name, "Error writing ControlTuning object to JSON string. Deleting");
-        return PBRet::FAILURE;
-    }
+    // // Serialize to ControlTuning JSON string memory
+    // if (ctrlTuning.serialize(ctrlTuningMessage) != PBRet::SUCCESS)
+    // {
+    //     ESP_LOGW(Webserver::Name, "Error writing ControlTuning object to JSON string. Deleting");
+    //     return PBRet::FAILURE;
+    // }
 
-    return _sendToAll(ctrlTuningMessage);
+    // return _sendToAll(ctrlTuningMessage);
+
+    return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_controlCommandCB(std::shared_ptr<MessageBase> msg)
+PBRet Webserver::_controlCommandCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Serialize the controller command data and broadcast to all 
     // connected websockets
 
-    // Get ControlCommand object
-    ControlCommand ctrlCmd = *std::static_pointer_cast<ControlCommand>(msg);
-    std::string ctrlCommandMessage {};
+    // // Get ControlCommand object
+    // ControlCommand ctrlCmd = *std::static_pointer_cast<ControlCommand>(msg);
+    // std::string ctrlCommandMessage {};
 
-    // Serialize to ControlCommand JSON string memory
-    if (ctrlCmd.serialize(ctrlCommandMessage) != PBRet::SUCCESS)
-    {
-        ESP_LOGW(Webserver::Name, "Error writing ControlCommand object to JSON string. Deleting");
-        return PBRet::FAILURE;
-    }
+    // // Serialize to ControlCommand JSON string memory
+    // if (ctrlCmd.serialize(ctrlCommandMessage) != PBRet::SUCCESS)
+    // {
+    //     ESP_LOGW(Webserver::Name, "Error writing ControlCommand object to JSON string. Deleting");
+    //     return PBRet::FAILURE;
+    // }
 
-    return _sendToAll(ctrlCommandMessage);
+    // return _sendToAll(ctrlCommandMessage);
+
+    return PBRet::SUCCESS;
 }
 
-PBRet Webserver::_deviceDataCB(std::shared_ptr<MessageBase> msg)
+PBRet Webserver::_deviceDataCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Serialize the device data message and broadcast to all connected
     // websockets
 
-    // Get controlTuning object
-    DeviceData deviceData = *std::static_pointer_cast<DeviceData>(msg);
+    // // Get controlTuning object
+    // DeviceData deviceData = *std::static_pointer_cast<DeviceData>(msg);
 
-    // Serialize the device addresses
-    cJSON* root = cJSON_CreateObject();
-    if (root == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
-        return PBRet::FAILURE;
-    }
+    // // Serialize the device addresses
+    // cJSON* root = cJSON_CreateObject();
+    // if (root == nullptr) {
+    //     ESP_LOGW(Webserver::Name, "Unable to create root JSON object");
+    //     return PBRet::FAILURE;
+    // }
 
-    cJSON* sensors = cJSON_CreateArray();
-    if (sensors == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to create sensors array");
-        cJSON_Delete(root);
-        return PBRet::FAILURE;
-    }
+    // cJSON* sensors = cJSON_CreateArray();
+    // if (sensors == nullptr) {
+    //     ESP_LOGW(Webserver::Name, "Unable to create sensors array");
+    //     cJSON_Delete(root);
+    //     return PBRet::FAILURE;
+    // }
 
-    cJSON_AddStringToObject(root, "type", "sensorID");
-    cJSON_AddItemToObject(root, "sensors", sensors);
+    // cJSON_AddStringToObject(root, "type", "sensorID");
+    // cJSON_AddItemToObject(root, "sensors", sensors);
 
-    for (const Ds18b20& sensor: deviceData.getDevices()) {
-        sensor.serialize(sensors);
-    }
+    // for (const Ds18b20& sensor: deviceData.getDevices()) {
+    //     sensor.serialize(sensors);
+    // }
 
-    char* deviceDataJSON = cJSON_Print(root);
-    cJSON_Delete(root);
+    // char* deviceDataJSON = cJSON_Print(root);
+    // cJSON_Delete(root);
 
-    if (deviceDataJSON == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to allocate memory for device data JSON string");
-        return PBRet::FAILURE;
-    }
+    // if (deviceDataJSON == nullptr) {
+    //     ESP_LOGW(Webserver::Name, "Unable to allocate memory for device data JSON string");
+    //     return PBRet::FAILURE;
+    // }
 
-    _sendToAll(deviceDataJSON);
-    free(deviceDataJSON);
+    // _sendToAll(deviceDataJSON);
+    // free(deviceDataJSON);
 
     return PBRet::SUCCESS;
 }
@@ -453,7 +467,9 @@ PBRet Webserver::_processControlTuningMessage(cJSON* msgRoot)
     std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (ctrlTuning);
 
     ESP_LOGI(Webserver::Name, "Broadcasting controller tuning");
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Webserver::_processControlSettingsMessage(cJSON* msgRoot)
@@ -478,7 +494,9 @@ PBRet Webserver::_processControlSettingsMessage(cJSON* msgRoot)
     std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (ctrlSettingsMsg);
 
     ESP_LOGI(Webserver::Name, "Broadcasting controller settings");
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Webserver::_processCommandMessage(cJSON* msgRoot)
@@ -502,7 +520,9 @@ PBRet Webserver::_processCommandMessage(cJSON* msgRoot)
         // Send message to trigger scan of sensor bus
         std::shared_ptr<SensorManagerCommand> msg = std::make_shared<SensorManagerCommand> (SensorManagerCmdType::BroadcastSensorsStart);
         ESP_LOGI(Webserver::Name, "Sending message to start sensor assign task");
-        return MessageServer::broadcastMessage(msg);
+        // return MessageServer::broadcastMessage(msg);
+
+        return PBRet::SUCCESS;
     } else if (subtypeStr == Webserver::AssignSensor) {
         return _processAssignSensorMessage(msgRoot);
     } else {
@@ -533,7 +553,9 @@ PBRet Webserver::_processPeripheralStateMessage(cJSON* msgRoot)
     std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (ctrlCommand);
 
     ESP_LOGI(Webserver::Name, "Broadcasting controller command");
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Webserver::_processAssignSensorMessage(cJSON* root)
@@ -580,7 +602,9 @@ PBRet Webserver::_processAssignSensorMessage(cJSON* root)
     SensorType sensorType = PBOneWire::mapSensorIDToType(task->valueint);
 
     std::shared_ptr<AssignSensorCommand> msg = std::make_shared<AssignSensorCommand> (romCode, sensorType);
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Webserver::_sendToAll(const std::string& msg)
@@ -605,7 +629,9 @@ PBRet Webserver::_requestControllerTuning(void)
 
     std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::TUNING);
 
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Webserver::_requestControllerSettings(void)
@@ -615,7 +641,9 @@ PBRet Webserver::_requestControllerSettings(void)
 
     std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::SETTINGS);
 
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Webserver::_requestControllerPeripheralState(void)
@@ -625,13 +653,17 @@ PBRet Webserver::_requestControllerPeripheralState(void)
 
     std::shared_ptr<ControllerDataRequest> msg = std::make_shared<ControllerDataRequest> (ControllerDataRequestType::PERIPHERAL_STATE);
 
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Webserver::socketLog(const std::string& logMsg)
 {
     // Broadcast a logged message to all available sockets
     std::shared_ptr<SocketLogMessage> msg = std::make_shared<SocketLogMessage> (logMsg);
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 

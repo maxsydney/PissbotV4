@@ -14,28 +14,29 @@ PBRet MessageServer::registerTask(const Subscriber& subscriber)
     return PBRet::SUCCESS;
 }
 
-PBRet MessageServer::broadcastMessage(const std::shared_ptr<MessageBase>& message)
+PBRet MessageServer::broadcastMessage(const std::shared_ptr<PBMessageWrapper>& message)
 {
     // Broadcast message to the general purpose queue of any subscribing tasks
 
-    MessageType msgType = message->getType();
+    // TODO: Get this working first
+    // MessageType msgType = message->getType();
 
-    if (msgType == MessageType::Unknown) {
-        ESP_LOGE(MessageServer::Name, "Message type was unknown");
-        return PBRet::FAILURE;
-    }
+    // if (msgType == PBMessageType::Unknown) {
+    //     ESP_LOGE(MessageServer::Name, "Message type was unknown");
+    //     return PBRet::FAILURE;
+    // }
 
-    for (const Subscriber& subscriber: _subscribers) {
-        if (subscriber.isSubscribed(msgType)) {
-            // TODO: Ensure this is deleted.
-            subscriber.getQueueHandle().push(message);
-        }
-    }
+    // for (const Subscriber& subscriber: _subscribers) {
+    //     if (subscriber.isSubscribed(msgType)) {
+    //         // TODO: Ensure this is deleted.
+    //         subscriber.getQueueHandle().push(message);
+    //     }
+    // }
 
     return PBRet::SUCCESS;
 }
 
-bool Subscriber::isSubscribed(MessageType msgType) const
+bool Subscriber::isSubscribed(PBMessageType msgType) const
 {
     return (_subscriptions.find(msgType) != _subscriptions.end());
 }

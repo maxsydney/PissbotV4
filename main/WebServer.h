@@ -50,15 +50,15 @@ class Webserver : public Task
         PBRet _setupCBTable(void) override; 
 
         // Queue callbacks
-        PBRet _temperatureDataCB(std::shared_ptr<MessageBase> msg);
-        PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
-        PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
-        PBRet _deviceDataCB(std::shared_ptr<MessageBase> msg);
-        PBRet _flowrateDataCB(std::shared_ptr<MessageBase> msg);
-        PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
-        PBRet _concentrationDataCB(std::shared_ptr<MessageBase> msg);
-        PBRet _controllerStateCB(std::shared_ptr<MessageBase> msg);
-        PBRet _socketLogMessageCB(std::shared_ptr<MessageBase> msg);
+        PBRet _temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg);
+        PBRet _controlSettingsCB(std::shared_ptr<PBMessageWrapper> msg);
+        PBRet _controlTuningCB(std::shared_ptr<PBMessageWrapper> msg);
+        PBRet _deviceDataCB(std::shared_ptr<PBMessageWrapper> msg);
+        PBRet _flowrateDataCB(std::shared_ptr<PBMessageWrapper> msg);
+        PBRet _controlCommandCB(std::shared_ptr<PBMessageWrapper> msg);
+        PBRet _concentrationDataCB(std::shared_ptr<PBMessageWrapper> msg);
+        PBRet _controllerStateCB(std::shared_ptr<PBMessageWrapper> msg);
+        PBRet _socketLogMessageCB(std::shared_ptr<PBMessageWrapper> msg);
 
         // Message serialization
         static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);

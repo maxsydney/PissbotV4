@@ -8,7 +8,7 @@
 
 class TemperatureData : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::TemperatureData;
+    static constexpr PBMessageType messageType = PBMessageType::TemperatureData;
     static constexpr const char *Name = "Temperature Data";
     static constexpr const char *HeadTempStr = "HeadTemp";
     static constexpr const char *RefluxCondensorTempStr = "RefluxTemp";
@@ -37,7 +37,7 @@ public:
 
 class DeviceData : public MessageBase
 {
-    static constexpr MessageType messageType = MessageType::DeviceData;
+    static constexpr PBMessageType messageType = PBMessageType::DeviceData;
     static constexpr const char *Name = "OneWireBus Device Data";
 
 public:

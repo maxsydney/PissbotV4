@@ -24,13 +24,13 @@ Controller::Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t 
 void Controller::taskMain(void)
 {
     // Subscribe to messages
-    std::set<MessageType> subscriptions = { 
-        MessageType::General,
-        MessageType::TemperatureData,
-        MessageType::ControlTuning,
-        MessageType::ControlCommand,
-        MessageType::ControlSettings,
-        MessageType::ControllerDataRequest
+    std::set<PBMessageType> subscriptions = { 
+        PBMessageType::General,
+        PBMessageType::TemperatureData,
+        PBMessageType::ControllerTuning,
+        PBMessageType::ControllerCommand,
+        PBMessageType::ControllerSettings,
+        PBMessageType::ControllerDataRequest
     };
     Subscriber sub(Controller::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
@@ -74,47 +74,47 @@ void Controller::taskMain(void)
     }
 }
 
-PBRet Controller::_generalMessageCB(std::shared_ptr<MessageBase> msg)
+// PBRet Controller::_generalMessageCB(std::shared_ptr<PBMessageWrapper> msg)
+// {
+//     std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
+//     ESP_LOGI(Controller::Name, "Received general message: %s", genMsg->getMessage().c_str());  
+
+//     return PBRet::SUCCESS;
+// }
+PBRet Controller::_temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    ESP_LOGI(Controller::Name, "Received general message: %s", genMsg->getMessage().c_str());  
+    // std::shared_ptr<TemperatureData> TData = std::static_pointer_cast<TemperatureData>(msg);
+    // _currentTemp = TemperatureData(*TData);
 
     return PBRet::SUCCESS;
 }
-PBRet Controller::_temperatureDataCB(std::shared_ptr<MessageBase> msg)
-{
-    std::shared_ptr<TemperatureData> TData = std::static_pointer_cast<TemperatureData>(msg);
-    _currentTemp = TemperatureData(*TData);
 
+PBRet Controller::_controlCommandCB(std::shared_ptr<PBMessageWrapper> msg)
+{
+    // std::shared_ptr<ControlCommand> cmd = std::static_pointer_cast<ControlCommand>(msg);
+    // _peripheralState = ControlCommand(*cmd);
+
+    // // Update PWM drivers
+    // if (_LPElementPWM.setDutyCycle(_peripheralState.LPElementDutyCycle) != PBRet::SUCCESS) {
+    //     ESP_LOGW(Controller::Name, "Failed to update LPElement duty cycle");
+    //     return PBRet::FAILURE;
+    // }
+
+    // if (_HPElementPWM.setDutyCycle(_peripheralState.HPElementDutyCycle) != PBRet::SUCCESS) {
+    //     ESP_LOGW(Controller::Name, "Failed to update HPElement duty cycle");
+    //     return PBRet::FAILURE;
+    // }
+
+    // ESP_LOGI(Controller::Name, "Controller peripheral states were updated");
     return PBRet::SUCCESS;
 }
 
-PBRet Controller::_controlCommandCB(std::shared_ptr<MessageBase> msg)
+PBRet Controller::_controlSettingsCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    std::shared_ptr<ControlCommand> cmd = std::static_pointer_cast<ControlCommand>(msg);
-    _peripheralState = ControlCommand(*cmd);
+    // std::shared_ptr<ControlSettings> cmd = std::static_pointer_cast<ControlSettings>(msg);
+    // _ctrlSettings = ControlSettings(*cmd);
 
-    // Update PWM drivers
-    if (_LPElementPWM.setDutyCycle(_peripheralState.LPElementDutyCycle) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "Failed to update LPElement duty cycle");
-        return PBRet::FAILURE;
-    }
-
-    if (_HPElementPWM.setDutyCycle(_peripheralState.HPElementDutyCycle) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "Failed to update HPElement duty cycle");
-        return PBRet::FAILURE;
-    }
-
-    ESP_LOGI(Controller::Name, "Controller peripheral states were updated");
-    return PBRet::SUCCESS;
-}
-
-PBRet Controller::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
-{
-    std::shared_ptr<ControlSettings> cmd = std::static_pointer_cast<ControlSettings>(msg);
-    _ctrlSettings = ControlSettings(*cmd);
-
-    ESP_LOGI(Controller::Name, "Controller settings were updated");
+    // ESP_LOGI(Controller::Name, "Controller settings were updated");
 
     // TODO: Update pump modes here instead of aux outputs
     // if (_updatePeripheralState(_peripheralState) != PBRet::SUCCESS) {
@@ -125,61 +125,61 @@ PBRet Controller::_controlSettingsCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;
 }
 
-PBRet Controller::_controlTuningCB(std::shared_ptr<MessageBase> msg)
+PBRet Controller::_controlTuningCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    std::shared_ptr<ControlTuning> cmd = std::static_pointer_cast<ControlTuning>(msg);
-    _ctrlTuning = ControlTuning(*cmd);
+    // std::shared_ptr<ControlTuning> cmd = std::static_pointer_cast<ControlTuning>(msg);
+    // _ctrlTuning = ControlTuning(*cmd);
 
-    // Update filter
-    _derivFilter = IIRLowpassFilter(_ctrlTuning.derivFilterCfg);
-    if (_derivFilter.isConfigured() == false) {
-        ESP_LOGW(Controller::Name, "Failed to configure derivative filter");
-    }
+    // // Update filter
+    // _derivFilter = IIRLowpassFilter(_ctrlTuning.derivFilterCfg);
+    // if (_derivFilter.isConfigured() == false) {
+    //     ESP_LOGW(Controller::Name, "Failed to configure derivative filter");
+    // }
 
-    // Write controller tuning to file
-    if (saveTuningToFile() != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
-    }
+    // // Write controller tuning to file
+    // if (saveTuningToFile() != PBRet::SUCCESS) {
+    //     ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
+    // }
 
-    ESP_LOGI(Controller::Name, "Controller tuning was updated");
+    // ESP_LOGI(Controller::Name, "Controller tuning was updated");
 
     return PBRet::SUCCESS;
 }
 
-PBRet Controller::_controlDataRequestCB(std::shared_ptr<MessageBase> msg)
+PBRet Controller::_controlDataRequestCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Broadcast the requested data
     //
 
-    ESP_LOGI(Controller::Name, "Got request for data");
+    // ESP_LOGI(Controller::Name, "Got request for data");
 
-    ControllerDataRequest request = *std::static_pointer_cast<ControllerDataRequest>(msg);
+    // ControllerDataRequest request = *std::static_pointer_cast<ControllerDataRequest>(msg);
 
-    switch (request.getType())
-    {
-        case (ControllerDataRequestType::TUNING):
-        {
-            return _broadcastControllerTuning();
-        }
-        case (ControllerDataRequestType::SETTINGS):
-        {
-            return _broadcastControllerSettings();
-        }
-        case (ControllerDataRequestType::PERIPHERAL_STATE):
-        {
-            return _broadcastControllerPeripheralState();
-        }
-        case (ControllerDataRequestType::NONE):
-        {
-            ESP_LOGW(Controller::Name, "Cannot respond to request for data None");
-            break;
-        }
-        default:
-        {
-            ESP_LOGW(Controller::Name, "Controller data request not supported");
-            break;
-        }
-    }
+    // switch (request.getType())
+    // {
+    //     case (ControllerDataRequestType::TUNING):
+    //     {
+    //         return _broadcastControllerTuning();
+    //     }
+    //     case (ControllerDataRequestType::SETTINGS):
+    //     {
+    //         return _broadcastControllerSettings();
+    //     }
+    //     case (ControllerDataRequestType::PERIPHERAL_STATE):
+    //     {
+    //         return _broadcastControllerPeripheralState();
+    //     }
+    //     case (ControllerDataRequestType::NONE):
+    //     {
+    //         ESP_LOGW(Controller::Name, "Cannot respond to request for data None");
+    //         break;
+    //     }
+    //     default:
+    //     {
+    //         ESP_LOGW(Controller::Name, "Controller data request not supported");
+    //         break;
+    //     }
+    // }
 
     // If we have made it here, we haven't been able to respond to data request
     return PBRet::FAILURE;
@@ -187,13 +187,13 @@ PBRet Controller::_controlDataRequestCB(std::shared_ptr<MessageBase> msg)
 
 PBRet Controller::_setupCBTable(void)
 {
-    _cbTable = std::map<MessageType, queueCallback> {
-        {MessageType::General, std::bind(&Controller::_generalMessageCB, this, std::placeholders::_1)},
-        {MessageType::TemperatureData, std::bind(&Controller::_temperatureDataCB, this, std::placeholders::_1)},
-        {MessageType::ControlCommand, std::bind(&Controller::_controlCommandCB, this, std::placeholders::_1)},
-        {MessageType::ControlSettings, std::bind(&Controller::_controlSettingsCB, this, std::placeholders::_1)},
-        {MessageType::ControlTuning, std::bind(&Controller::_controlTuningCB, this, std::placeholders::_1)},
-        {MessageType::ControllerDataRequest, std::bind(&Controller::_controlDataRequestCB, this, std::placeholders::_1)}
+    _cbTable = std::map<PBMessageType, queueCallback> {
+        // {PBMessageType::General, std::bind(&Controller::_generalMessageCB, this, std::placeholders::_1)},
+        {PBMessageType::TemperatureData, std::bind(&Controller::_temperatureDataCB, this, std::placeholders::_1)},
+        {PBMessageType::ControllerCommand, std::bind(&Controller::_controlCommandCB, this, std::placeholders::_1)},
+        {PBMessageType::ControllerSettings, std::bind(&Controller::_controlSettingsCB, this, std::placeholders::_1)},
+        {PBMessageType::ControllerTuning, std::bind(&Controller::_controlTuningCB, this, std::placeholders::_1)},
+        {PBMessageType::ControllerDataRequest, std::bind(&Controller::_controlDataRequestCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -205,7 +205,9 @@ PBRet Controller::_broadcastControllerTuning(void) const
     std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (_ctrlTuning);
 
     ESP_LOGI(Controller::Name, "Broadcasting controller tuning");
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Controller::_broadcastControllerSettings(void) const
@@ -214,7 +216,9 @@ PBRet Controller::_broadcastControllerSettings(void) const
     std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (_ctrlSettings);
 
     ESP_LOGI(Controller::Name, "Broadcasting controller settings");
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Controller::_broadcastControllerPeripheralState(void) const
@@ -225,14 +229,18 @@ PBRet Controller::_broadcastControllerPeripheralState(void) const
     std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (_peripheralState);
 
     ESP_LOGI(Controller::Name, "Broadcasting peripheral state");
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Controller::_broadcastControllerState(void) const
 {
     // Send a ControllerState message to the queue
     std::shared_ptr<ControllerState> msg = std::make_shared<ControllerState> ();
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet Controller::_initIO(const ControllerConfig& cfg) const
@@ -467,11 +475,12 @@ PBRet Controller::_checkTemperatures(const TemperatureData& currTemp) const
         return PBRet::FAILURE;
     }
 
-    // Check that current temperature hasn't expired
-    if ((esp_timer_get_time() - currTemp.getTimeStamp()) > TEMP_MESSAGE_TIMEOUT) {
-        ESP_LOGW(Controller::Name, "Temperature message was stale");
-        return PBRet::FAILURE;
-    }
+    // TODO: Fix timestamp
+    // // Check that current temperature hasn't expired
+    // if ((esp_timer_get_time() - currTemp.getTimeStamp()) > TEMP_MESSAGE_TIMEOUT) {
+    //     ESP_LOGW(Controller::Name, "Temperature message was stale");
+    //     return PBRet::FAILURE;
+    // }
 
     return PBRet::SUCCESS;
 }

@@ -121,10 +121,12 @@ PBRet PBOneWire::_scanForDevices(void)
 
 PBRet PBOneWire::_broadcastDeviceAddresses(void) const
 {
-    // Broadcast the available device addresses to all listening tasks
-    std::shared_ptr<DeviceData> msg = std::make_shared<DeviceData> (_availableSensors);
+    // // Broadcast the available device addresses to all listening tasks
+    // std::shared_ptr<DeviceData> msg = std::make_shared<DeviceData> (_availableSensors);
 
-    return MessageServer::broadcastMessage(msg);
+    // return MessageServer::broadcastMessage(msg);
+
+    return PBRet::SUCCESS;
 }
 
 PBRet PBOneWire::broadcastAvailableDevices(void)

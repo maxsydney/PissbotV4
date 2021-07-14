@@ -43,7 +43,7 @@ DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth,
 
 void DistillerManager::taskMain(void)
 {
-    std::set<MessageType> subscriptions = { MessageType::General };
+    std::set<PBMessageType> subscriptions = { PBMessageType::General };
     Subscriber sub(DistillerManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
 
@@ -56,18 +56,18 @@ void DistillerManager::taskMain(void)
     }
 }
 
-PBRet DistillerManager::_generalMessagCB(std::shared_ptr<MessageBase> msg)
+PBRet DistillerManager::_generalMessagCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    ESP_LOGI(DistillerManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
+    // std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
+    // ESP_LOGI(DistillerManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
 
     return PBRet::SUCCESS;
 }
 
 PBRet DistillerManager::_setupCBTable(void)
 {
-    _cbTable = std::map<MessageType, queueCallback> {
-        {MessageType::General, std::bind(&DistillerManager::_generalMessagCB, this, std::placeholders::_1)}
+    _cbTable = std::map<PBMessageType, queueCallback> {
+        {PBMessageType::General, std::bind(&DistillerManager::_generalMessagCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
