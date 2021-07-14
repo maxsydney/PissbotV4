@@ -9,6 +9,10 @@
 #include <libesphttpd/esp.h>
 #include "libesphttpd/httpd.h"
 #include "libesphttpd/httpd-freertos.h"
+#include "Generated/WebserverMessaging.h"
+
+static constexpr uint32_t socketLogLength = 128;
+using PBSocketLogMessage = SocketLogMessage<socketLogLength>;
 
 class WebserverConfig
 {

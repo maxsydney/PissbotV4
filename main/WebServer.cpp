@@ -661,7 +661,7 @@ PBRet Webserver::_requestControllerPeripheralState(void)
 PBRet Webserver::socketLog(const std::string& logMsg)
 {
     // Broadcast a logged message to all available sockets
-    std::shared_ptr<SocketLogMessage> msg = std::make_shared<SocketLogMessage> (logMsg);
+    // std::shared_ptr<SocketLogMessage> msg = std::make_shared<SocketLogMessage> (logMsg);
     // return MessageServer::broadcastMessage(msg);
 
     return PBRet::SUCCESS;

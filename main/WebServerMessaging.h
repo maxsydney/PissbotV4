@@ -5,22 +5,22 @@
 #include "MessageDefs.h"
 #include "cJSON.h"
 
-class SocketLogMessage : public MessageBase
-{
-    static constexpr PBMessageType messageType = PBMessageType::SocketLog;
-    static constexpr const char* Name = "Socket Log";
-    static constexpr const char* SocketLogStr = "Log";
+// class SocketLogMessage : public MessageBase
+// {
+//     static constexpr PBMessageType messageType = PBMessageType::SocketLog;
+//     static constexpr const char* Name = "Socket Log";
+//     static constexpr const char* SocketLogStr = "Log";
 
-public:
-    SocketLogMessage(void) = default;
-    SocketLogMessage(const std::string& msg)
-        : MessageBase(SocketLogMessage::messageType, SocketLogMessage::Name, esp_timer_get_time()),
-          msg(msg) {}
+// public:
+//     SocketLogMessage(void) = default;
+//     SocketLogMessage(const std::string& msg)
+//         : MessageBase(SocketLogMessage::messageType, SocketLogMessage::Name, esp_timer_get_time()),
+//           msg(msg) {}
 
-    PBRet serialize(std::string &JSONStr) const override;
-    PBRet deserialize(const cJSON *root) override { return PBRet::FAILURE; }
+//     PBRet serialize(std::string &JSONStr) const override;
+//     PBRet deserialize(const cJSON *root) override { return PBRet::FAILURE; }
     
-    std::string msg {};
-};
+//     std::string msg {};
+// };
 
 #endif // MAIN_WEBSERVER_MESSAGING_H

@@ -4,6 +4,8 @@
 #include "MessageServer.h"
 #include "MessageDefs.h"
 #include "nvs_flash.h"
+#include "Generated/WebserverMessaging.h"
+#include "IO/Readable.h"
 
 DistillerManager* DistillerManager::_managerPtr = nullptr;
 
@@ -43,9 +45,19 @@ DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth,
 
 void DistillerManager::taskMain(void)
 {
-    std::set<PBMessageType> subscriptions = { PBMessageType::General };
+    std::set<PBMessageType> subscriptions = { PBMessageType::SocketLog };
     Subscriber sub(DistillerManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
+
+    // Create a SocketLog message and broadcast it
+    std::string testMessage("This is a test");
+    PBSocketLogMessage msg {};
+    msg.mutable_logMsg().set(testMessage.c_str(), testMessage.length());
+    PBMessageWrapper wrapped = MessageServer::wrapMessage(msg, PBMessageType::SocketLog);
+    std::shared_ptr<PBMessageWrapper> msgPtr = std::make_shared<PBMessageWrapper> (wrapped);
+    MessageServer::broadcastMessage(msgPtr);
+    ESP_LOGI(DistillerManager::Name, "Broadcast test socket log message!");
+
 
     while(true) {
         _processQueue();
@@ -56,10 +68,20 @@ void DistillerManager::taskMain(void)
     }
 }
 
-PBRet DistillerManager::_generalMessagCB(std::shared_ptr<PBMessageWrapper> msg)
+PBRet DistillerManager::_socketLogCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    // std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    // ESP_LOGI(DistillerManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
+    ESP_LOGI(DistillerManager::Name, "Received socket log message");
+    Readable readBuffer {};
+    for (size_t i = 0; i < msg->get_payload().get_length(); i++)
+    {
+        uint8_t ch = static_cast<uint8_t>(msg->get_payload().get_const(i));
+        readBuffer.push(ch);
+    }
+
+    PBSocketLogMessage decodedMsg {};
+    decodedMsg.deserialize(readBuffer);
+
+    ESP_LOGI(DistillerManager::Name, "Message: %s", decodedMsg.logMsg());
 
     return PBRet::SUCCESS;
 }
@@ -67,7 +89,7 @@ PBRet DistillerManager::_generalMessagCB(std::shared_ptr<PBMessageWrapper> msg)
 PBRet DistillerManager::_setupCBTable(void)
 {
     _cbTable = std::map<PBMessageType, queueCallback> {
-        {PBMessageType::General, std::bind(&DistillerManager::_generalMessagCB, this, std::placeholders::_1)}
+        {PBMessageType::SocketLog, std::bind(&DistillerManager::_socketLogCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;

@@ -93,6 +93,7 @@ class MessageServer
     public:
         static PBRet registerTask(const Subscriber& subscriber);
         static PBRet broadcastMessage(const std::shared_ptr<PBMessageWrapper>& message);
+        static PBMessageWrapper wrapMessage(const ::EmbeddedProto::MessageInterface& message, PBMessageType type);
 
     private:
         static std::vector<Subscriber> _subscribers;
