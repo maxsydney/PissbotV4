@@ -5,7 +5,6 @@
 #include "MessageDefs.h"
 #include "nvs_flash.h"
 #include "Generated/WebserverMessaging.h"
-#include "IO/Readable.h"
 
 DistillerManager* DistillerManager::_managerPtr = nullptr;
 
@@ -53,11 +52,10 @@ void DistillerManager::taskMain(void)
     std::string testMessage("This is a test");
     PBSocketLogMessage msg {};
     msg.mutable_logMsg().set(testMessage.c_str(), testMessage.length());
-    PBMessageWrapper wrapped = MessageServer::wrapMessage(msg, PBMessageType::SocketLog);
+    PBMessageWrapper wrapped = MessageServer::wrap(msg, PBMessageType::SocketLog);
     std::shared_ptr<PBMessageWrapper> msgPtr = std::make_shared<PBMessageWrapper> (wrapped);
     MessageServer::broadcastMessage(msgPtr);
     ESP_LOGI(DistillerManager::Name, "Broadcast test socket log message!");
-
 
     while(true) {
         _processQueue();
@@ -71,17 +69,11 @@ void DistillerManager::taskMain(void)
 PBRet DistillerManager::_socketLogCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     ESP_LOGI(DistillerManager::Name, "Received socket log message");
-    Readable readBuffer {};
-    for (size_t i = 0; i < msg->get_payload().get_length(); i++)
-    {
-        uint8_t ch = static_cast<uint8_t>(msg->get_payload().get_const(i));
-        readBuffer.push(ch);
+    
+    PBSocketLogMessage socketMessage {};
+    if (MessageServer::unwrap(*msg, socketMessage) == PBRet::SUCCESS) {
+        ESP_LOGI(DistillerManager::Name, "Message: %s", socketMessage.logMsg());
     }
-
-    PBSocketLogMessage decodedMsg {};
-    decodedMsg.deserialize(readBuffer);
-
-    ESP_LOGI(DistillerManager::Name, "Message: %s", decodedMsg.logMsg());
 
     return PBRet::SUCCESS;
 }

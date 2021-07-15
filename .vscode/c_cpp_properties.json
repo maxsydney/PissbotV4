@@ -4,6 +4,7 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}",
+                "${workspaceFolder}/lib/PBProtoBuf/Generated",
                 "${IDF_PATH}/components/soc/esp32/include",
                 "${workspaceFolder}/components/esp32-ds18b20/include",
                 "${workspaceFolder}/components/esp32-owb/include",

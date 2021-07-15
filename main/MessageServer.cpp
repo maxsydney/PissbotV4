@@ -1,6 +1,7 @@
 #include "MessageServer.h"
 #include "MessageDefs.h"
 #include "IO/Writable.h"
+#include "IO/Readable.h"
 #include <esp_log.h>
 
 std::vector<Subscriber> MessageServer::_subscribers {};
@@ -41,7 +42,7 @@ bool Subscriber::isSubscribed(PBMessageType msgType) const
     return (_subscriptions.find(msgType) != _subscriptions.end());
 }
 
-PBMessageWrapper MessageServer::wrapMessage(const ::EmbeddedProto::MessageInterface& message, PBMessageType type)
+PBMessageWrapper MessageServer::wrap(const ::EmbeddedProto::MessageInterface& message, PBMessageType type)
 {
     // Wrap a protobuf message in a PBMessageWrapper to transmit out over the network
 
@@ -58,4 +59,21 @@ PBMessageWrapper MessageServer::wrapMessage(const ::EmbeddedProto::MessageInterf
     wrapper.mutable_payload().set(buffer.get_buffer(), buffer.get_size());
 
     return wrapper;
+}
+
+PBRet MessageServer::unwrap(const PBMessageWrapper& wrapped, ::EmbeddedProto::MessageInterface& message)
+{
+    // Unwrap a protobuf message into a specific message type
+    // TODO: Error checking
+
+    Readable readBuffer {};
+    for (size_t i = 0; i < wrapped.get_payload().get_length(); i++)
+    {
+        uint8_t ch = static_cast<uint8_t>(wrapped.get_payload().get_const(i));
+        readBuffer.push(ch);
+    }
+
+    message.deserialize(readBuffer);
+
+    return PBRet::SUCCESS;
 }
