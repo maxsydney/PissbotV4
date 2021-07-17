@@ -9,6 +9,7 @@
 #include "Filter.h"
 #include "ControllerMessaging.h"
 #include "Generated/MessageBase.h"
+#include "Generated/ControllerMessaging.h"
 
 struct ControllerConfig
 {
@@ -47,12 +48,12 @@ public:
     bool isConfigured(void) const { return _configured; }
 
     // Setters
-    void setRefluxPumpMode(PumpMode pumpMode) { _ctrlSettings.refluxPumpMode = pumpMode; }
-    void setProductPumpMode(PumpMode pumpMode) { _ctrlSettings.productPumpMode = pumpMode; }
+    void setRefluxPumpMode(PumpMode pumpMode) { _ctrlSettings.set_refluxPumpMode(pumpMode); }
+    void setProductPumpMode(PumpMode pumpMode) { _ctrlSettings.set_productPumpMode(pumpMode); }
 
     // Getters
-    PumpMode getRefluxPumpMode(void) const { return _ctrlSettings.refluxPumpMode; }
-    PumpMode getProductPumpMode(void) const { return _ctrlSettings.productPumpMode; }
+    PumpMode getRefluxPumpMode(void) const { return _ctrlSettings.refluxPumpMode(); }
+    PumpMode getProductPumpMode(void) const { return _ctrlSettings.productPumpMode(); }
 
     friend class ControllerUT;
 
@@ -64,7 +65,7 @@ private:
 
     // Updates
     PBRet _doControl(double temp);
-    PBRet _updatePeripheralState(const ControlCommand &cmd);
+    PBRet _updatePeripheralState(const ControllerCommand &cmd);
     PBRet _updatePumps(void);
     PBRet _updateProductPump(double temp);
     PBRet _updateRefluxPump(void);
@@ -97,10 +98,10 @@ private:
 
     // Controller data
     ControllerConfig _cfg{};
-    ControlCommand _peripheralState{};
+    ControllerCommand _peripheralState{};
     TemperatureData _currentTemp{};
-    ControlTuning _ctrlTuning{};
-    ControlSettings _ctrlSettings{};
+    ControllerTuning _ctrlTuning{};
+    ControllerSettings _ctrlSettings{};
 
     Pump _refluxPump{};
     Pump _productPump{};

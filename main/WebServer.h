@@ -64,9 +64,6 @@ class Webserver : public Task
         PBRet _controllerStateCB(std::shared_ptr<PBMessageWrapper> msg);
         PBRet _socketLogMessageCB(std::shared_ptr<PBMessageWrapper> msg);
 
-        // Message serialization
-        static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);
-
         // Message parsing
         static PBRet _processControlTuningMessage(cJSON* msgRoot);
         static PBRet _processControlSettingsMessage(cJSON* msgRoot);

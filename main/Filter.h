@@ -4,6 +4,7 @@
 #include <vector>
 #include "PBCommon.h"
 #include "cJSON.h"
+#include "Generated/ControllerMessaging.h"
 
 class FilterConfig
 {
@@ -50,16 +51,16 @@ class Filter
         bool _configured = false;
 };
 
-class IIRLowpassFilterConfig
-{
-    public:
-        IIRLowpassFilterConfig(void) = default;
-        IIRLowpassFilterConfig(double samplingFreq, double cutoffFreq)
-            : Fs(samplingFreq), Fc(cutoffFreq) {}
+// class IIRLowpassFilterConfig
+// {
+//     public:
+//         IIRLowpassFilterConfig(void) = default;
+//         IIRLowpassFilterConfig(double samplingFreq, double cutoffFreq)
+//             : Fs(samplingFreq), Fc(cutoffFreq) {}
 
-        double Fs = 0.0;
-        double Fc = 0.0;
-};
+//         double Fs = 0.0;
+//         double Fc = 0.0;
+// };
 
 // Implements a lowpass filter as a single stage biquad
 // https://e2e.ti.com/cfs-file/__key/communityserver-discussions-components-files/6/Configure-the-Coefficients-for-Digital-Biquad-Filters-in-TLV320AIc3xxx-F_2E00__2E00__2E00_.pdf
@@ -77,8 +78,8 @@ class IIRLowpassFilter
         PBRet setSamplingFreq(double Fs);
 
         // Getters
-        double getCutoffFreq(void) const { return _config.Fc; }
-        double getSamplingFreq(void) const { return _config.Fs; }
+        double getCutoffFreq(void) const { return _config.cutoffFreq(); }
+        double getSamplingFreq(void) const { return _config.sampleFreq(); }
 
         // Utility
         static PBRet checkInputs(const IIRLowpassFilterConfig& config);

@@ -535,27 +535,27 @@ PBRet Webserver::_processCommandMessage(cJSON* msgRoot)
 
 PBRet Webserver::_processPeripheralStateMessage(cJSON* msgRoot)
 {
-    ControlCommand ctrlCommand {};
-    if (msgRoot == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to parse control command message. cJSON object was null");
-        return PBRet::FAILURE;
-    }
+    // ControlCommand ctrlCommand {};
+    // if (msgRoot == nullptr) {
+    //     ESP_LOGW(Webserver::Name, "Unable to parse control command message. cJSON object was null");
+    //     return PBRet::FAILURE;
+    // }
 
-    cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
-    if (msgData == nullptr) {
-        ESP_LOGW(Webserver::Name, "Unable to parse data from control command message");
-        return PBRet::FAILURE;
-    }
+    // cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
+    // if (msgData == nullptr) {
+    //     ESP_LOGW(Webserver::Name, "Unable to parse data from control command message");
+    //     return PBRet::FAILURE;
+    // }
 
-    if (ctrlCommand.deserialize(msgData) != PBRet::SUCCESS) {
-        ESP_LOGW(Webserver::Name, "Unable to parse control command message");
-        return PBRet::FAILURE;
-    }
+    // if (ctrlCommand.deserialize(msgData) != PBRet::SUCCESS) {
+    //     ESP_LOGW(Webserver::Name, "Unable to parse control command message");
+    //     return PBRet::FAILURE;
+    // }
 
-    std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (ctrlCommand);
+    // // std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (ctrlCommand);
 
-    ESP_LOGI(Webserver::Name, "Broadcasting controller command");
-    // return MessageServer::broadcastMessage(msg);
+    // ESP_LOGI(Webserver::Name, "Broadcasting controller command");
+    // // return MessageServer::broadcastMessage(msg);
 
     return PBRet::SUCCESS;
 }

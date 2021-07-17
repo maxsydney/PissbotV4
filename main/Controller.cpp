@@ -193,46 +193,45 @@ PBRet Controller::_setupCBTable(void)
 
 PBRet Controller::_broadcastControllerTuning(void) const
 {
-    // Send a temperature data message to the queue
-    std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (_ctrlTuning);
+    // Send a controlelr message to the queue
+    PBMessageWrapper wrapped = MessageServer::wrap(_ctrlTuning, PBMessageType::ControllerTuning);
+    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    ESP_LOGI(Controller::Name, "Broadcasting controller tuning");
-    // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet Controller::_broadcastControllerSettings(void) const
 {
-    // Send a temperature data message to the queue
-    std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (_ctrlSettings);
+    // Send a controller settings message to the queue
+    PBMessageWrapper wrapped = MessageServer::wrap(_ctrlSettings, PBMessageType::ControllerSettings);
+    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    ESP_LOGI(Controller::Name, "Broadcasting controller settings");
-    // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet Controller::_broadcastControllerPeripheralState(void) const
 {
     // Send a Control command message to the queue
-    // TODO: Does this loopback?
+    // TODO: Does this loopback? Separate commands from state
+    PBMessageWrapper wrapped = MessageServer::wrap(_peripheralState, PBMessageType::ControllerCommand);
+    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (_peripheralState);
-
-    ESP_LOGI(Controller::Name, "Broadcasting peripheral state");
-    // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet Controller::_broadcastControllerState(void) const
 {
     // Send a ControllerState message to the queue
-    std::shared_ptr<ControllerState> msg = std::make_shared<ControllerState> ();
-    // return MessageServer::broadcastMessage(msg);
+    ControllerState state {};
+    state.set_propOutput(_proportional);
+    state.set_integralOutput(_integral);
+    state.set_derivOutput(_derivative);
+    state.set_totalOutput(_currentOutput);
 
-    return PBRet::SUCCESS;
+    PBMessageWrapper wrapped = MessageServer::wrap(state, PBMessageType::ControllerState);
+    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
+
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet Controller::_initIO(const ControllerConfig& cfg) const
@@ -305,8 +304,8 @@ PBRet Controller::_initPumps(const PumpConfig& refluxPumpConfig, const PumpConfi
     }
 
     // Set pumps to off until Controller is configured
-    _ctrlSettings.refluxPumpMode = PumpMode::PUMP_OFF;
-    _ctrlSettings.productPumpMode = PumpMode::PUMP_OFF;
+    _ctrlSettings.set_refluxPumpMode(PumpMode::PUMP_OFF);
+    _ctrlSettings.set_productPumpMode(PumpMode::PUMP_OFF);
 
     return PBRet::SUCCESS;
 }
@@ -336,13 +335,13 @@ PBRet Controller::_doControl(double temp)
     // Implements a basic PID controller with anti-integral windup
     // and filtering on derivative
 
-    const double err = temp - _ctrlTuning.setpoint;
+    const double err = temp - _ctrlTuning.setpoint();
 
     // Proportional term
-    _proportional = _ctrlTuning.PGain * err;
+    _proportional = _ctrlTuning.PGain() * err;
 
     // Integral term (discretized via bilinear transform)
-    _integral += 0.5 * _ctrlTuning.IGain * _cfg.dt * (err + _prevError);
+    _integral += 0.5 * _ctrlTuning.IGain() * _cfg.dt * (err + _prevError);
 
     // Dynamic integral clamping/anti windup. Limit integral signal so that
     // PI control does not exceed pump maximum speed. 
@@ -369,7 +368,7 @@ PBRet Controller::_doControl(double temp)
 
     // Derivative term filtered with biquad LPF. If filter is not configured, use 
     // raw measurements
-    const double derivRaw = _ctrlTuning.DGain * (temp - _prevTemp) / _cfg.dt;
+    const double derivRaw = _ctrlTuning.DGain() * (temp - _prevTemp) / _cfg.dt;
     if (_derivFilter.filter(derivRaw, _derivative) != PBRet::SUCCESS) {
         // Error message printed in filter
         _derivative = derivRaw;
@@ -404,13 +403,13 @@ PBRet Controller::_updatePumps(void)
 PBRet Controller::_updateRefluxPump(void)
 {
     // Update the reflux pump speed
-    if (_ctrlSettings.refluxPumpMode == PumpMode::ACTIVE_CONTROL) {
+    if (_ctrlSettings.get_refluxPumpMode() == PumpMode::ACTIVE_CONTROL) {
         if (_refluxPump.updatePumpSpeed(_currentOutput) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in active mode");
             return PBRet::FAILURE;
         }
-    } else if (_ctrlSettings.refluxPumpMode == PumpMode::MANUAL_CONTROL) {
-        if (_refluxPump.updatePumpSpeed(_ctrlSettings.manualPumpSpeeds.refluxPumpSpeed) != PBRet::SUCCESS) {
+    } else if (_ctrlSettings.get_refluxPumpMode() == PumpMode::MANUAL_CONTROL) {
+        if (_refluxPump.updatePumpSpeed(_ctrlSettings.manualPumpSpeeds().refluxPumpSpeed()) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in manual mode");
             return PBRet::FAILURE;
         }
@@ -427,7 +426,7 @@ PBRet Controller::_updateRefluxPump(void)
 
 PBRet Controller::_updateProductPump(double temp)
 {
-    if (_ctrlSettings.productPumpMode == PumpMode::ACTIVE_CONTROL) {
+    if (_ctrlSettings.get_productPumpMode() == PumpMode::ACTIVE_CONTROL) {
         // Control pump speed based on head temperature
         if (temp >= Controller::HYSTERESIS_BOUND_UPPER) {
             if (_productPump.updatePumpSpeed(Pump::FLUSH_SPEED) != PBRet::SUCCESS) {
@@ -440,8 +439,8 @@ PBRet Controller::_updateProductPump(double temp)
                 return PBRet::FAILURE;
             }
         }
-    } else if (_ctrlSettings.productPumpMode == PumpMode::MANUAL_CONTROL) {
-        if (_productPump.updatePumpSpeed(_ctrlSettings.manualPumpSpeeds.productPumpSpeed) != PBRet::SUCCESS) {
+    } else if (_ctrlSettings.get_productPumpMode() == PumpMode::MANUAL_CONTROL) {
+        if (_productPump.updatePumpSpeed(_ctrlSettings.get_manualPumpSpeeds().productPumpSpeed()) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Failed to update reflux pump speed in manual mode");
             return PBRet::FAILURE;
         }
@@ -477,7 +476,7 @@ PBRet Controller::_checkTemperatures(const TemperatureData& currTemp) const
     return PBRet::SUCCESS;
 }
 
-PBRet Controller::_updatePeripheralState(const ControlCommand& cmd)
+PBRet Controller::_updatePeripheralState(const ControllerCommand& cmd)
 {
     esp_err_t err = ESP_OK;
 
@@ -498,7 +497,7 @@ PBRet Controller::_updatePeripheralState(const ControlCommand& cmd)
         err |= ESP_FAIL;
     }
 
-    err |= gpio_set_level(_cfg.fanPin, static_cast<uint32_t> (cmd.fanState));
+    err |= gpio_set_level(_cfg.fanPin, static_cast<uint32_t> (cmd.fanState()));
     err |= gpio_set_level(_cfg.element1Pin, LPElementState);
     err |= gpio_set_level(_cfg.element2Pin, HPElementState);
 
@@ -645,14 +644,14 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
     }
 
     // Initialize derivative filter from loaded tuning object
-    _derivFilter = IIRLowpassFilter(_ctrlTuning.derivFilterCfg);
+    _derivFilter = IIRLowpassFilter(_ctrlTuning.derivFilterSettings());
     if (_derivFilter.isConfigured() == false) {
         ESP_LOGW(Controller::Name, "Unable to initialize derivative filter");
     }
 
     // Set pumps to active control
-    _ctrlSettings.refluxPumpMode = PumpMode::ACTIVE_CONTROL;
-    _ctrlSettings.productPumpMode = PumpMode::ACTIVE_CONTROL;
+    _ctrlSettings.set_refluxPumpMode(PumpMode::ACTIVE_CONTROL);
+    _ctrlSettings.set_refluxPumpMode(PumpMode::ACTIVE_CONTROL);
     _cfg = cfg;
 
     return PBRet::SUCCESS;
@@ -663,28 +662,28 @@ PBRet Controller::saveTuningToFile(void)
     // Save the current controller tuning to a JSON file and store
     // in flash
 
-    std::string JSONStr {};
-    if (_ctrlTuning.serialize(JSONStr) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
-        return PBRet::FAILURE;
-    }
+    // std::string JSONStr {};
+    // if (_ctrlTuning.serialize(JSONStr) != PBRet::SUCCESS) {
+    //     ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
+    //     return PBRet::FAILURE;
+    // }
 
-    // Mount filesystem
-    Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
-    if (F.isOpen() == false) {
-        ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not written to file");
-        return PBRet::FAILURE;
-    }
+    // // Mount filesystem
+    // Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
+    // if (F.isOpen() == false) {
+    //     ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not written to file");
+    //     return PBRet::FAILURE;
+    // }
 
-    std::ofstream outFile(Controller::ctrlTuningFile);
-    if (outFile.is_open() == false) {
-        ESP_LOGE(Controller::Name, "Failed to open file for writing. Controller config was not written to file");
-        return PBRet::FAILURE;
-    }
+    // std::ofstream outFile(Controller::ctrlTuningFile);
+    // if (outFile.is_open() == false) {
+    //     ESP_LOGE(Controller::Name, "Failed to open file for writing. Controller config was not written to file");
+    //     return PBRet::FAILURE;
+    // }
 
-    // Write JSON string out to file
-    outFile << JSONStr;
-    ESP_LOGI(Controller::Name, "Controller tuning successfully written to file");
+    // // Write JSON string out to file
+    // outFile << JSONStr;
+    // ESP_LOGI(Controller::Name, "Controller tuning successfully written to file");
     return PBRet::SUCCESS;
 }
 
@@ -693,28 +692,30 @@ PBRet Controller::loadTuningFromFile(void)
     // Load a saved controller tuning from a JSON file and configure
     // controller. Returns Failure if no file can be found
 
-    // Mount filesystem
-    Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
-    if (F.isOpen() == false) {
-        ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not read from file");
-        return PBRet::FAILURE;
-    }
+    // // Mount filesystem
+    // Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
+    // if (F.isOpen() == false) {
+    //     ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not read from file");
+    //     return PBRet::FAILURE;
+    // }
 
-    // Read JSON string from file
-    std::ifstream ctrlTuningIn(Controller::ctrlTuningFile);
-    if (ctrlTuningIn.good() == false) {
-        ESP_LOGW(Controller::Name, "Controller tuning file %s could not be opened", Controller::ctrlTuningFile);
-        return PBRet::FAILURE;
-    }
+    // // Read JSON string from file
+    // std::ifstream ctrlTuningIn(Controller::ctrlTuningFile);
+    // if (ctrlTuningIn.good() == false) {
+    //     ESP_LOGW(Controller::Name, "Controller tuning file %s could not be opened", Controller::ctrlTuningFile);
+    //     return PBRet::FAILURE;
+    // }
 
-    std::stringstream JSONBuffer;
-    JSONBuffer << ctrlTuningIn.rdbuf();
+    // std::stringstream JSONBuffer;
+    // JSONBuffer << ctrlTuningIn.rdbuf();
 
-    cJSON* root = cJSON_Parse(JSONBuffer.str().c_str());
-    if (root == nullptr) {
-        ESP_LOGE(Controller::Name, "Failed to load controller tuning from JSON. Root JSON pointer was null");
-        return PBRet::FAILURE;
-    }
+    // cJSON* root = cJSON_Parse(JSONBuffer.str().c_str());
+    // if (root == nullptr) {
+    //     ESP_LOGE(Controller::Name, "Failed to load controller tuning from JSON. Root JSON pointer was null");
+    //     return PBRet::FAILURE;
+    // }
     
-    return _ctrlTuning.deserialize(root);
+    // return _ctrlTuning.deserialize(root);
+
+    return PBRet::SUCCESS;
 }
