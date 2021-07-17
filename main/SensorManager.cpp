@@ -27,7 +27,6 @@ void SensorManager::taskMain(void)
 {
     // Subscribe to messages
     std::set<PBMessageType> subscriptions = { 
-        PBMessageType::General,
         PBMessageType::SensorManagerCommand,
         PBMessageType::AssignSensor
     };
@@ -51,17 +50,16 @@ void SensorManager::taskMain(void)
         }
 
         // Read flowmeters
-        FlowrateData flowData(0.0, 0.0);
-        if (_refluxFlowmeter.readMassFlowrate(esp_timer_get_time(), flowData.refluxFlowrate) != PBRet::SUCCESS) {
+        FlowrateData flowData {};
+        if (_refluxFlowmeter.readMassFlowrate(esp_timer_get_time(), flowData.mutable_refluxFlowrate().get()) != PBRet::SUCCESS) {
             ESP_LOGW(SensorManager::Name, "Unable to read reflux flowmeter");
         }
 
         // Compute ABV
-        ConcentrationData concData(0.0, 0.0);
+        ConcentrationData concData {};
         if (_estimateABV(Tdata, concData) != PBRet::SUCCESS) {
             ESP_LOGW(SensorManager::Name, "Unable to estimate ABV");
         }
-
 
         // Broadcast data
         _broadcastTemps(Tdata);
@@ -72,37 +70,33 @@ void SensorManager::taskMain(void)
     }
 }
 
-PBRet SensorManager::_generalMessageCB(std::shared_ptr<PBMessageWrapper> msg)
-{
-    // std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    // ESP_LOGI(SensorManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
-
-    return PBRet::SUCCESS;
-}
-
 PBRet SensorManager::_commandMessageCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    // SensorManagerCommand cmd = *std::static_pointer_cast<SensorManagerCommand>(msg);
-    // ESP_LOGI(SensorManager::Name, "Got SensorManagerCommand message");
+    SensorManagerCommandMessage cmd {};
+    if (MessageServer::unwrap(*msg, cmd) != PBRet::SUCCESS) {
+        ESP_LOGW(SensorManager::Name, "Failed to decode SensorManagerCommand");
+        return PBRet::FAILURE;
+    } 
+    ESP_LOGI(SensorManager::Name, "Got SensorManagerCommand message");
 
-    // switch (cmd.getCommandType())
-    // {
-    //     case (SensorManagerCmdType::BroadcastSensorsStart):
-    //     {
-    //         ESP_LOGI(SensorManager::Name, "Broadcasting sensor adresses");
-    //         return _broadcastSensors();
-    //     }
-    //     case (SensorManagerCmdType::None):
-    //     {
-    //         ESP_LOGW(SensorManager::Name, "Received command None");
-    //         break;
-    //     }
-    //     default:
-    //     {
-    //         ESP_LOGW(SensorManager::Name, "Unsupported command");
-    //         break;
-    //     }
-    // } 
+    switch (cmd.get_cmdType())
+    {
+        case (SensorManagerCmdType::CMD_BROADCAST_SENSORS):
+        {
+            ESP_LOGI(SensorManager::Name, "Broadcasting sensor adresses");
+            return _broadcastSensors();
+        }
+        case (SensorManagerCmdType::CMD_NONE):
+        {
+            ESP_LOGW(SensorManager::Name, "Received command None");
+            break;
+        }
+        default:
+        {
+            ESP_LOGW(SensorManager::Name, "Unsupported command");
+            break;
+        }
+    } 
 
     return PBRet::SUCCESS;
 }
@@ -135,7 +129,6 @@ PBRet SensorManager::_assignSensorCB(std::shared_ptr<PBMessageWrapper> msg)
 PBRet SensorManager::_setupCBTable(void)
 {
     _cbTable = std::map<PBMessageType, queueCallback> {
-        {PBMessageType::General, std::bind(&SensorManager::_generalMessageCB, this, std::placeholders::_1)},
         {PBMessageType::SensorManagerCommand, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)},
         {PBMessageType::AssignSensor, std::bind(&SensorManager::_assignSensorCB, this, std::placeholders::_1)}
     };
@@ -188,31 +181,28 @@ PBRet SensorManager::_initOneWireBus(const SensorManagerConfig &cfg)
 PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
 {
     // Send a temperature data message to the queue
-    std::shared_ptr<TemperatureData> msg = std::make_shared<TemperatureData> (Tdata);
+    PBMessageWrapper wrapped = MessageServer::wrap(Tdata, PBMessageType::TemperatureData);
+    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet SensorManager::_broadcastFlowrates(const FlowrateData& flowData) const
 {
     // Send a temperature data message to the queue
-    std::shared_ptr<FlowrateData> msg = std::make_shared<FlowrateData> (flowData);
+    PBMessageWrapper wrapped = MessageServer::wrap(flowData, PBMessageType::FlowrateData);
+    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet SensorManager::_broadcastConcentrations(const ConcentrationData& concData) const
 {
     // Send a temperature data message to the queue
-    std::shared_ptr<ConcentrationData> msg = std::make_shared<ConcentrationData> (concData);
+    PBMessageWrapper wrapped = MessageServer::wrap(concData, PBMessageType::ConcentrationData);
+    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
+    return MessageServer::broadcastMessage(msg);
 }
 
 PBRet SensorManager::checkInputs(const SensorManagerConfig& cfg)
@@ -470,9 +460,9 @@ PBRet SensorManager::_estimateABV(const TemperatureData &TData, ConcentrationDat
     // TODO: Not sure that this is where this method should live permanently
 
     // Only do lookup if temperature is within interpolation range
-    if ((TData.headTemp > ABVTables::MIN_TEMPERATURE) && (TData.headTemp < ABVTables::MAX_TEMPERATURE)) {
-        concData.vapourConcentration = Thermo::computeVapourABVLookup(TData.headTemp);
-        concData.boilerConcentration = Thermo::computeLiquidABVLookup(TData.boilerTemp);
+    if ((TData.get_headTemp() > ABVTables::MIN_TEMPERATURE) && (TData.get_headTemp() < ABVTables::MAX_TEMPERATURE)) {
+        concData.set_vapourConcentration(Thermo::computeVapourABVLookup(TData.get_headTemp()));
+        concData.set_boilerConcentration(Thermo::computeLiquidABVLookup(TData.get_boilerTemp()));
     }
 
     return PBRet::SUCCESS;

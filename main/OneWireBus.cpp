@@ -247,8 +247,13 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
     }
 
     // Fill data structure
-    Tdata = TemperatureData(headTemp, refluxTemp, productTemp, radiatorTemp, boilerTemp);
-
+    // TODO: Handle timestamp here
+    Tdata.set_headTemp(headTemp);
+    Tdata.set_refluxCondensorTemp(refluxTemp);
+    Tdata.set_prodCondensorTemp(productTemp);
+    Tdata.set_radiatorTemp(radiatorTemp);
+    Tdata.set_boilerTemp(boilerTemp);
+    
     return PBRet::SUCCESS;
 }
 

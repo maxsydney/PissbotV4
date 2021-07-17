@@ -2,8 +2,6 @@
 #define ONEWIRE_BUS_H
 
 #include <vector>
-
-#include "OneWireBusMessaging.h"
 #include "PBCommon.h"
 #include "MessageServer.h"
 #include "PBds18b20.h"
@@ -11,6 +9,7 @@
 #include "owb_rmt.h"
 #include "freertos/semphr.h"
 #include "ds18b20.h"
+#include "Generated/SensorManagerMessaging.h"
 
 // C++ wrapper around the esp32-owb library
 // https://github.com/DavidAntliff/esp32-owb

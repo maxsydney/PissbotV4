@@ -9,7 +9,7 @@ set(DEPENDENCIES
 
 idf_component_register(
     SRC_DIRS "." "../lib/EmbeddedProto/src" "../lib/PBProtoBuf/IO/"
-    INCLUDE_DIRS "../lib/EmbeddedProto/src" "../lib/PBProtoBuf/"
+    INCLUDE_DIRS "../lib/EmbeddedProto/src" "../lib/PBProtoBuf/" "../lib/PBProtoBuf/Generated"
     REQUIRES ${DEPENDENCIES}
 )
 

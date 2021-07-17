@@ -50,7 +50,7 @@ void Controller::taskMain(void)
         }
 
         // Update control
-        if (_doControl(_currentTemp.headTemp) != PBRet::SUCCESS) {
+        if (_doControl(_currentTemp.get_headTemp()) != PBRet::SUCCESS) {
             ESP_LOGW(Controller::Name, "Control law update failed");
             // Send warning message to distiller controller
         }
@@ -74,19 +74,11 @@ void Controller::taskMain(void)
     }
 }
 
-// PBRet Controller::_generalMessageCB(std::shared_ptr<PBMessageWrapper> msg)
-// {
-//     std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-//     ESP_LOGI(Controller::Name, "Received general message: %s", genMsg->getMessage().c_str());  
-
-//     return PBRet::SUCCESS;
-// }
 PBRet Controller::_temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    // std::shared_ptr<TemperatureData> TData = std::static_pointer_cast<TemperatureData>(msg);
-    // _currentTemp = TemperatureData(*TData);
+    // Store the current temperature estimate
 
-    return PBRet::SUCCESS;
+    return MessageServer::unwrap(*msg, _currentTemp); 
 }
 
 PBRet Controller::_controlCommandCB(std::shared_ptr<PBMessageWrapper> msg)
@@ -401,7 +393,7 @@ PBRet Controller::_updatePumps(void)
     }
 
     // Update product pump
-    if (_updateProductPump(_currentTemp.headTemp) != PBRet::SUCCESS) {
+    if (_updateProductPump(_currentTemp.get_headTemp()) != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Pump update failed");
         return PBRet::FAILURE;
     }
@@ -469,9 +461,9 @@ PBRet Controller::_checkTemperatures(const TemperatureData& currTemp) const
     // Verify that the input temperatures are valid
 
     // Check head temperature is within bounds
-    if ((currTemp.headTemp > MAX_CONTROL_TEMP) || (currTemp.headTemp < MIN_CONTROL_TEMP))
+    if ((currTemp.get_headTemp() > MAX_CONTROL_TEMP) || (currTemp.get_headTemp() < MIN_CONTROL_TEMP))
     {
-        ESP_LOGW(Controller::Name, "Head temp (%.2f) was outside controllable bounds [%.2f, %.2f]", currTemp.headTemp, MIN_CONTROL_TEMP, MAX_CONTROL_TEMP);
+        ESP_LOGW(Controller::Name, "Head temp (%.2f) was outside controllable bounds [%.2f, %.2f]", currTemp.get_headTemp().get(), MIN_CONTROL_TEMP, MAX_CONTROL_TEMP);
         return PBRet::FAILURE;
     }
 
