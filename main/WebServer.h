@@ -78,6 +78,7 @@ class Webserver : public Task
 
         // Websocket methods
         PBRet _sendToAll(const std::string& msg);
+        PBRet _sendToAll(const PBMessageWrapper& wrapper);
 
         // FreeRTOS hook method
         void taskMain(void) override;

@@ -10,6 +10,7 @@
 #include "libesphttpd/httpd-espfs.h"
 #include "esp_netif.h"
 #include "libesphttpd/route.h"
+#include "IO/Writable.h"
 #include "cJSON.h"
 
 Webserver::Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg)
@@ -239,24 +240,11 @@ PBRet Webserver::_temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Take the temperature data and broadcast it to all available
     // websocket connections.
-    //
-    // Temperature data is serialized to JSON and broadcast over websockets
+    
+    // Temperature data is serialized and broadcast over websockets
     // to the browser client
 
-    // // Get TemperatureData object
-    // TemperatureData TData = *std::static_pointer_cast<TemperatureData>(msg);
-    // std::string temperatureMessage {};
-
-    // // Serialize to TemperatureData JSON string memory
-    // if (TData.serialize(temperatureMessage) != PBRet::SUCCESS)
-    // {
-    //     ESP_LOGW(Webserver::Name, "Error writing TemperatureData object to JSON string. Deleting");
-    //     return PBRet::FAILURE;
-    // }
-
-    // return _sendToAll(temperatureMessage);  
-
-    return PBRet::SUCCESS; 
+    return _sendToAll(*msg);  
 }
 
 PBRet Webserver::_flowrateDataCB(std::shared_ptr<PBMessageWrapper> msg)
@@ -606,20 +594,40 @@ PBRet Webserver::_processAssignSensorMessage(cJSON* root)
 //     std::shared_ptr<AssignSensorCommand> msg = std::make_shared<AssignSensorCommand> (romCode, sensorType);
 //     // return MessageServer::broadcastMessage(msg);
 
-//     return PBRet::SUCCESS;
-// }
+    return PBRet::SUCCESS;
+}
 
-// PBRet Webserver::_sendToAll(const std::string& msg)
-// {
-//     // Send a message to all open websocket connections
-//     for (Websock* ws : ConnectionManager::getActiveWebsockets()) {
-//         if (msg.length() > 0) {
-//             int ret = cgiWebsocketSend(&_httpdFreertosInstance.httpdInstance, ws, msg.c_str(), strlen(msg.c_str()), WEBSOCK_FLAG_NONE);
-//             if (ret != 1) {
-//                 ESP_LOGW(Webserver::Name, "Unable to send message to websocket %p (got %d)", ws, ret);
-//             }
-//         }
-//     }
+PBRet Webserver::_sendToAll(const std::string& msg)
+{
+    // Send a message to all open websocket connections
+    for (Websock* ws : ConnectionManager::getActiveWebsockets()) {
+        if (msg.length() > 0) {
+            int ret = cgiWebsocketSend(&_httpdFreertosInstance.httpdInstance, ws, msg.c_str(), strlen(msg.c_str()), WEBSOCK_FLAG_NONE);
+            if (ret != 1) {
+                ESP_LOGW(Webserver::Name, "Unable to send message to websocket %p (got %d)", ws, ret);
+            }
+        }
+    }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet Webserver::_sendToAll(const PBMessageWrapper& wrapper)
+{
+    // Serialize to byte buffer
+    Writable buffer {};
+    wrapper.serialize(buffer);      // TODO: Error checking
+
+    // Send a message to all open websocket connections
+    for (Websock* ws : ConnectionManager::getActiveWebsockets()) {
+        if (buffer.get_size() > 0) {
+            int ret = cgiWebsocketSend(&_httpdFreertosInstance.httpdInstance, ws, reinterpret_cast<const char*>(buffer.get_buffer()), 
+                                       buffer.get_size(), WEBSOCK_FLAG_BIN);
+            if (ret != 1) {
+                ESP_LOGW(Webserver::Name, "Unable to send message to websocket %p (got %d)", ws, ret);
+            }
+        }
+    }
 
     return PBRet::SUCCESS;
 }

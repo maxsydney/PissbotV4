@@ -253,6 +253,7 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
     Tdata.set_prodCondensorTemp(productTemp);
     Tdata.set_radiatorTemp(radiatorTemp);
     Tdata.set_boilerTemp(boilerTemp);
+    Tdata.set_timeStamp(esp_timer_get_time());
     
     return PBRet::SUCCESS;
 }
