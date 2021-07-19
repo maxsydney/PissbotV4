@@ -54,15 +54,7 @@ class Webserver : public Task
         PBRet _setupCBTable(void) override; 
 
         // Queue callbacks
-        PBRet _temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg);
-        PBRet _controlSettingsCB(std::shared_ptr<PBMessageWrapper> msg);
-        PBRet _controlTuningCB(std::shared_ptr<PBMessageWrapper> msg);
-        PBRet _deviceDataCB(std::shared_ptr<PBMessageWrapper> msg);
-        PBRet _flowrateDataCB(std::shared_ptr<PBMessageWrapper> msg);
-        PBRet _controlCommandCB(std::shared_ptr<PBMessageWrapper> msg);
-        PBRet _concentrationDataCB(std::shared_ptr<PBMessageWrapper> msg);
-        PBRet _controllerStateCB(std::shared_ptr<PBMessageWrapper> msg);
-        PBRet _socketLogMessageCB(std::shared_ptr<PBMessageWrapper> msg);
+        PBRet _broadcastDataCB(std::shared_ptr<PBMessageWrapper> msg);
 
         // Message parsing
         static PBRet _processControlTuningMessage(cJSON* msgRoot);

@@ -143,35 +143,42 @@ PBRet Controller::_controlDataRequestCB(std::shared_ptr<PBMessageWrapper> msg)
     // Broadcast the requested data
     //
 
-    // ESP_LOGI(Controller::Name, "Got request for data");
+    ESP_LOGI(Controller::Name, "Got request for controller data");
 
-    // ControllerDataRequest request = *std::static_pointer_cast<ControllerDataRequest>(msg);
+    ControllerDataRequest request {};
+    if (MessageServer::unwrap(*msg, request) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to decode controller data request");
+        return PBRet::FAILURE;
+    }
 
-    // switch (request.getType())
-    // {
-    //     case (ControllerDataRequestType::TUNING):
-    //     {
-    //         return _broadcastControllerTuning();
-    //     }
-    //     case (ControllerDataRequestType::SETTINGS):
-    //     {
-    //         return _broadcastControllerSettings();
-    //     }
-    //     case (ControllerDataRequestType::PERIPHERAL_STATE):
-    //     {
-    //         return _broadcastControllerPeripheralState();
-    //     }
-    //     case (ControllerDataRequestType::NONE):
-    //     {
-    //         ESP_LOGW(Controller::Name, "Cannot respond to request for data None");
-    //         break;
-    //     }
-    //     default:
-    //     {
-    //         ESP_LOGW(Controller::Name, "Controller data request not supported");
-    //         break;
-    //     }
-    // }
+    switch (request.get_requestType())
+    {
+        case (ControllerDataRequestType::TUNING):
+        {
+            ESP_LOGI(Controller::Name, "Got request for controller tuning data");
+            return _broadcastControllerTuning();
+        }
+        case (ControllerDataRequestType::SETTINGS):
+        {
+            ESP_LOGI(Controller::Name, "Got request for controller settings");
+            return _broadcastControllerSettings();
+        }
+        case (ControllerDataRequestType::PERIPHERAL_STATE):
+        {
+            ESP_LOGI(Controller::Name, "Got request for controller peripheral state");
+            return _broadcastControllerPeripheralState();
+        }
+        case (ControllerDataRequestType::NONE):
+        {
+            ESP_LOGW(Controller::Name, "Cannot respond to request for data None");
+            break;
+        }
+        default:
+        {
+            ESP_LOGW(Controller::Name, "Controller data request not supported");
+            break;
+        }
+    }
 
     // If we have made it here, we haven't been able to respond to data request
     return PBRet::FAILURE;
@@ -193,7 +200,7 @@ PBRet Controller::_setupCBTable(void)
 
 PBRet Controller::_broadcastControllerTuning(void) const
 {
-    // Send a controlelr message to the queue
+    // Send a controller message to the queue
     PBMessageWrapper wrapped = MessageServer::wrap(_ctrlTuning, PBMessageType::ControllerTuning);
     std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
@@ -227,6 +234,7 @@ PBRet Controller::_broadcastControllerState(void) const
     state.set_integralOutput(_integral);
     state.set_derivOutput(_derivative);
     state.set_totalOutput(_currentOutput);
+    state.set_timeStamp(esp_timer_get_time());
 
     PBMessageWrapper wrapped = MessageServer::wrap(state, PBMessageType::ControllerState);
     std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
@@ -466,12 +474,11 @@ PBRet Controller::_checkTemperatures(const TemperatureData& currTemp) const
         return PBRet::FAILURE;
     }
 
-    // TODO: Fix timestamp
-    // // Check that current temperature hasn't expired
-    // if ((esp_timer_get_time() - currTemp.getTimeStamp()) > TEMP_MESSAGE_TIMEOUT) {
-    //     ESP_LOGW(Controller::Name, "Temperature message was stale");
-    //     return PBRet::FAILURE;
-    // }
+    // Check that current temperature hasn't expired
+    if ((esp_timer_get_time() - currTemp.timeStamp()) > TEMP_MESSAGE_TIMEOUT) {
+        ESP_LOGW(Controller::Name, "Temperature message was stale");
+        return PBRet::FAILURE;
+    }
 
     return PBRet::SUCCESS;
 }

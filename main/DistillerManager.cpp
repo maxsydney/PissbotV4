@@ -44,9 +44,9 @@ DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth,
 
 void DistillerManager::taskMain(void)
 {
-    std::set<PBMessageType> subscriptions = { PBMessageType::SocketLog };
-    Subscriber sub(DistillerManager::Name, _GPQueue, subscriptions);
-    MessageServer::registerTask(sub);
+    // std::set<PBMessageType> subscriptions = { PBMessageType::SocketLog };
+    // Subscriber sub(DistillerManager::Name, _GPQueue, subscriptions);
+    // MessageServer::registerTask(sub);
 
     // Create a SocketLog message and broadcast it
     std::string testMessage("This is a test");
@@ -80,9 +80,9 @@ PBRet DistillerManager::_socketLogCB(std::shared_ptr<PBMessageWrapper> msg)
 
 PBRet DistillerManager::_setupCBTable(void)
 {
-    _cbTable = std::map<PBMessageType, queueCallback> {
-        {PBMessageType::SocketLog, std::bind(&DistillerManager::_socketLogCB, this, std::placeholders::_1)}
-    };
+    // _cbTable = std::map<PBMessageType, queueCallback> {
+    //     {PBMessageType::SocketLog, std::bind(&DistillerManager::_socketLogCB, this, std::placeholders::_1)}
+    // };
 
     return PBRet::SUCCESS;
 }
