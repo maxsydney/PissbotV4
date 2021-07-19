@@ -106,7 +106,7 @@ IIRLowpassFilter::IIRLowpassFilter(const IIRLowpassFilterConfig& config)
 PBRet IIRLowpassFilter::filter(double val, double& output)
 {
     if (_configured == false) {
-        ESP_LOGE(IIRLowpassFilter::Name, "IIRLowpassFilter object was not configured");
+        // ESP_LOGE(IIRLowpassFilter::Name, "IIRLowpassFilter object was not configured");
         return PBRet::FAILURE;
     }
 

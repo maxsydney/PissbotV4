@@ -10,6 +10,7 @@
 #include "libesphttpd/httpd-espfs.h"
 #include "esp_netif.h"
 #include "libesphttpd/route.h"
+#include "IO/Readable.h"
 #include "IO/Writable.h"
 #include "cJSON.h"
 
@@ -137,45 +138,73 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
 {
     // Websocket message is not null terminated. Copy into string with null
     // terminator
-    char* socketMsg = (char*) malloc(len+1);
-    std::string msgTypeStr {};
-    memset(socketMsg, 0, len+1);
-    memcpy(socketMsg, data, len);
 
-    ESP_LOGI(Webserver::Name, "Message: %s", socketMsg);
+    ESP_LOGI(Webserver::Name, "Received websocket message");
 
-    cJSON* root = cJSON_Parse(socketMsg);
-    if (root == nullptr) {
-        ESP_LOGW(Webserver::Name, "Failed to parse JSON string");
-        return;
+    if ((flags & WEBSOCK_FLAG_BIN) == 0) {
+        ESP_LOGW(Webserver::Name, "Not receiving binary data: 0x%X", flags);
     }
 
-    // Get message type
-    cJSON* msgType = cJSON_GetObjectItem(root, "type");
-    if (msgType != nullptr) {
-        msgTypeStr = std::string(msgType->valuestring);
-    } else {
-        ESP_LOGI(Webserver::Name, "Unable to read msgType from JSON string");
-        cJSON_Delete(root);
-        return;
+
+    uint8_t buf[len] = {0};
+    memcpy(buf, data, len);
+
+    Readable readBuffer {};
+    printf("Reading buffer\n");
+    for (size_t i = 0; i < len; i++)
+    {
+        uint8_t ch = buf[i];
+        printf("0x%X ", ch);
+        readBuffer.push(ch);
     }
 
-    // Parse string
-    if (msgTypeStr == Webserver::CtrlTuningStr) {
-        _processControlTuningMessage(root);
-    } else if (msgTypeStr == Webserver::CtrlSettingsStr) {
-        _processControlSettingsMessage(root);
-    } else if (msgTypeStr == Webserver::PeripheralState) {
-        _processPeripheralStateMessage(root);
-    }else if (msgTypeStr == Webserver::CommandStr) {
-        _processCommandMessage(root);
-    } else {
-        ESP_LOGI(Webserver::Name, "Unable to process %s message", msgTypeStr.c_str());
+    PBMessageWrapper wrapped{};
+    EmbeddedProto::Error e = wrapped.deserialize(readBuffer);
+    if (e != EmbeddedProto::Error::NO_ERRORS) {
+        ESP_LOGW(Webserver::Name, "Failed to decode message. Error: %d", static_cast<int>(e));
     }
 
-    // Can't return PBRet from this callback
-    cJSON_Delete(root);
-    return;
+    ESP_LOGI(Webserver::Name, "Msg type: %d", static_cast<int>(wrapped.type()));
+
+    // char* socketMsg = (char*) malloc(len+1);
+    // std::string msgTypeStr {};
+    // memset(socketMsg, 0, len+1);
+    // memcpy(socketMsg, data, len);
+
+    // ESP_LOGI(Webserver::Name, "Message: %s", socketMsg);
+
+    // cJSON* root = cJSON_Parse(socketMsg);
+    // if (root == nullptr) {
+    //     ESP_LOGW(Webserver::Name, "Failed to parse JSON string");
+    //     return;
+    // }
+
+    // // Get message type
+    // cJSON* msgType = cJSON_GetObjectItem(root, "type");
+    // if (msgType != nullptr) {
+    //     msgTypeStr = std::string(msgType->valuestring);
+    // } else {
+    //     ESP_LOGI(Webserver::Name, "Unable to read msgType from JSON string");
+    //     cJSON_Delete(root);
+    //     return;
+    // }
+
+    // // Parse string
+    // if (msgTypeStr == Webserver::CtrlTuningStr) {
+    //     _processControlTuningMessage(root);
+    // } else if (msgTypeStr == Webserver::CtrlSettingsStr) {
+    //     _processControlSettingsMessage(root);
+    // } else if (msgTypeStr == Webserver::PeripheralState) {
+    //     _processPeripheralStateMessage(root);
+    // }else if (msgTypeStr == Webserver::CommandStr) {
+    //     _processCommandMessage(root);
+    // } else {
+    //     ESP_LOGI(Webserver::Name, "Unable to process %s message", msgTypeStr.c_str());
+    // }
+
+    // // Can't return PBRet from this callback
+    // cJSON_Delete(root);
+    // return;
 }
 
 // TODO: Make this a member of Webserver
