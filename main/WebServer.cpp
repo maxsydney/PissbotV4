@@ -136,75 +136,29 @@ void Webserver::closeConnection(Websock *ws)
 
 void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int flags)
 {
-    // Websocket message is not null terminated. Copy into string with null
-    // terminator
-
-    ESP_LOGI(Webserver::Name, "Received websocket message");
-
-    if ((flags & WEBSOCK_FLAG_BIN) == 0) {
-        ESP_LOGW(Webserver::Name, "Not receiving binary data: 0x%X", flags);
-    }
-
+    // Read in message from websocket and broadcast over network
 
     uint8_t buf[len] = {0};
     memcpy(buf, data, len);
 
     Readable readBuffer {};
-    printf("Reading buffer\n");
     for (size_t i = 0; i < len; i++)
     {
-        uint8_t ch = buf[i];
-        printf("0x%X ", ch);
-        readBuffer.push(ch);
+        readBuffer.push(buf[i]);
     }
 
     PBMessageWrapper wrapped{};
     EmbeddedProto::Error e = wrapped.deserialize(readBuffer);
+
     if (e != EmbeddedProto::Error::NO_ERRORS) {
         ESP_LOGW(Webserver::Name, "Failed to decode message. Error: %d", static_cast<int>(e));
+        return;
     }
 
-    ESP_LOGI(Webserver::Name, "Msg type: %d", static_cast<int>(wrapped.type()));
+    // TODO: BroadcastMessage should take PBMessageWrapper& 
+    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    // char* socketMsg = (char*) malloc(len+1);
-    // std::string msgTypeStr {};
-    // memset(socketMsg, 0, len+1);
-    // memcpy(socketMsg, data, len);
-
-    // ESP_LOGI(Webserver::Name, "Message: %s", socketMsg);
-
-    // cJSON* root = cJSON_Parse(socketMsg);
-    // if (root == nullptr) {
-    //     ESP_LOGW(Webserver::Name, "Failed to parse JSON string");
-    //     return;
-    // }
-
-    // // Get message type
-    // cJSON* msgType = cJSON_GetObjectItem(root, "type");
-    // if (msgType != nullptr) {
-    //     msgTypeStr = std::string(msgType->valuestring);
-    // } else {
-    //     ESP_LOGI(Webserver::Name, "Unable to read msgType from JSON string");
-    //     cJSON_Delete(root);
-    //     return;
-    // }
-
-    // // Parse string
-    // if (msgTypeStr == Webserver::CtrlTuningStr) {
-    //     _processControlTuningMessage(root);
-    // } else if (msgTypeStr == Webserver::CtrlSettingsStr) {
-    //     _processControlSettingsMessage(root);
-    // } else if (msgTypeStr == Webserver::PeripheralState) {
-    //     _processPeripheralStateMessage(root);
-    // }else if (msgTypeStr == Webserver::CommandStr) {
-    //     _processCommandMessage(root);
-    // } else {
-    //     ESP_LOGI(Webserver::Name, "Unable to process %s message", msgTypeStr.c_str());
-    // }
-
-    // // Can't return PBRet from this callback
-    // cJSON_Delete(root);
-    // return;
+    MessageServer::broadcastMessage(msg);
 }
 
 // TODO: Make this a member of Webserver
@@ -270,170 +224,6 @@ PBRet Webserver::_broadcastDataCB(std::shared_ptr<PBMessageWrapper> msg)
     // Broadcasts the wrapped message to all websocket connections
 
     return _sendToAll(*msg);  
-}
-
-PBRet Webserver::_processControlTuningMessage(cJSON* msgRoot)
-{
-    // ControlTuning ctrlTuning {};
-    // if (msgRoot == nullptr) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse control tuning message. cJSON object was null");
-    //     return PBRet::FAILURE;
-    // }
-
-    // cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
-    // if (msgData == nullptr) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse data from control tuning message");
-    //     return PBRet::FAILURE;
-    // }
-
-    // if (ctrlTuning.deserialize(msgData) != PBRet::SUCCESS) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse control tuning message");
-    //     return PBRet::FAILURE;
-    // }
-
-    // std::shared_ptr<ControlTuning> msg = std::make_shared<ControlTuning> (ctrlTuning);
-
-    // ESP_LOGI(Webserver::Name, "Broadcasting controller tuning");
-    // // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
-}
-
-PBRet Webserver::_processControlSettingsMessage(cJSON* msgRoot)
-{
-    // ControlSettings ctrlSettingsMsg {};
-    // if (msgRoot == nullptr) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse control settings message. cJSON root object was null");
-    //     return PBRet::FAILURE;
-    // }
-
-    // cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
-    // if (msgData == nullptr) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse data from control settings message");
-    //     return PBRet::FAILURE;
-    // }
-
-    // if (ctrlSettingsMsg.deserialize(msgData) != PBRet::SUCCESS) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse control settings message. cJSON data object was null");
-    //     return PBRet::FAILURE;
-    // }
-
-    // std::shared_ptr<ControlSettings> msg = std::make_shared<ControlSettings> (ctrlSettingsMsg);
-
-    // ESP_LOGI(Webserver::Name, "Broadcasting controller settings");
-    // // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
-}
-
-PBRet Webserver::_processCommandMessage(cJSON* msgRoot)
-{
-    // if (msgRoot == nullptr) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse command message. cJSON object was null");
-    //     return PBRet::FAILURE;
-    // }
-
-    // std::string subtypeStr {};
-
-    // cJSON* subtype = cJSON_GetObjectItemCaseSensitive(msgRoot, "subtype");
-    // if (subtype != nullptr) {
-    //     subtypeStr = std::string(subtype->valuestring);
-    // } else {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse subtype from command message");
-    //     return PBRet::FAILURE;
-    // }
-
-    // if (subtypeStr == Webserver::BroadcastDevices) {
-    //     // Send message to trigger scan of sensor bus
-    //     std::shared_ptr<SensorManagerCommand> msg = std::make_shared<SensorManagerCommand> (SensorManagerCmdType::BroadcastSensorsStart);
-    //     ESP_LOGI(Webserver::Name, "Sending message to start sensor assign task");
-    //     // return MessageServer::broadcastMessage(msg);
-
-    //     return PBRet::SUCCESS;
-    // } else if (subtypeStr == Webserver::AssignSensor) {
-    //     return _processAssignSensorMessage(msgRoot);
-    // } else {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse command message with subtype %s", subtypeStr.c_str());
-    //     return PBRet::FAILURE;
-    // }
-
-    return PBRet::SUCCESS;
-}
-
-PBRet Webserver::_processPeripheralStateMessage(cJSON* msgRoot)
-{
-    // ControlCommand ctrlCommand {};
-    // if (msgRoot == nullptr) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse control command message. cJSON object was null");
-    //     return PBRet::FAILURE;
-    // }
-
-    // cJSON* msgData = cJSON_GetObjectItemCaseSensitive(msgRoot, "data");
-    // if (msgData == nullptr) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse data from control command message");
-    //     return PBRet::FAILURE;
-    // }
-
-    // if (ctrlCommand.deserialize(msgData) != PBRet::SUCCESS) {
-    //     ESP_LOGW(Webserver::Name, "Unable to parse control command message");
-    //     return PBRet::FAILURE;
-    // }
-
-    // // std::shared_ptr<ControlCommand> msg = std::make_shared<ControlCommand> (ctrlCommand);
-
-    // ESP_LOGI(Webserver::Name, "Broadcasting controller command");
-    // // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
-}
-
-PBRet Webserver::_processAssignSensorMessage(cJSON* root)
-{
-//     if (root == nullptr) {
-//         ESP_LOGW(Webserver::Name, "Unable to parse assign sensor message. cJSON object was null");
-//         return PBRet::FAILURE;
-//     }
-
-//     ESP_LOGI(Webserver::Name, "Decoding assign sensor message");
-
-//     cJSON* sensorData = cJSON_GetObjectItemCaseSensitive(root, "data");
-//     if (sensorData == nullptr) {
-//         ESP_LOGW(Webserver::Name, "Unable to parse sensor data from assign sensor message");
-//         return PBRet::FAILURE;
-//     }
-
-//     // TODO: Allow Ds18b20 initialization from JSON
-//     cJSON* sensorAddr = cJSON_GetObjectItemCaseSensitive(sensorData, "addr");
-//     if (sensorAddr == nullptr) {
-//         ESP_LOGW(Webserver::Name, "Unable to parse sensor address from assign sensor message");
-//         return PBRet::FAILURE;
-//     }
-
-//     // Read address from JSON
-//     OneWireBus_ROMCode romCode {};
-//     cJSON* byte = nullptr;
-//     int i = 0;
-//     cJSON_ArrayForEach(byte, sensorAddr)
-//     {
-//         if (cJSON_IsNumber(byte) == false) {
-//             ESP_LOGW(Webserver::Name, "Unable to decode sensor address. Address byte was not a number");
-//             return PBRet::FAILURE;
-//         }
-//         romCode.bytes[i++] = byte->valueint;
-//     }
-
-//     // Read assigned sensor task from JSON
-//     cJSON* task = cJSON_GetObjectItemCaseSensitive(sensorData, "task");
-//     if (task == nullptr) {
-//         ESP_LOGW(Webserver::Name, "Unable to parse assigned sensor task from assign sensor message");
-//         return PBRet::FAILURE;
-//     }
-//     SensorType sensorType = PBOneWire::mapSensorIDToType(task->valueint);
-
-//     std::shared_ptr<AssignSensorCommand> msg = std::make_shared<AssignSensorCommand> (romCode, sensorType);
-//     // return MessageServer::broadcastMessage(msg);
-
-    return PBRet::SUCCESS;
 }
 
 PBRet Webserver::_sendToAll(const std::string& msg)

@@ -103,18 +103,15 @@ PBRet Controller::_controlCommandCB(std::shared_ptr<PBMessageWrapper> msg)
 
 PBRet Controller::_controlSettingsCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    // std::shared_ptr<ControlSettings> cmd = std::static_pointer_cast<ControlSettings>(msg);
-    // _ctrlSettings = ControlSettings(*cmd);
+    // Store new settings and update pumps
 
-    // ESP_LOGI(Controller::Name, "Controller settings were updated");
+    if (MessageServer::unwrap(*msg, _ctrlSettings) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to decode ");
+    }
 
-    // TODO: Update pump modes here instead of aux outputs
-    // if (_updatePeripheralState(_peripheralState) != PBRet::SUCCESS) {
-    //     ESP_LOGW(Controller::Name, "A command message was received but all of the auxilliary components did not update successfully");
-    //     return PBRet::FAILURE;
-    // }
+    ESP_LOGI(Controller::Name, "Controller settings were updated");
 
-    return PBRet::SUCCESS;
+    return _updatePumps();
 }
 
 PBRet Controller::_controlTuningCB(std::shared_ptr<PBMessageWrapper> msg)

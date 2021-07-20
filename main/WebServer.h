@@ -56,12 +56,6 @@ class Webserver : public Task
         // Queue callbacks
         PBRet _broadcastDataCB(std::shared_ptr<PBMessageWrapper> msg);
 
-        // Message parsing
-        static PBRet _processControlTuningMessage(cJSON* msgRoot);
-        static PBRet _processControlSettingsMessage(cJSON* msgRoot);
-        static PBRet _processCommandMessage(cJSON* msgRoot);
-        static PBRet _processPeripheralStateMessage(cJSON* msgRoot);
-
         // Utility methods
         static PBRet _requestControllerTuning(void);
         static PBRet _requestControllerSettings(void);

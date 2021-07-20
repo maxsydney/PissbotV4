@@ -16,6 +16,7 @@ PBRet MessageServer::registerTask(const Subscriber& subscriber)
     return PBRet::SUCCESS;
 }
 
+// TODO: BroadcastMessage should take PBMessageWrapper& 
 PBRet MessageServer::broadcastMessage(const std::shared_ptr<PBMessageWrapper>& message)
 {
     // Broadcast message to the general purpose queue of any subscribing tasks
