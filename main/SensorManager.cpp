@@ -182,27 +182,24 @@ PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
 {
     // Send a temperature data message to the queue
     PBMessageWrapper wrapped = MessageServer::wrap(Tdata, PBMessageType::TemperatureData);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet SensorManager::_broadcastFlowrates(const FlowrateData& flowData) const
 {
     // Send a temperature data message to the queue
     PBMessageWrapper wrapped = MessageServer::wrap(flowData, PBMessageType::FlowrateData);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet SensorManager::_broadcastConcentrations(const ConcentrationData& concData) const
 {
     // Send a temperature data message to the queue
     PBMessageWrapper wrapped = MessageServer::wrap(concData, PBMessageType::ConcentrationData);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet SensorManager::checkInputs(const SensorManagerConfig& cfg)

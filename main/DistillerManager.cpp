@@ -53,8 +53,7 @@ void DistillerManager::taskMain(void)
     PBSocketLogMessage msg {};
     msg.mutable_logMsg().set(testMessage.c_str(), testMessage.length());
     PBMessageWrapper wrapped = MessageServer::wrap(msg, PBMessageType::SocketLog);
-    std::shared_ptr<PBMessageWrapper> msgPtr = std::make_shared<PBMessageWrapper> (wrapped);
-    MessageServer::broadcastMessage(msgPtr);
+    MessageServer::broadcastMessage(wrapped);
     ESP_LOGI(DistillerManager::Name, "Broadcast test socket log message!");
 
     while(true) {

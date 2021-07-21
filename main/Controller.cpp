@@ -199,18 +199,16 @@ PBRet Controller::_broadcastControllerTuning(void) const
 {
     // Send a controller message to the queue
     PBMessageWrapper wrapped = MessageServer::wrap(_ctrlTuning, PBMessageType::ControllerTuning);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet Controller::_broadcastControllerSettings(void) const
 {
     // Send a controller settings message to the queue
     PBMessageWrapper wrapped = MessageServer::wrap(_ctrlSettings, PBMessageType::ControllerSettings);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet Controller::_broadcastControllerPeripheralState(void) const
@@ -218,9 +216,8 @@ PBRet Controller::_broadcastControllerPeripheralState(void) const
     // Send a Control command message to the queue
     // TODO: Does this loopback? Separate commands from state
     PBMessageWrapper wrapped = MessageServer::wrap(_peripheralState, PBMessageType::ControllerCommand);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet Controller::_broadcastControllerState(void) const
@@ -234,9 +231,8 @@ PBRet Controller::_broadcastControllerState(void) const
     state.set_timeStamp(esp_timer_get_time());
 
     PBMessageWrapper wrapped = MessageServer::wrap(state, PBMessageType::ControllerState);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet Controller::_initIO(const ControllerConfig& cfg) const

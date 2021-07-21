@@ -155,10 +155,7 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
         return;
     }
 
-    // TODO: BroadcastMessage should take PBMessageWrapper& 
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper>(wrapped);
-
-    MessageServer::broadcastMessage(msg);
+    MessageServer::broadcastMessage(wrapped);
 }
 
 // TODO: Make this a member of Webserver
@@ -270,11 +267,9 @@ PBRet Webserver::_requestControllerTuning(void)
     request.set_requestType(ControllerDataRequestType::TUNING);
 
     PBMessageWrapper wrapped = MessageServer::wrap(request, PBMessageType::ControllerDataRequest);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper> (wrapped);
-
     ESP_LOGI(Webserver::Name, "Requesting controller tuning");
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet Webserver::_requestControllerSettings(void)
@@ -284,11 +279,9 @@ PBRet Webserver::_requestControllerSettings(void)
 
     ControllerDataRequest request {};
     request.set_requestType(ControllerDataRequestType::SETTINGS);
-
     PBMessageWrapper wrapped = MessageServer::wrap(request, PBMessageType::ControllerDataRequest);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper> (wrapped);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet Webserver::_requestControllerPeripheralState(void)
@@ -297,11 +290,9 @@ PBRet Webserver::_requestControllerPeripheralState(void)
     // 
     ControllerDataRequest request {};
     request.set_requestType(ControllerDataRequestType::PERIPHERAL_STATE);
-
     PBMessageWrapper wrapped = MessageServer::wrap(request, PBMessageType::ControllerDataRequest);
-    std::shared_ptr<PBMessageWrapper> msg = std::make_shared<PBMessageWrapper> (wrapped);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet Webserver::socketLog(const std::string& logMsg)
@@ -310,8 +301,7 @@ PBRet Webserver::socketLog(const std::string& logMsg)
     PBSocketLogMessage socketLog {};
     socketLog.mutable_logMsg().set(logMsg.c_str(), logMsg.length());
     PBMessageWrapper wrapped = MessageServer::wrap(socketLog, PBMessageType::SocketLog);
-    std::shared_ptr<PBMessageWrapper> msgPtr = std::make_shared<PBMessageWrapper> (wrapped);
     
-    return MessageServer::broadcastMessage(msgPtr);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
