@@ -4,6 +4,7 @@
 #include "cJSON.h"
 #include <fstream>
 #include <sstream>
+#include "IO/Writable.h"
 #include "MessageDefs.h"
 
 Controller::Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const ControllerConfig& cfg)
@@ -662,28 +663,30 @@ PBRet Controller::saveTuningToFile(void)
     // Save the current controller tuning to a JSON file and store
     // in flash
 
-    // std::string JSONStr {};
-    // if (_ctrlTuning.serialize(JSONStr) != PBRet::SUCCESS) {
-    //     ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
-    //     return PBRet::FAILURE;
-    // }
+    // Mount filesystem
+    Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
+    if (F.isOpen() == false) {
+        ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not written to file");
+        return PBRet::FAILURE;
+    }
 
-    // // Mount filesystem
-    // Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
-    // if (F.isOpen() == false) {
-    //     ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not written to file");
-    //     return PBRet::FAILURE;
-    // }
+    std::ofstream outFile(Controller::ctrlTuningFile, std::ios::binary | std::ios::out);
+    if (outFile.is_open() == false) {
+        ESP_LOGE(Controller::Name, "Failed to open file for writing. Controller config was not written to file");
+        return PBRet::FAILURE;
+    }
 
-    // std::ofstream outFile(Controller::ctrlTuningFile);
-    // if (outFile.is_open() == false) {
-    //     ESP_LOGE(Controller::Name, "Failed to open file for writing. Controller config was not written to file");
-    //     return PBRet::FAILURE;
-    // }
+    Writable writeBuffer {};
+    ::EmbeddedProto::Error err = _ctrlTuning.serialize(writeBuffer);
+    if (err != ::EmbeddedProto::Error::NO_ERRORS) {
+        ESP_LOGW(Controller::Name, "Failed to serialize control tuning object (err: %d)", static_cast<int>(err));
+        return PBRet::FAILURE;
+    }
 
-    // // Write JSON string out to file
-    // outFile << JSONStr;
-    // ESP_LOGI(Controller::Name, "Controller tuning successfully written to file");
+    // Write data structure to file
+    outFile.write((char*) writeBuffer.get_buffer(), writeBuffer.get_size());
+    ESP_LOGI(Controller::Name, "Controller tuning successfully written to file");
+
     return PBRet::SUCCESS;
 }
 
