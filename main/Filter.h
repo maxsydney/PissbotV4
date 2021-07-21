@@ -70,7 +70,7 @@ class IIRLowpassFilter
     public:
         // Constructors
         IIRLowpassFilter(void) = default;
-        explicit IIRLowpassFilter(const IIRLowpassFilterConfig& config);
+        explicit IIRLowpassFilter(const IIRLowpassFilterTuning& config);
 
         // Update
         PBRet filter(double val, double& output);
@@ -82,18 +82,18 @@ class IIRLowpassFilter
         double getSamplingFreq(void) const { return _config.sampleFreq(); }
 
         // Utility
-        static PBRet checkInputs(const IIRLowpassFilterConfig& config);
-        static PBRet loadFromJSON(IIRLowpassFilterConfig& cfg, const cJSON* cfgRoot);
+        static PBRet checkInputs(const IIRLowpassFilterTuning& config);
+        static PBRet loadFromJSON(IIRLowpassFilterTuning& cfg, const cJSON* cfgRoot);
         bool isConfigured(void) const { return _configured; }
 
         friend class IIRLowpassFilterUT;
     private:
 
-        PBRet _initFromConfig(const IIRLowpassFilterConfig& config);
+        PBRet _initFromConfig(const IIRLowpassFilterTuning& config);
         PBRet _computeFilterCoefficients(double samplingFreq, double cutoffFreq, FilterConfig& filterConfig);
 
         Filter _filter {};
-        IIRLowpassFilterConfig _config {};
+        IIRLowpassFilterTuning _config {};
         bool _configured = false;
 
 };

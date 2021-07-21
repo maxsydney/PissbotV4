@@ -92,7 +92,7 @@ PBRet Filter::checkInputs(const FilterConfig& config)
     return err == ESP_OK ? PBRet::SUCCESS : PBRet::FAILURE;
 }
 
-IIRLowpassFilter::IIRLowpassFilter(const IIRLowpassFilterConfig& config)
+IIRLowpassFilter::IIRLowpassFilter(const IIRLowpassFilterTuning& config)
 {
     // Initialize filter
     if (_initFromConfig(config) == PBRet::SUCCESS) {
@@ -121,7 +121,7 @@ PBRet IIRLowpassFilter::filter(double val, double& output)
 PBRet IIRLowpassFilter::setCutoffFreq(double Fc)
 {
     // Create dummy config and check that it is valid
-    IIRLowpassFilterConfig filterConfig {};
+    IIRLowpassFilterTuning filterConfig {};
     filterConfig.set_sampleFreq(_config.sampleFreq());
     filterConfig.set_cutoffFreq(Fc);
 
@@ -134,7 +134,7 @@ PBRet IIRLowpassFilter::setCutoffFreq(double Fc)
 PBRet IIRLowpassFilter::setSamplingFreq(double Fs)
 {
     // Create dummy config and check that it is valid
-    IIRLowpassFilterConfig filterConfig {};
+    IIRLowpassFilterTuning filterConfig {};
     filterConfig.set_sampleFreq(Fs);
     filterConfig.set_cutoffFreq(_config.cutoffFreq());
 
@@ -144,7 +144,7 @@ PBRet IIRLowpassFilter::setSamplingFreq(double Fs)
     return _initFromConfig(filterConfig);
 }
 
-PBRet IIRLowpassFilter::checkInputs(const IIRLowpassFilterConfig& config)
+PBRet IIRLowpassFilter::checkInputs(const IIRLowpassFilterTuning& config)
 {
     esp_err_t err = 0;
 
@@ -176,7 +176,7 @@ PBRet IIRLowpassFilter::checkInputs(const IIRLowpassFilterConfig& config)
     return err == ESP_OK ? PBRet::SUCCESS : PBRet::FAILURE;
 }
 
-PBRet IIRLowpassFilter::loadFromJSON(IIRLowpassFilterConfig& cfg, const cJSON* cfgRoot)
+PBRet IIRLowpassFilter::loadFromJSON(IIRLowpassFilterTuning& cfg, const cJSON* cfgRoot)
 {
     // if (cfgRoot == nullptr) {
     //     ESP_LOGW(IIRLowpassFilter::Name, "cfg was null");
@@ -204,7 +204,7 @@ PBRet IIRLowpassFilter::loadFromJSON(IIRLowpassFilterConfig& cfg, const cJSON* c
     return PBRet::SUCCESS;
 }
 
-PBRet IIRLowpassFilter::_initFromConfig(const IIRLowpassFilterConfig& config)
+PBRet IIRLowpassFilter::_initFromConfig(const IIRLowpassFilterTuning& config)
 {
     if (checkInputs(config) == PBRet::SUCCESS) {
         _config = config;

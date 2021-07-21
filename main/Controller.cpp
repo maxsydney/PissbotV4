@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include "IO/Writable.h"
+#include "IO/Readable.h"
 #include "MessageDefs.h"
 
 Controller::Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const ControllerConfig& cfg)
@@ -117,21 +118,16 @@ PBRet Controller::_controlSettingsCB(std::shared_ptr<PBMessageWrapper> msg)
 
 PBRet Controller::_controlTuningCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    // std::shared_ptr<ControlTuning> cmd = std::static_pointer_cast<ControlTuning>(msg);
-    // _ctrlTuning = ControlTuning(*cmd);
+    if (MessageServer::unwrap(*msg, _ctrlTuning) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to decode ");
+    }
 
-    // // Update filter
-    // _derivFilter = IIRLowpassFilter(_ctrlTuning.derivFilterCfg);
-    // if (_derivFilter.isConfigured() == false) {
-    //     ESP_LOGW(Controller::Name, "Failed to configure derivative filter");
-    // }
+    // Write controller tuning to file
+    if (saveTuningToFile() != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
+    }
 
-    // // Write controller tuning to file
-    // if (saveTuningToFile() != PBRet::SUCCESS) {
-    //     ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
-    // }
-
-    // ESP_LOGI(Controller::Name, "Controller tuning was updated");
+    ESP_LOGI(Controller::Name, "Controller tuning was updated");
 
     return PBRet::SUCCESS;
 }
@@ -644,11 +640,11 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
         ESP_LOGW(Controller::Name, "Unable to load controller tuning from file");
     }
 
-    // Initialize derivative filter from loaded tuning object
-    _derivFilter = IIRLowpassFilter(_ctrlTuning.derivFilterSettings());
-    if (_derivFilter.isConfigured() == false) {
-        ESP_LOGW(Controller::Name, "Unable to initialize derivative filter");
-    }
+    // // Initialize derivative filter from loaded tuning object
+    // _derivFilter = IIRLowpassFilter(_ctrlTuning.LPFTuning());
+    // if (_derivFilter.isConfigured() == false) {
+    //     ESP_LOGW(Controller::Name, "Unable to initialize derivative filter");
+    // }
 
     // Set pumps to active control
     _ctrlSettings.set_refluxPumpMode(PumpMode::ACTIVE_CONTROL);
@@ -695,30 +691,36 @@ PBRet Controller::loadTuningFromFile(void)
     // Load a saved controller tuning from a JSON file and configure
     // controller. Returns Failure if no file can be found
 
-    // // Mount filesystem
-    // Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
-    // if (F.isOpen() == false) {
-    //     ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not read from file");
-    //     return PBRet::FAILURE;
-    // }
+    // Mount filesystem
+    Filesystem F(Controller::FSBasePath, Controller::FSPartitionLabel, 5, true);
+    if (F.isOpen() == false) {
+        ESP_LOGW(Controller::Name, "Failed to mount filesystem. Controller config was not read from file");
+        return PBRet::FAILURE;
+    }
 
-    // // Read JSON string from file
-    // std::ifstream ctrlTuningIn(Controller::ctrlTuningFile);
-    // if (ctrlTuningIn.good() == false) {
-    //     ESP_LOGW(Controller::Name, "Controller tuning file %s could not be opened", Controller::ctrlTuningFile);
-    //     return PBRet::FAILURE;
-    // }
+    std::ifstream inFile(Controller::ctrlTuningFile);
+    if (inFile.is_open() == false) {
+        ESP_LOGE(Controller::Name, "Failed to open file for reading. Controller config was not read from file");
+        return PBRet::FAILURE;
+    }
 
-    // std::stringstream JSONBuffer;
-    // JSONBuffer << ctrlTuningIn.rdbuf();
-
-    // cJSON* root = cJSON_Parse(JSONBuffer.str().c_str());
-    // if (root == nullptr) {
-    //     ESP_LOGE(Controller::Name, "Failed to load controller tuning from JSON. Root JSON pointer was null");
-    //     return PBRet::FAILURE;
-    // }
+    // Get file size
+    inFile.seekg(0, std::ios::end);
+    int fileSize = inFile.tellg();
+    inFile.seekg(0, std::ios::beg);
     
-    // return _ctrlTuning.deserialize(root);
+    // Read into buffer
+    Readable readBuff {};
+    inFile.read((char*) readBuff.get_data_array(), fileSize);
+
+    // Decode into ControllerTuning object
+    ::EmbeddedProto::Error err = _ctrlTuning.deserialize(readBuff);
+    if (err != ::EmbeddedProto::Error::NO_ERRORS) {
+        ESP_LOGW(Controller::Name, "Failed to deserialize control tuning object (err: %d)", static_cast<int>(err));
+        return PBRet::FAILURE;
+    }
+
+    ESP_LOGI(Controller::Name, "Loaded tuning settings from file");
 
     return PBRet::SUCCESS;
 }
