@@ -121,12 +121,20 @@ PBRet PBOneWire::_scanForDevices(void)
 
 PBRet PBOneWire::_broadcastDeviceAddresses(void) const
 {
-    // // Broadcast the available device addresses to all listening tasks
-    // std::shared_ptr<DeviceData> msg = std::make_shared<DeviceData> (_availableSensors);
+    // Broadcast the available device addresses to all listening tasks
 
-    // return MessageServer::broadcastMessage(msg);
+    PBDeviceData deviceData {};
+    for (const Ds18b20& sensor : _availableSensors) {
+        PBDS18B20Sensor sensorBuffer {};
+        sensorBuffer.set_role(DS18B20Role::NONE);     // Update this
+        memcpy(&sensorBuffer.mutable_romCode()[0], &sensor.getInfo().rom_code.bytes, ROM_SIZE);  // Copy rom code into protobuf
+        sensorBuffer.set_calibLinear(1.0);
+        sensorBuffer.set_calibOffset(0.0);
+        deviceData.add_sensors(sensorBuffer);
+    }
 
-    return PBRet::SUCCESS;
+    PBMessageWrapper wrapped = MessageServer::wrap(deviceData, PBMessageType::DeviceData);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet PBOneWire::broadcastAvailableDevices(void)

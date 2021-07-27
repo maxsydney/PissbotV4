@@ -23,7 +23,7 @@
 #include "PBCommon.h"
 #include "Generated/MessageBase.h"
 
-static constexpr uint32_t MESSAGE_SIZE = 256;
+constexpr uint32_t MESSAGE_SIZE = 256;
 using PBMessageWrapper = MessageWrapper<MESSAGE_SIZE>;
 
 enum class MessageType {

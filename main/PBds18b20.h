@@ -4,6 +4,10 @@
 #include "PBCommon.h"
 #include "ds18b20.h"
 #include "cJSON.h"
+#include "Generated/DS18B20Messaging.h"
+
+constexpr uint8_t ROM_SIZE = 8;
+using PBDS18B20Sensor = DS18B20Sensor<ROM_SIZE>;
 
 class Ds18b20
 {

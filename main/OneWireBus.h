@@ -14,6 +14,9 @@
 // C++ wrapper around the esp32-owb library
 // https://github.com/DavidAntliff/esp32-owb
 
+constexpr uint8_t DEVICE_DATA_LEN = 12;
+using PBDeviceData = DeviceData<DEVICE_DATA_LEN, ROM_SIZE>;
+
 struct PBOneWireConfig
 {
     gpio_num_t oneWirePin = (gpio_num_t)GPIO_NUM_NC;

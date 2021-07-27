@@ -26,8 +26,7 @@ Controller::Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t 
 void Controller::taskMain(void)
 {
     // Subscribe to messages
-    std::set<PBMessageType> subscriptions = { 
-        PBMessageType::General,
+    std::set<PBMessageType> subscriptions = {
         PBMessageType::TemperatureData,
         PBMessageType::ControllerTuning,
         PBMessageType::ControllerCommand,
@@ -181,7 +180,6 @@ PBRet Controller::_controlDataRequestCB(std::shared_ptr<PBMessageWrapper> msg)
 PBRet Controller::_setupCBTable(void)
 {
     _cbTable = std::map<PBMessageType, queueCallback> {
-        // {PBMessageType::General, std::bind(&Controller::_generalMessageCB, this, std::placeholders::_1)},
         {PBMessageType::TemperatureData, std::bind(&Controller::_temperatureDataCB, this, std::placeholders::_1)},
         {PBMessageType::ControllerCommand, std::bind(&Controller::_controlCommandCB, this, std::placeholders::_1)},
         {PBMessageType::ControllerSettings, std::bind(&Controller::_controlSettingsCB, this, std::placeholders::_1)},
