@@ -127,7 +127,12 @@ PBRet PBOneWire::_broadcastDeviceAddresses(void) const
     for (const Ds18b20& sensor : _availableSensors) {
         PBDS18B20Sensor sensorBuffer {};
         sensorBuffer.set_role(DS18B20Role::NONE);     // Update this
-        memcpy(&sensorBuffer.mutable_romCode()[0], &sensor.getInfo().rom_code.bytes, ROM_SIZE);  // Copy rom code into protobuf
+
+        // Copy ROM code into PBDS18B20Sensor object
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            sensorBuffer.mutable_romCode()[i] = sensor.getInfo().rom_code.bytes[i];
+        }
+        
         sensorBuffer.set_calibLinear(1.0);
         sensorBuffer.set_calibOffset(0.0);
         deviceData.add_sensors(sensorBuffer);
