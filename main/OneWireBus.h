@@ -51,7 +51,7 @@ public:
     PBRet readTempSensors(TemperatureData &Tdata) const;
 
     // Get/Set
-    PBRet setTempSensor(SensorType type, const Ds18b20 &sensor);
+    PBRet setTempSensor(DS18B20Role type, const Ds18b20 &sensor);
     const OneWireBus *getOWB(void) const { return _owb; } // Probably not a great idea. Consider removing
 
     // Utility
@@ -95,7 +95,7 @@ private:
 
     // Unassigned sensors
     size_t _connectedDevices = 0;
-    std::vector<Ds18b20> _availableSensors;
+    std::vector<Ds18b20> _availableSensors {};
 
     // Class data
     PBOneWireConfig _cfg{};

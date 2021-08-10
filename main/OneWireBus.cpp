@@ -452,9 +452,10 @@ bool PBOneWire::isAvailableSensor(const Ds18b20& sensor) const
     return false;
 }
 
-PBRet PBOneWire::setTempSensor(SensorType type, const Ds18b20& sensor)
+PBRet PBOneWire::setTempSensor(DS18B20Role type, const Ds18b20& sensor)
 {
     // TODO: This function is very manual and could be tidied up a lot
+    // TODO: This needs a serious tidy up
     
     // First, we must "unassign" the sensor if it is already assigned
     if (_headTempSensor == sensor) {
@@ -472,34 +473,34 @@ PBRet PBOneWire::setTempSensor(SensorType type, const Ds18b20& sensor)
     // Assign the sensor to the selected task
     switch (type)
     {
-        case SensorType::Head:
+        case DS18B20Role::HEAD_TEMP:
         {
             _headTempSensor = sensor;
             break;
         }
-        case SensorType::Reflux:
+        case DS18B20Role::REFLUX_TEMP:
         {
             _refluxTempSensor = sensor;
             break;
         }
-        case SensorType::Product:
+        case DS18B20Role::PRODUCT_TEMP:
         {
             _productTempSensor = sensor;
             break;
         }
-        case SensorType::Boiler:
+        case DS18B20Role::BOILER_TEMP:
         {
             _boilerTempSensor = sensor;
             break;
         }
-        case SensorType::Radiator:
+        case DS18B20Role::RADIATOR_TEMP:
         {
             _radiatorTempSensor = sensor;
             break;
         }
-        case SensorType::Unknown:
+        case DS18B20Role::NONE:
         {
-            ESP_LOGE(PBOneWire::Name, "Cannot set sensor with type unknown");
+            ESP_LOGE(PBOneWire::Name, "Cannot set sensor with unknown type");
             return PBRet::FAILURE;
         }
         default:

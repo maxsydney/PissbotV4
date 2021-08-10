@@ -95,6 +95,7 @@ class MessageServer
         static PBRet broadcastMessage(const PBMessageWrapper& message);
         static PBMessageWrapper wrap(const ::EmbeddedProto::MessageInterface& message, PBMessageType type);
         static PBRet unwrap(const PBMessageWrapper& wrapped, ::EmbeddedProto::MessageInterface& message);
+        static void printErr(::EmbeddedProto::Error err);
 
     private:
         static std::vector<Subscriber> _subscribers;

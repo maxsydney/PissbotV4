@@ -73,7 +73,30 @@ PBRet MessageServer::unwrap(const PBMessageWrapper& wrapped, ::EmbeddedProto::Me
         readBuffer.push(ch);
     }
 
-    message.deserialize(readBuffer);
+    ::EmbeddedProto::Error err = message.deserialize(readBuffer);
+
+    if (err != ::EmbeddedProto::Error::NO_ERRORS)
+    {
+        MessageServer::printErr(err);
+        return PBRet::FAILURE;
+    }
 
     return PBRet::SUCCESS;
+}
+
+void MessageServer::printErr(::EmbeddedProto::Error err)
+{
+    // Print a string associated with the protobuf error
+
+    if (err == ::EmbeddedProto::Error::NO_ERRORS) {
+        ESP_LOGI(MessageServer::Name, "No errors have occurred");
+    } else if (err == ::EmbeddedProto::Error::END_OF_BUFFER) {
+        ESP_LOGI(MessageServer::Name, "While trying to read from the buffer we ran out of bytes to read");
+    } else if (err == ::EmbeddedProto::Error::BUFFER_FULL) {
+        ESP_LOGI(MessageServer::Name, "The write buffer is full, unable to push more bytes in to it");
+    } else if (err == ::EmbeddedProto::Error::INVALID_WIRETYPE) {
+        ESP_LOGI(MessageServer::Name, "When reading a Wiretype from the tag we got an invalid value");
+    } else if (err == ::EmbeddedProto::Error::ARRAY_FULL) {
+        ESP_LOGI(MessageServer::Name, "The array is full, it is not possible to push more items in it");
+    }
 }
