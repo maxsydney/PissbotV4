@@ -116,17 +116,14 @@ PBRet SensorManager::_assignSensorCB(std::shared_ptr<PBMessageWrapper> msg)
     OneWireBus_ROMCode romCode {};
 
     // Copy bytes into ROM code
-    printf("Copying ROM code\n");
     for (size_t i = 0; i < ROM_SIZE; i++)
     {
         romCode.bytes[i] = sensorMsg.mutable_sensor().romCode()[i];
-        printf("0x%X ", sensorMsg.mutable_sensor().romCode()[i]);
     }
-    printf("\n");
 
-    // TODO: Assign sensor on heap here
-    const Ds18b20 sensor(romCode, DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
-    if (sensor.isConfigured() == false) {
+    // TODO: Decide where this object should be created + use unique ptr
+    std::shared_ptr<Ds18b20> sensor = std::make_shared<Ds18b20>(romCode, DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
+    if (sensor->isConfigured() == false) {
         ESP_LOGW(SensorManager::Name, "Failed to create valid Ds18b20 sensor");
         return PBRet::FAILURE;
     }
