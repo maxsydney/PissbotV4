@@ -19,7 +19,8 @@
 
 constexpr uint8_t DEVICE_DATA_LEN = 12;
 using PBDeviceData = DeviceData<DEVICE_DATA_LEN, ROM_SIZE>;
-using SensorMap = std::unordered_map<DS18B20Role, std::shared_ptr<Ds18b20>> ;
+using SensorMap = std::unordered_map<DS18B20Role, std::shared_ptr<Ds18b20>>;
+using DeviceVector = std::vector<Ds18b20>;
 
 struct PBOneWireConfig
 {
@@ -38,9 +39,6 @@ public:
     PBOneWire(void) = default;
     explicit PBOneWire(const PBOneWireConfig &cfg);
 
-    // Initialisation
-    PBRet initialiseTempSensors(void);
-
     // Update
     PBRet readTempSensors(TemperatureData &Tdata) const;
 
@@ -51,7 +49,7 @@ public:
     // Utility
     bool isAvailableSensor(const Ds18b20 &sensor) const;
     PBRet serialize(std::string &JSONstr) const;
-    PBRet broadcastAvailableDevices(void);
+    PBRet broadcastAvailableDevices(void) const;
 
     static PBRet checkInputs(const PBOneWireConfig &cfg);
     static PBRet loadFromJSON(PBOneWireConfig &cfg, const cJSON *cfgRoot);
@@ -70,8 +68,8 @@ private:
     // Utility
     PBRet _writeToFile(void) const;
     PBRet _printConfigFile(void) const;
-    PBRet _scanForDevices(void);
-    PBRet _broadcastDeviceAddresses(void) const;
+    PBRet _scanForDevices(DeviceVector& devices) const;
+    PBRet _broadcastDeviceAddresses(const DeviceVector& devices) const;
     PBRet _readTemperatureSensor(DS18B20Role sensor, double& T) const;
 
     SemaphoreHandle_t _OWBMutex = NULL;
@@ -80,9 +78,6 @@ private:
 
     // Assigned sensors
     SensorMap _assignedSensors {};
-
-    // Store all identified sensors on the network
-    std::vector<std::shared_ptr<Ds18b20>> _availableSensors {};
 
     // Class data
     PBOneWireConfig _cfg{};

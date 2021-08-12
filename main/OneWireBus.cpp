@@ -91,7 +91,7 @@ PBRet PBOneWire::_initOWB()
     return PBRet::SUCCESS;
 }
 
-PBRet PBOneWire::_scanForDevices(void)
+PBRet PBOneWire::_scanForDevices(DeviceVector& devices) const
 {
     if (_owb == nullptr) {
         ESP_LOGW(PBOneWire::Name, "Onewire bus pointer was null");
@@ -101,15 +101,14 @@ PBRet PBOneWire::_scanForDevices(void)
     if (xSemaphoreTake(_OWBMutex, 250 / portTICK_PERIOD_MS) == pdTRUE) {
         OneWireBus_SearchState search_state {};
         bool found = false;
-        _availableSensors.clear();
+        devices.clear();
 
         owb_search_first(_owb, &search_state, &found);
         while (found) {
-            _availableSensors.push_back(std::make_shared<Ds18b20>(search_state.rom_code, _cfg.tempSensorResolution, _owb));
+            devices.emplace_back(search_state.rom_code, _cfg.tempSensorResolution, _owb);
             owb_search_next(_owb, &search_state, &found);
         }
         xSemaphoreGive(_OWBMutex);
-
     } else {
         ESP_LOGW(PBOneWire::Name, "Unable to access PBOneWire shared resource");
         return PBRet::FAILURE;
@@ -118,22 +117,21 @@ PBRet PBOneWire::_scanForDevices(void)
     return PBRet::SUCCESS;
 }
 
-PBRet PBOneWire::_broadcastDeviceAddresses(void) const
+PBRet PBOneWire::_broadcastDeviceAddresses(const DeviceVector& devices) const
 {
     // Broadcast the available device addresses to all listening tasks
 
     PBDeviceData deviceData {};
-    for (const std::shared_ptr<Ds18b20> sensor : _availableSensors) {
+    for (const Ds18b20& sensor : devices) {
+        // We really just want to send the sensor ROM code here, so no need
+        // fill the calibration fields
         PBDS18B20Sensor sensorBuffer {};
-        sensorBuffer.set_role(DS18B20Role::NONE);     // Update this
 
         // Copy ROM code into PBDS18B20Sensor object
         for (size_t i = 0; i < ROM_SIZE; i++) {
-            sensorBuffer.mutable_romCode()[i] = sensor->getInfo().rom_code.bytes[i];
+            sensorBuffer.mutable_romCode()[i] = sensor.getInfo().rom_code.bytes[i];
         }
-        
-        sensorBuffer.set_calibLinear(1.0);
-        sensorBuffer.set_calibOffset(0.0);
+
         deviceData.add_sensors(sensorBuffer);
     }
 
@@ -141,37 +139,15 @@ PBRet PBOneWire::_broadcastDeviceAddresses(void) const
     return MessageServer::broadcastMessage(wrapped);
 }
 
-PBRet PBOneWire::broadcastAvailableDevices(void)
+PBRet PBOneWire::broadcastAvailableDevices(void) const
 {
-    if (_scanForDevices() != PBRet::SUCCESS) {
+    DeviceVector devices {};
+    if (_scanForDevices(devices) != PBRet::SUCCESS) {
         ESP_LOGW(PBOneWire::Name, "Scan of OneWire bus failed");
         return PBRet::FAILURE;
     }
 
-    return _broadcastDeviceAddresses();
-}
-
-PBRet PBOneWire::initialiseTempSensors(void)
-{
-    // TODO:
-    // Attempt to connect to each sensor and check that they are responding
-    // 
-
-    // // Connect to sensors and create PBds18b20 object
-    // if (_connectedDevices == 0) {
-    //     ESP_LOGW(PBOneWire::Name, "No available devices");
-    //     return PBRet::FAILURE;
-    // }
-
-    // // NOTE: Just assigning the first for now. Assign properly from saved sensors JSON
-    // // Assign sensors
-    // if (_headTempSensor.isConfigured() == false) {
-    //     _headTempSensor = _availableSensors.at(0);
-    // }
-
-    // // Connect other devices here
-    
-    return PBRet::SUCCESS;
+    return _broadcastDeviceAddresses(devices);
 }
 
 PBRet PBOneWire::_oneWireConvert(void) const
@@ -181,13 +157,15 @@ PBRet PBOneWire::_oneWireConvert(void) const
     //       this method, it is your responsibility to make sure that the bus
     //       is not locked out
 
-    if (_availableSensors.size() == 0) {
-        ESP_LOGW(PBOneWire::Name, "No available devices. Cannot convert temperatures");
+    if (_assignedSensors.size() == 0) {
+        ESP_LOGW(PBOneWire::Name, "No assigned devices. Cannot convert temperatures");
         return PBRet::FAILURE;
     }
 
     ds18b20_convert_all(_owb);
-    ds18b20_wait_for_conversion(&_availableSensors.front()->getInfo());
+
+    // Wait until the first sensor in the map has finished converting measurement
+    ds18b20_wait_for_conversion(&_assignedSensors.begin()->second->getInfo());
 
     return PBRet::SUCCESS;
 }
@@ -252,22 +230,6 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
     if (_OWBMutex == NULL) {
         ESP_LOGW(PBOneWire::Name, "Unable to create mutex");
         return PBRet::FAILURE;
-    }
-
-    // The following cases can fail and be recovered from. Don't return failure
-    // Find available devices on bus
-    if (_scanForDevices() != PBRet::SUCCESS) {
-        ESP_LOGW(PBOneWire::Name, "Failed to scan OneWire bus for deveices");
-    }
-
-    if (_availableSensors.size() == 0) {
-        ESP_LOGW(PBOneWire::Name, "No devices were found on OneWire bus");
-    }
-
-    // // This is a temporary method to load a temperature sensor into the headTemp channel
-    // // for testing
-    if (initialiseTempSensors() != PBRet::SUCCESS) {
-        ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
     }
 
     return PBRet::SUCCESS;
@@ -405,16 +367,17 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
     return PBRet::SUCCESS;
 }
 
+// TODO: Pass in available sensors as an argument
 bool PBOneWire::isAvailableSensor(const Ds18b20& sensor) const
 {
     // Returns true if a ds18b20 sensor exists in the list of available 
     // sensors
 
-    for (const std::shared_ptr<Ds18b20> available : _availableSensors) {
-        if (sensor == *available) {
-            return true;
-        }
-    }
+    // for (const std::shared_ptr<Ds18b20> available : _availableSensors) {
+    //     if (sensor == *available) {
+    //         return true;
+    //     }
+    // }
 
     return false;
 }
