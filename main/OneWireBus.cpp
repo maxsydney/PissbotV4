@@ -1,5 +1,6 @@
 #include "OneWireBus.h"
 #include "SensorManager.h"
+#include "Generated/SensorManagerMessaging.h"
 
 PBOneWire::PBOneWire(const PBOneWireConfig& cfg)
 {
@@ -105,7 +106,7 @@ PBRet PBOneWire::_scanForDevices(DeviceVector& devices) const
 
         owb_search_first(_owb, &search_state, &found);
         while (found) {
-            devices.emplace_back(search_state.rom_code, _cfg.tempSensorResolution, _owb);
+            devices.emplace_back(Ds18b20Config(search_state.rom_code, 1.0, 0.0, _cfg.tempSensorResolution, _owb));
             owb_search_next(_owb, &search_state, &found);
         }
         xSemaphoreGive(_OWBMutex);
@@ -123,16 +124,7 @@ PBRet PBOneWire::_broadcastDeviceAddresses(const DeviceVector& devices) const
 
     PBDeviceData deviceData {};
     for (const Ds18b20& sensor : devices) {
-        // We really just want to send the sensor ROM code here, so no need
-        // fill the calibration fields
-        PBDS18B20Sensor sensorBuffer {};
-
-        // Copy ROM code into PBDS18B20Sensor object
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            sensorBuffer.mutable_romCode()[i] = sensor.getInfo().rom_code.bytes[i];
-        }
-
-        deviceData.add_sensors(sensorBuffer);
+        deviceData.add_sensors(sensor.toSerialConfig());
     }
 
     PBMessageWrapper wrapped = MessageServer::wrap(deviceData, PBMessageType::DeviceData);
@@ -235,134 +227,50 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
     return PBRet::SUCCESS;
 }
 
- PBRet PBOneWire::serialize(std::string& JSONstr) const
+ PBRet PBOneWire::serialize(Writable& buffer) const
 {
-    // // Helper method for writing out the sensor configuration to JSON
-    // cJSON* root = cJSON_CreateObject();
-    // if (root == nullptr) {
-    //     ESP_LOGW(PBOneWire::Name, "Unable to create root JSON object");
-    //     return PBRet::FAILURE;
-    // }
+    // Write the assigned sensors to buffer
 
-    // // Create an object for temperature sensors
-    // cJSON* tempSensors = cJSON_CreateObject();
-    // if (tempSensors == NULL) {
-    //     ESP_LOGW(PBOneWire::Name, "Unable to create tempSensors JSON object");
-    //     return PBRet::FAILURE;
-    // }
+    PBAssignedSensorRegistry registry {};
 
-    // // Write individual sensors to tempSensors
-    // if (_headTempSensor.isConfigured()) {
-    //     // Write out its data
-    //     cJSON* headTemp = cJSON_CreateObject();
-    //     if (headTemp == NULL) {
-    //         ESP_LOGW(PBOneWire::Name, "Unable to create headTemp JSON object");
-    //         return PBRet::FAILURE;
-    //     }
+    auto it = _assignedSensors.find(DS18B20Role::HEAD_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_headTempSensor((*it->second).toSerialConfig());
+    }
 
-    //     // TODO: Add headTemp to tempSensors and the modify inplace?
-    //     if (_headTempSensor.serialize(headTemp) != PBRet::SUCCESS) {
-    //         ESP_LOGW(PBOneWire::Name, "Couldn't serialize head temp sensor");
-    //         cJSON_Delete(headTemp);
-    //         return PBRet::FAILURE;
-    //     }
+    it = _assignedSensors.find(DS18B20Role::REFLUX_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_refluxTempSensor((*it->second).toSerialConfig());
+    }
 
-    //     cJSON_AddItemToObject(tempSensors, SensorManager::HeadTempSensorKey, headTemp);
-    // }
+    it = _assignedSensors.find(DS18B20Role::PRODUCT_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_productTempSensor((*it->second).toSerialConfig());
+    }
 
-    // if (_refluxTempSensor.isConfigured()) {
-    //     // Write out its data
-    //     cJSON* refluxTempSensor = cJSON_CreateObject();
-    //     if (refluxTempSensor == NULL) {
-    //         ESP_LOGW(PBOneWire::Name, "Unable to create reflux temp sensor JSON object");
-    //         return PBRet::FAILURE;
-    //     }
+    it = _assignedSensors.find(DS18B20Role::RADIATOR_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_radiatorTempSensor((*it->second).toSerialConfig());
+    }
 
-    //     if (_refluxTempSensor.serialize(refluxTempSensor) != PBRet::SUCCESS) {
-    //         ESP_LOGW(PBOneWire::Name, "Couldn't serialize reflux condensor temp sensor");
-    //         cJSON_Delete(refluxTempSensor);
-    //         return PBRet::FAILURE;
-    //     }
+    it = _assignedSensors.find(DS18B20Role::BOILER_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_boilerTempSensor((*it->second).toSerialConfig());
+    }
 
-    //     cJSON_AddItemToObject(tempSensors, SensorManager::RefluxTempSensorKey, refluxTempSensor);
-    // }
+    // Serialize data structure into buffer
+    EmbeddedProto::Error e = registry.serialize(buffer);
 
-    // if (_productTempSensor.isConfigured()) {
-    //     // Write out its data
-    //     cJSON* productTempSensor = cJSON_CreateObject();
-    //     if (productTempSensor == NULL) {
-    //         ESP_LOGW(PBOneWire::Name, "Unable to create product temp sensor JSON object");
-    //         return PBRet::FAILURE;
-    //     }
-
-    //     if (_productTempSensor.serialize(productTempSensor) != PBRet::SUCCESS) {
-    //         ESP_LOGW(PBOneWire::Name, "Couldn't serialize product condensor temp sensor");
-    //         cJSON_Delete(productTempSensor);
-    //         return PBRet::FAILURE;
-    //     }
-
-    //     cJSON_AddItemToObject(tempSensors, SensorManager::ProductTempSensorKey, productTempSensor);
-    // }
-
-    // if (_radiatorTempSensor.isConfigured()) {
-    //     // Write out its data
-    //     cJSON* radiatorTempSensor = cJSON_CreateObject();
-    //     if (radiatorTempSensor == NULL) {
-    //         ESP_LOGW(PBOneWire::Name, "Unable to create radiator temp sensor JSON object");
-    //         return PBRet::FAILURE;
-    //     }
-
-    //     if (_radiatorTempSensor.serialize(radiatorTempSensor) != PBRet::SUCCESS) {
-    //         ESP_LOGW(PBOneWire::Name, "Couldn't serialize radiator temp sensor");
-    //         cJSON_Delete(radiatorTempSensor);
-    //         return PBRet::FAILURE;
-    //     }
-
-    //     cJSON_AddItemToObject(tempSensors, SensorManager::RadiatorTempSensorKey, radiatorTempSensor);
-    // }
-
-    // if (_radiatorTempSensor.isConfigured()) {
-    //     // Write out its data
-    //     cJSON* radiatorTempSensor = cJSON_CreateObject();
-    //     if (radiatorTempSensor == NULL) {
-    //         ESP_LOGW(PBOneWire::Name, "Unable to create radiator temp sensor JSON object");
-    //         return PBRet::FAILURE;
-    //     }
-
-    //     if (_radiatorTempSensor.serialize(radiatorTempSensor) != PBRet::SUCCESS) {
-    //         ESP_LOGW(PBOneWire::Name, "Couldn't serialize radiator temp sensor");
-    //         cJSON_Delete(radiatorTempSensor);
-    //         return PBRet::FAILURE;
-    //     }
-
-    //     cJSON_AddItemToObject(tempSensors, SensorManager::RadiatorTempSensorKey, radiatorTempSensor);
-    // }
-
-    // if (_boilerTempSensor.isConfigured()) {
-    //     // Write out its data
-    //     cJSON* boilerTempSensor = cJSON_CreateObject();
-    //     if (boilerTempSensor == NULL) {
-    //         ESP_LOGW(PBOneWire::Name, "Unable to create boiler temp sensor JSON object");
-    //         return PBRet::FAILURE;
-    //     }
-
-    //     if (_boilerTempSensor.serialize(boilerTempSensor) != PBRet::SUCCESS) {
-    //         ESP_LOGW(PBOneWire::Name, "Couldn't serialize boiler temp sensor");
-    //         cJSON_Delete(boilerTempSensor);
-    //         return PBRet::FAILURE;
-    //     }
-
-    //     cJSON_AddItemToObject(tempSensors, SensorManager::BoilerTempSensorKey, boilerTempSensor);
-    // }
-
-    // cJSON_AddItemToObject(root, "TempSensors", tempSensors);
-
-    // // Copy JSON to string. cJSON requires printing to a char* pointer. Copy into
-    // // std::string and free memory to avoid memory leak
-    // char* stringPtr = cJSON_Print(root);
-    // JSONstr = std::string(stringPtr);
-    // cJSON_Delete(root);
-    // free(stringPtr);
+    if (e != EmbeddedProto::Error::NO_ERRORS) {
+        ESP_LOGW(PBOneWire::Name, "Failed to serialize message");
+        MessageServer::printErr(e);
+        return PBRet::FAILURE;
+    }
 
     return PBRet::SUCCESS;
 }

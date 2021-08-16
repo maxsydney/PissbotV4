@@ -9,6 +9,7 @@
 
 // Forward declarations
 class PBOneWire;
+using PBAssignedSensorRegistry = AssignedSensorRegistry<ROM_SIZE, ROM_SIZE, ROM_SIZE, ROM_SIZE, ROM_SIZE>;
 
 struct SensorManagerConfig
 {
@@ -23,7 +24,7 @@ class SensorManager : public Task
     static constexpr const char *Name = "SensorManager";
     static constexpr const char *FSBasePath = "/spiffs";
     static constexpr const char *FSPartitionLabel = "PBData";
-    static constexpr const char *deviceFile = "/spiffs/devices.json";
+    static constexpr const char *assignedSensorFile = "/spiffs/assignedSensors";
 
 public:
     // Constructors
@@ -58,7 +59,6 @@ private:
 
     // Utilities
     PBRet _writeSensorConfigToFile(void) const;
-    PBRet _printConfigFile(void) const;
     PBRet _broadcastSensors(void);
 
     // FreeRTOS hook method

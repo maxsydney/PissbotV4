@@ -11,6 +11,7 @@
 #include "owb_rmt.h"
 #include "freertos/semphr.h"
 #include "ds18b20.h"
+#include "IO/Writable.h"
 #include "Generated/SensorManagerMessaging.h"
 #include "Generated/DS18B20Messaging.h"
 
@@ -48,7 +49,7 @@ public:
 
     // Utility
     bool isAvailableSensor(const Ds18b20 &sensor) const;
-    PBRet serialize(std::string &JSONstr) const;
+    PBRet serialize(Writable& buffer) const;
     PBRet broadcastAvailableDevices(void) const;
 
     static PBRet checkInputs(const PBOneWireConfig &cfg);
@@ -66,7 +67,6 @@ private:
     PBRet _oneWireConvert(void) const;
 
     // Utility
-    PBRet _writeToFile(void) const;
     PBRet _printConfigFile(void) const;
     PBRet _scanForDevices(DeviceVector& devices) const;
     PBRet _broadcastDeviceAddresses(const DeviceVector& devices) const;

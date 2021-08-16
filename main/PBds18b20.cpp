@@ -1,69 +1,29 @@
 #include "PBds18b20.h"
 
-Ds18b20::Ds18b20(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, const OneWireBus* bus)
+Ds18b20::Ds18b20(const Ds18b20Config& config)
 {
-    if (Ds18b20::checkInputs(romCode, res, bus) != PBRet::SUCCESS) {
-        ESP_LOGE(Ds18b20::Name, "ds18b20 sensor was not initialized");
-        _configured = false;
-    }
-
-    if (_initFromParams(romCode, res, bus) == PBRet::SUCCESS) {
-        ESP_LOGI(Ds18b20::Name, "Device successfully configured!");
+    if (_initFromConfig(config) == PBRet::SUCCESS) {
         _configured = true;
     } else {
         ESP_LOGW(Ds18b20::Name, "ds18b20 sensor was not initialized");
-        _configured = false;
     }
 }
 
-Ds18b20::Ds18b20(const cJSON* JSONConfig, DS18B20_RESOLUTION res, const OneWireBus* bus)
+// Ds18b20::Ds18b20(const PBDS18B20Sensor& serialConfig, DS18B20_RESOLUTION res, const OneWireBus* bus)
+// {
+//     // TODO: Implement protobuf constructor
+// }
+
+PBRet Ds18b20::checkInputs(const Ds18b20Config& config)
 {
-    if (JSONConfig == nullptr) {
-        ESP_LOGW(Ds18b20::Name, "JSON pointer was null. Ds18b20 device not configured");
-        return;
-    }
-
-    const cJSON* romCode = cJSON_GetObjectItemCaseSensitive(JSONConfig, "romCode");
-    if (romCode == nullptr) {
-        ESP_LOGW(Ds18b20::Name, "Failed to find romCode property of JSON object");
-        return;
-    }
-
-    const cJSON* byte = nullptr;
-    OneWireBus_ROMCode romCodeIn {};
-    size_t i = 0;
-    cJSON_ArrayForEach(byte, romCode)
-    {
-        if (byte == nullptr) {
-            ESP_LOGW(Ds18b20::Name, "Failed to read byte from romCode");
-            return;
-        }
-
-        if (cJSON_IsNumber(byte) == false) {
-            ESP_LOGW(Ds18b20::Name, "Byte in romCode array was not of cJSON type number");
-            return;
-        }
-
-        romCodeIn.bytes[i++] = byte->valueint;
-    }
-
-    if (_initFromParams(romCodeIn, res, bus) == PBRet::SUCCESS) {
-        ESP_LOGI(Ds18b20::Name, "Device successfully configured!");
-        _configured = true;
-    } else {
-        ESP_LOGW(Ds18b20::Name, "ds18b20 sensor was not initialized");
-        _configured = false;
-    }
-}
-
-PBRet Ds18b20::checkInputs(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, const OneWireBus* bus)
-{
-    if (bus == nullptr) {
+    if (config.bus == nullptr) {
         ESP_LOGW(Ds18b20::Name, "Onewire bus pointer was null. Unable to initialize sensor");
         return PBRet::FAILURE;
     }
 
     // TODO: Check address
+
+    // TODO: Check calibration
 
     return PBRet::SUCCESS;
 }
@@ -114,20 +74,26 @@ PBRet Ds18b20::serialize(cJSON* root) const
     return PBRet::SUCCESS;
 }
 
-PBRet Ds18b20::_initFromParams(OneWireBus_ROMCode romCode, DS18B20_RESOLUTION res, const OneWireBus* bus)
+PBRet Ds18b20::_initFromConfig(const Ds18b20Config& config)
 {
-    // Initialize info
-    ds18b20_init(&_info, bus, romCode);
-    ds18b20_use_crc(&_info, true);
-    ds18b20_set_resolution(&_info, res);
+    if (Ds18b20::checkInputs(config) == PBRet::SUCCESS) {
+        // Initialize info
+        ds18b20_init(&_info, config.bus, config.romCode);
+        ds18b20_use_crc(&_info, true);
+        ds18b20_set_resolution(&_info, config.res);
 
-    // Check if sensor responds on bus
-    if (ds18b20_read_resolution(&_info) == DS18B20_RESOLUTION_INVALID) {
-        ESP_LOGW(Ds18b20::Name, "Device was initialised but didn't respond on bus");
-        return PBRet::FAILURE;
+        _config = config;
+
+        // Check if sensor responds on bus
+        if (ds18b20_read_resolution(&_info) == DS18B20_RESOLUTION_INVALID) {
+            ESP_LOGW(Ds18b20::Name, "Device was initialised but didn't respond on bus");
+            return PBRet::FAILURE;
+        }
+
+        return PBRet::SUCCESS;
     }
 
-    return PBRet::SUCCESS;
+    return PBRet::FAILURE;
 }
 
 bool Ds18b20::operator==(const Ds18b20& other) const
@@ -142,4 +108,20 @@ bool Ds18b20::operator==(const Ds18b20& other) const
     }
 
     return equal;
+}
+
+// Factory function for generating a Protobuf definition
+// of the sensor
+PBDS18B20Sensor Ds18b20::toSerialConfig(void) const
+{
+    PBDS18B20Sensor sensor {};
+    sensor.set_calibLinear(_config.calibLinear);
+    sensor.set_calibOffset(_config.calibOffset);
+
+    // Copy ROM code
+    for (size_t i = 0; i < ROM_SIZE; i++) {
+        sensor.mutable_romCode()[i] = _info.rom_code.bytes[i];
+    }
+
+    return sensor;
 }
