@@ -34,7 +34,7 @@ class Ds18b20
     public:
         Ds18b20(void) = default;
         explicit Ds18b20(const Ds18b20Config& config);
-        // Ds18b20(const PBDS18B20Sensor& serialConfig, DS18B20_RESOLUTION res, const OneWireBus* bus);
+        Ds18b20(const PBDS18B20Sensor& serialConfig, DS18B20_RESOLUTION res, const OneWireBus* bus);
         
         // Update
         PBRet readTemp(float& temp) const;
@@ -42,6 +42,8 @@ class Ds18b20
         // Utility
         PBRet serialize(cJSON* root) const;
         static PBRet checkInputs(const Ds18b20Config& config);
+        static PBRet loadFromSerial(const PBDS18B20Sensor& serialConfig, DS18B20_RESOLUTION res, 
+                                    const OneWireBus* bus, Ds18b20Config& config);
         PBDS18B20Sensor toSerialConfig(void) const;
 
          // Operators

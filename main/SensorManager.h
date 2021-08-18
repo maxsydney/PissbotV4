@@ -48,7 +48,6 @@ private:
     PBRet _initFromParams(const SensorManagerConfig &cfg);
     PBRet _setupCBTable(void) override;
     PBRet _loadKnownDevices(const char *basePath, const char *partitionLabel);
-    PBRet _loadTempSensorsFromJSON(const cJSON *JSONTempSensors);
 
     // Updates
     PBRet _readFlowmeters(const FlowrateData &F) const;

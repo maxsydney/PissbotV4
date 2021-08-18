@@ -236,30 +236,55 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
     auto it = _assignedSensors.find(DS18B20Role::HEAD_TEMP);
     if (it != _assignedSensors.end())
     {
+        ESP_LOGW(PBOneWire::Name, "Writing head sensor to file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
         registry.set_headTempSensor((*it->second).toSerialConfig());
     }
 
     it = _assignedSensors.find(DS18B20Role::REFLUX_TEMP);
     if (it != _assignedSensors.end())
     {
+        ESP_LOGW(PBOneWire::Name, "Writing reflux sensor to file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
         registry.set_refluxTempSensor((*it->second).toSerialConfig());
     }
 
     it = _assignedSensors.find(DS18B20Role::PRODUCT_TEMP);
     if (it != _assignedSensors.end())
     {
+        ESP_LOGW(PBOneWire::Name, "Writing product sensor to file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
         registry.set_productTempSensor((*it->second).toSerialConfig());
     }
 
     it = _assignedSensors.find(DS18B20Role::RADIATOR_TEMP);
     if (it != _assignedSensors.end())
     {
+        ESP_LOGW(PBOneWire::Name, "Writing radiator sensor to file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
         registry.set_radiatorTempSensor((*it->second).toSerialConfig());
     }
 
     it = _assignedSensors.find(DS18B20Role::BOILER_TEMP);
     if (it != _assignedSensors.end())
     {
+        ESP_LOGW(PBOneWire::Name, "Writing boiler sensor to file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
         registry.set_boilerTempSensor((*it->second).toSerialConfig());
     }
 
@@ -270,6 +295,78 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
         ESP_LOGW(PBOneWire::Name, "Failed to serialize message");
         MessageServer::printErr(e);
         return PBRet::FAILURE;
+    }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet PBOneWire::deserialize(Readable& buffer)
+{
+    // Deserialize assigned sensors from buffer
+
+    ESP_LOGW(PBOneWire::Name, "Running PBOneWire deserialize");
+
+    PBAssignedSensorRegistry registry {};
+    ::EmbeddedProto::Error err = registry.deserialize(buffer);
+    if (err != ::EmbeddedProto::Error::NO_ERRORS)
+    {
+        MessageServer::printErr(err);
+        return PBRet::FAILURE;
+    }
+
+    std::shared_ptr<Ds18b20> sensor = std::make_shared<Ds18b20>(registry.headTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
+    if (sensor->isConfigured())
+    {
+        ESP_LOGW(PBOneWire::Name, "Reading head sensor from file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
+        _assignedSensors[DS18B20Role::HEAD_TEMP] = sensor;
+    }
+
+    sensor = std::make_shared<Ds18b20>(registry.refluxTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
+    if (sensor->isConfigured())
+    {
+        ESP_LOGW(PBOneWire::Name, "Reading reflux sensor from file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
+        _assignedSensors[DS18B20Role::REFLUX_TEMP] = sensor;
+    }
+
+    sensor = std::make_shared<Ds18b20>(registry.productTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
+    if (sensor->isConfigured())
+    {
+        ESP_LOGW(PBOneWire::Name, "Reading product sensor from file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
+        _assignedSensors[DS18B20Role::PRODUCT_TEMP] = sensor;
+    }
+
+    sensor = std::make_shared<Ds18b20>(registry.radiatorTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
+    if (sensor->isConfigured())
+    {
+        ESP_LOGW(PBOneWire::Name, "Reading radiator sensor from file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
+        _assignedSensors[DS18B20Role::RADIATOR_TEMP] = sensor;
+    }
+
+    sensor = std::make_shared<Ds18b20>(registry.boilerTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
+    if (sensor->isConfigured())
+    {
+        ESP_LOGW(PBOneWire::Name, "Reading boiler sensor from file");
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+        }
+        printf("\n");
+        _assignedSensors[DS18B20Role::BOILER_TEMP] = sensor;
     }
 
     return PBRet::SUCCESS;

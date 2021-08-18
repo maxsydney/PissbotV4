@@ -9,10 +9,20 @@ Ds18b20::Ds18b20(const Ds18b20Config& config)
     }
 }
 
-// Ds18b20::Ds18b20(const PBDS18B20Sensor& serialConfig, DS18B20_RESOLUTION res, const OneWireBus* bus)
-// {
-//     // TODO: Implement protobuf constructor
-// }
+Ds18b20::Ds18b20(const PBDS18B20Sensor& serialConfig, DS18B20_RESOLUTION res, const OneWireBus* bus)
+{
+    // Load a sensor from a protobuf definition
+
+    Ds18b20Config config {};
+    if (loadFromSerial(serialConfig, res, bus, config) == PBRet::SUCCESS)
+    {
+        if (_initFromConfig(config) == PBRet::SUCCESS) {
+            _configured = true;
+        } else {
+            ESP_LOGW(Ds18b20::Name, "ds18b20 sensor was not initialized");
+        }
+    }
+}
 
 PBRet Ds18b20::checkInputs(const Ds18b20Config& config)
 {
@@ -25,6 +35,24 @@ PBRet Ds18b20::checkInputs(const Ds18b20Config& config)
 
     // TODO: Check calibration
 
+    return PBRet::SUCCESS;
+}
+
+PBRet Ds18b20::loadFromSerial(const PBDS18B20Sensor& serialConfig, DS18B20_RESOLUTION res, 
+                              const OneWireBus* bus, Ds18b20Config& config)
+{
+    // Copy ROM code
+    OneWireBus_ROMCode romCode {};
+
+    ESP_LOGW(Ds18b20::Name, "Loading DS18B20 sensor from serial");
+
+    for (size_t i = 0; i < ROM_SIZE; i++) {
+        romCode.bytes[i] = serialConfig.romCode()[i];
+    }
+    const double calibLinear = serialConfig.calibLinear();
+    const double calibOffset = serialConfig.calibOffset();
+
+    config = Ds18b20Config(romCode, calibLinear, calibOffset, res, bus);
     return PBRet::SUCCESS;
 }
 
@@ -84,9 +112,10 @@ PBRet Ds18b20::_initFromConfig(const Ds18b20Config& config)
 
         _config = config;
 
-        // Check if sensor responds on bus
-        if (ds18b20_read_resolution(&_info) == DS18B20_RESOLUTION_INVALID) {
-            ESP_LOGW(Ds18b20::Name, "Device was initialised but didn't respond on bus");
+        // Check if sensor has been initialized correctly by checking
+        // the resolution it returns
+        if (ds18b20_read_resolution(&_info) != config.res) {
+            ESP_LOGW(Ds18b20::Name, "Device was not initialized correctly");
             return PBRet::FAILURE;
         }
 

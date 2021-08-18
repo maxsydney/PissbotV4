@@ -12,6 +12,7 @@
 #include "freertos/semphr.h"
 #include "ds18b20.h"
 #include "IO/Writable.h"
+#include "IO/Readable.h"
 #include "Generated/SensorManagerMessaging.h"
 #include "Generated/DS18B20Messaging.h"
 
@@ -50,6 +51,7 @@ public:
     // Utility
     bool isAvailableSensor(const Ds18b20 &sensor) const;
     PBRet serialize(Writable& buffer) const;
+    PBRet deserialize(Readable& buffer);
     PBRet broadcastAvailableDevices(void) const;
 
     static PBRet checkInputs(const PBOneWireConfig &cfg);
@@ -67,7 +69,6 @@ private:
     PBRet _oneWireConvert(void) const;
 
     // Utility
-    PBRet _printConfigFile(void) const;
     PBRet _scanForDevices(DeviceVector& devices) const;
     PBRet _broadcastDeviceAddresses(const DeviceVector& devices) const;
     PBRet _readTemperatureSensor(DS18B20Role sensor, double& T) const;

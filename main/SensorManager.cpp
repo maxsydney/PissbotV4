@@ -259,113 +259,38 @@ PBRet SensorManager::checkInputs(const SensorManagerConfig& cfg)
 
 PBRet SensorManager::_loadKnownDevices(const char* basePath, const char* partitionLabel)
 {
-    // // Nullptr check
-    // if ((basePath == nullptr) || (partitionLabel == nullptr)) {
-    //     ESP_LOGW(SensorManager::Name, "Cannot load known devices. One or more input pointers were null");
-    //     return PBRet::FAILURE;
-    // }
-
-    // // Mount filesystem
-    // Filesystem F(SensorManager::FSBasePath, SensorManager::FSPartitionLabel, 5, true);
-
-    // // Read JSON string from file
-    // std::ifstream configIn(SensorManager::assignedSensorFile);
-    // if (configIn.good() == false) {
-    //     ESP_LOGW(SensorManager::Name, "Devices file could not be opened");
-    //     return PBRet::FAILURE;
-    // }
-
-    // // TODO: Stringstream is quite heavy for embedded. Might need to remove
-    // std::stringstream JSONBuffer;
-    // JSONBuffer << configIn.rdbuf();
-
-    // // Load JSON object
-    // // Just load one sensor for now. Package into proper methods for loading all sensors once
-    // // validated
-    // cJSON* configRoot = cJSON_Parse(JSONBuffer.str().c_str());
-    // if (configRoot == nullptr) {
-    //     ESP_LOGW(SensorManager::Name, "Sensor config file was opened but could not be parsed");
-    //     return PBRet::FAILURE;
-    // }
-
-    // // Load saved temperature sensors
-    // // No longer required to check for null, as this check is performed in cJSON_GetObjectItemCaseSensitive
-    // const cJSON* tempSensors = cJSON_GetObjectItemCaseSensitive(configRoot, "TempSensors");
-    // if (_loadTempSensorsFromJSON(tempSensors) != PBRet::SUCCESS) {
-    //     ESP_LOGW(SensorManager::Name, "No temperature sensor config data was available");
-    // }
-
-    // cJSON_Delete(configRoot);
-    return PBRet::SUCCESS;
-}
-
-PBRet SensorManager::_loadTempSensorsFromJSON(const cJSON* JSONTempSensors)
-{
-    if (JSONTempSensors == nullptr) {
+    // Nullptr check
+    if ((basePath == nullptr) || (partitionLabel == nullptr)) {
+        ESP_LOGW(SensorManager::Name, "Cannot load known devices. One or more input pointers were null");
         return PBRet::FAILURE;
     }
 
-    // Ds18b20 savedSensor {};
+    // Mount filesystem
+    Filesystem F(SensorManager::FSBasePath, SensorManager::FSPartitionLabel, 5, true);
 
-    // // If there is saved head temp sensor in the config file, load it
-    // const cJSON* headTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::HeadTempSensorKey);
-    // if (headTemp != nullptr) {
-    //     savedSensor = Ds18b20(headTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-    //     if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-    //         _OWBus.setTempSensor(SensorType::Head, savedSensor);
-    //         ESP_LOGI(SensorManager::Name, "Loaded head temp sensor from file");
-    //     } else {
-    //         ESP_LOGW(SensorManager::Name, "Unable to head temp sensor object from file");
-    //     }
-    // }
+    // Read serialized config from file
+    std::ifstream configIn(SensorManager::assignedSensorFile, std::ios::binary);
+    if (configIn.good() == false) {
+        ESP_LOGW(SensorManager::Name, "Devices file could not be opened");
+        return PBRet::FAILURE;
+    }
 
-    // // Load reflux out temp sensor
-    // const cJSON* refluxTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::RefluxTempSensorKey);
-    // if (refluxTemp != nullptr) {
-    //     savedSensor = Ds18b20(refluxTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-    //     if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-    //         _OWBus.setTempSensor(SensorType::Reflux, savedSensor);
-    //         ESP_LOGI(SensorManager::Name, "Loaded reflux outflow temp sensor from file");
-    //     } else {
-    //         ESP_LOGW(SensorManager::Name, "Unable to reflux temp sensor object from file");
-    //     }
-    // }
+    std::vector<uint8_t> bytes(
+         (std::istreambuf_iterator<char>(configIn)),
+         (std::istreambuf_iterator<char>()));
+    ESP_LOGW(SensorManager::Name, "Loaded %zu bytes from file", bytes.size());
 
-    // // Load product out temp sensor
-    // const cJSON* productTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::ProductTempSensorKey);
-    // if (productTemp != nullptr) {
-    //     savedSensor = Ds18b20(productTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-    //     if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-    //         _OWBus.setTempSensor(SensorType::Product, savedSensor);
-    //         ESP_LOGI(SensorManager::Name, "Loaded product outflow temp sensor from file");
-    //     } else {
-    //         ESP_LOGW(SensorManager::Name, "Unable to product temp sensor object from file");
-    //     }
-    // }
+    Readable buffer {};
+    for (uint8_t byte : bytes)
+    {
+        buffer.push(byte);
+    }
 
-    // // Load radiator temp sensor
-    // const cJSON* radiatorTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::RadiatorTempSensorKey);
-    // if (radiatorTemp != nullptr) {
-    //     savedSensor = Ds18b20(radiatorTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-    //     if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-    //         _OWBus.setTempSensor(SensorType::Radiator, savedSensor);
-    //         ESP_LOGI(SensorManager::Name, "Loaded radiator temp sensor from file");
-    //     } else {
-    //         ESP_LOGW(SensorManager::Name, "Unable to radiator temp sensor object from file");
-    //     }
-    // }
-
-    // // Load boiler temp sensor
-    // const cJSON* boilerTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::BoilerTempSensorKey);
-    // if (boilerTemp != nullptr) {
-    //     savedSensor = Ds18b20(boilerTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-    //     if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-    //         _OWBus.setTempSensor(SensorType::Boiler, savedSensor);
-    //         ESP_LOGI(SensorManager::Name, "Loaded boiler temp sensor from file");
-    //     } else {
-    //         ESP_LOGW(SensorManager::Name, "Unable to boiler temp sensor object from file");
-    //     }
-    // }
+    if (_OWBus.deserialize(buffer) != PBRet::SUCCESS)
+    {
+        ESP_LOGW(SensorManager::Name, "Failed to read saved sensors from file");
+        return PBRet::FAILURE;
+    }
 
     return PBRet::SUCCESS;
 }
