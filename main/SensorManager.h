@@ -10,7 +10,7 @@
 // Forward declarations
 class PBOneWire;
 using PBAssignedSensorRegistry = AssignedSensorRegistry<ROM_SIZE, ROM_SIZE, ROM_SIZE, ROM_SIZE, ROM_SIZE>;
-
+using PBFieldBytes = ::EmbeddedProto::FieldBytes<ROM_SIZE>;
 struct SensorManagerConfig
 {
     double dt = 0.0;

@@ -106,7 +106,7 @@ PBRet PBOneWire::_scanForDevices(DeviceVector& devices) const
 
         owb_search_first(_owb, &search_state, &found);
         while (found) {
-            devices.emplace_back(Ds18b20Config(search_state.rom_code, 1.0, 0.0, _cfg.tempSensorResolution, _owb));
+            devices.emplace_back(search_state.rom_code);
             owb_search_next(_owb, &search_state, &found);
         }
         xSemaphoreGive(_OWBMutex);
@@ -118,13 +118,20 @@ PBRet PBOneWire::_scanForDevices(DeviceVector& devices) const
     return PBRet::SUCCESS;
 }
 
-PBRet PBOneWire::_broadcastDeviceAddresses(const DeviceVector& devices) const
+PBRet PBOneWire::_broadcastDeviceAddresses(const DeviceVector& deviceAddresses) const
 {
     // Broadcast the available device addresses to all listening tasks
 
     PBDeviceData deviceData {};
-    for (const Ds18b20& sensor : devices) {
-        deviceData.add_sensors(sensor.toSerialConfig());
+    for (const OneWireBus_ROMCode& address : deviceAddresses) {
+        PBFieldBytes addrBuffer {};
+
+        // Copy address into buffer
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            addrBuffer[i] = address.bytes[i];
+        }
+
+        deviceData.add_addresses(addrBuffer);
     }
 
     PBMessageWrapper wrapped = MessageServer::wrap(deviceData, PBMessageType::DeviceData);
@@ -133,13 +140,13 @@ PBRet PBOneWire::_broadcastDeviceAddresses(const DeviceVector& devices) const
 
 PBRet PBOneWire::broadcastAvailableDevices(void) const
 {
-    DeviceVector devices {};
-    if (_scanForDevices(devices) != PBRet::SUCCESS) {
+    DeviceVector deviceAddresses {};
+    if (_scanForDevices(deviceAddresses) != PBRet::SUCCESS) {
         ESP_LOGW(PBOneWire::Name, "Scan of OneWire bus failed");
         return PBRet::FAILURE;
     }
 
-    return _broadcastDeviceAddresses(devices);
+    return _broadcastDeviceAddresses(deviceAddresses);
 }
 
 PBRet PBOneWire::_oneWireConvert(void) const

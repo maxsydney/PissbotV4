@@ -107,8 +107,6 @@ PBRet SensorManager::_assignSensorCB(std::shared_ptr<PBMessageWrapper> msg)
     // Create a new sensor object and assign it to the requested task. Write
     // new sensor configuration to filesystem
 
-    // TODO: Use protobuf constructor in this method
-
     PBAssignSensorCommand sensorMsg {};
     if (MessageServer::unwrap(*msg, sensorMsg) != PBRet::SUCCESS) {
         ESP_LOGW(SensorManager::Name, "Failed to decode DS18B20Sensor message");
@@ -121,11 +119,15 @@ PBRet SensorManager::_assignSensorCB(std::shared_ptr<PBMessageWrapper> msg)
     // Copy bytes into ROM code
     for (size_t i = 0; i < ROM_SIZE; i++)
     {
-        romCode.bytes[i] = sensorMsg.mutable_sensor().romCode()[i];
+        romCode.bytes[i] = sensorMsg.address()[i];
     }
 
-    const double calibLinear = sensorMsg.mutable_sensor().calibLinear();
-    const double calibOffset = sensorMsg.mutable_sensor().calibOffset();
+    // TODO: Check here if this is a known sensor, and load it's calibration if so
+    //       Otherwise, initialize with default calibration
+
+    // Use default calibration for now
+    const double calibLinear = 1.0;
+    const double calibOffset = 0.0;
 
     const Ds18b20Config config(romCode, calibLinear, calibOffset, DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
 

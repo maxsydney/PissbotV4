@@ -22,7 +22,7 @@
 constexpr uint8_t DEVICE_DATA_LEN = 12;
 using PBDeviceData = DeviceData<DEVICE_DATA_LEN, ROM_SIZE>;
 using SensorMap = std::unordered_map<DS18B20Role, std::shared_ptr<Ds18b20>>;
-using DeviceVector = std::vector<Ds18b20>;
+using DeviceVector = std::vector<OneWireBus_ROMCode>;
 
 struct PBOneWireConfig
 {
@@ -70,7 +70,7 @@ private:
 
     // Utility
     PBRet _scanForDevices(DeviceVector& devices) const;
-    PBRet _broadcastDeviceAddresses(const DeviceVector& devices) const;
+    PBRet _broadcastDeviceAddresses(const DeviceVector& deviceAddresses) const;
     PBRet _readTemperatureSensor(DS18B20Role sensor, double& T) const;
 
     SemaphoreHandle_t _OWBMutex = NULL;
