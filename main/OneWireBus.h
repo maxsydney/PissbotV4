@@ -49,7 +49,6 @@ public:
     const OneWireBus *getOWB(void) const { return _owb; } // Probably not a great idea. Consider removing
 
     // Utility
-    bool isAvailableSensor(const Ds18b20 &sensor) const;
     PBRet serialize(Writable& buffer) const;
     PBRet deserialize(Readable& buffer);
     PBRet broadcastAvailableDevices(void) const;
@@ -72,6 +71,9 @@ private:
     PBRet _scanForDevices(DeviceVector& devices) const;
     PBRet _broadcastDeviceAddresses(const DeviceVector& deviceAddresses) const;
     PBRet _readTemperatureSensor(DS18B20Role sensor, double& T) const;
+    static bool _isAvailableSensor(const PBDS18B20Sensor& sensor, const DeviceVector& deviceAddresses);
+    static bool _romCodesMatch(const OneWireBus_ROMCode& a, const OneWireBus_ROMCode& b);
+    PBRet _createAndAssignSensor(const PBDS18B20Sensor& sensorConfig, DS18B20Role role, DS18B20_RESOLUTION res, const std::string& name);
 
     SemaphoreHandle_t _OWBMutex = NULL;
     OneWireBus *_owb = nullptr;

@@ -49,6 +49,7 @@ PBRet Ds18b20::loadFromSerial(const PBDS18B20Sensor& serialConfig, DS18B20_RESOL
     for (size_t i = 0; i < ROM_SIZE; i++) {
         romCode.bytes[i] = serialConfig.romCode()[i];
     }
+
     const double calibLinear = serialConfig.calibLinear();
     const double calibOffset = serialConfig.calibOffset();
 

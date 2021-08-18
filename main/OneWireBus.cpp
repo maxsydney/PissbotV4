@@ -321,77 +321,95 @@ PBRet PBOneWire::deserialize(Readable& buffer)
         return PBRet::FAILURE;
     }
 
-    std::shared_ptr<Ds18b20> sensor = std::make_shared<Ds18b20>(registry.headTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
-    if (sensor->isConfigured())
-    {
-        ESP_LOGW(PBOneWire::Name, "Reading head sensor from file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
-        }
-        printf("\n");
-        _assignedSensors[DS18B20Role::HEAD_TEMP] = sensor;
+    // Read available devices addresss from bus
+    DeviceVector deviceAddresses {};
+    if (_scanForDevices(deviceAddresses) != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "Scan for available devices failed");
+        return PBRet::FAILURE;
     }
 
-    sensor = std::make_shared<Ds18b20>(registry.refluxTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
-    if (sensor->isConfigured())
-    {
-        ESP_LOGW(PBOneWire::Name, "Reading reflux sensor from file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+    if (_isAvailableSensor(registry.headTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.headTempSensor(), DS18B20Role::HEAD_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "head temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Head temp sensor was available on bus but could not be configured");
         }
-        printf("\n");
-        _assignedSensors[DS18B20Role::REFLUX_TEMP] = sensor;
+    }
+    
+    if (_isAvailableSensor(registry.refluxTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.refluxTempSensor(), DS18B20Role::REFLUX_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "reflux temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Reflux temp sensor was available on bus but could not be configured");
+        }
     }
 
-    sensor = std::make_shared<Ds18b20>(registry.productTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
-    if (sensor->isConfigured())
-    {
-        ESP_LOGW(PBOneWire::Name, "Reading product sensor from file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+    if (_isAvailableSensor(registry.productTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.productTempSensor(), DS18B20Role::PRODUCT_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "product temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Product temp sensor was available on bus but could not be configured");
         }
-        printf("\n");
-        _assignedSensors[DS18B20Role::PRODUCT_TEMP] = sensor;
     }
 
-    sensor = std::make_shared<Ds18b20>(registry.radiatorTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
-    if (sensor->isConfigured())
-    {
-        ESP_LOGW(PBOneWire::Name, "Reading radiator sensor from file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+    if (_isAvailableSensor(registry.radiatorTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.radiatorTempSensor(), DS18B20Role::RADIATOR_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "radiator temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Radiator temp sensor was available on bus but could not be configured");
         }
-        printf("\n");
-        _assignedSensors[DS18B20Role::RADIATOR_TEMP] = sensor;
     }
 
-    sensor = std::make_shared<Ds18b20>(registry.boilerTempSensor(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _owb);
-    if (sensor->isConfigured())
-    {
-        ESP_LOGW(PBOneWire::Name, "Reading boiler sensor from file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+    if (_isAvailableSensor(registry.boilerTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.boilerTempSensor(), DS18B20Role::BOILER_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "boiler temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Boiler temp sensor was available on bus but could not be configured");
         }
-        printf("\n");
-        _assignedSensors[DS18B20Role::BOILER_TEMP] = sensor;
     }
 
     return PBRet::SUCCESS;
 }
 
-// TODO: Pass in available sensors as an argument
-bool PBOneWire::isAvailableSensor(const Ds18b20& sensor) const
+PBRet PBOneWire::_createAndAssignSensor(const PBDS18B20Sensor& sensorConfig, DS18B20Role role, DS18B20_RESOLUTION res, const std::string& name)
+{
+    // Create a sensor object and assign it a role
+    std::shared_ptr<Ds18b20> sensor = std::make_shared<Ds18b20>(sensorConfig, res, _owb);
+
+    if (sensor->isConfigured() == false) {
+        ESP_LOGW(PBOneWire::Name, "Failed to initialize and assign %s sensor", name.c_str());
+        return PBRet::FAILURE;
+    }
+
+    ESP_LOGW(PBOneWire::Name, "Reading %s sensor from file", name.c_str());
+    for (size_t i = 0; i < ROM_SIZE; i++) {
+        printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
+    }
+    printf("\n");
+    _assignedSensors[role] = sensor;
+    return PBRet::SUCCESS;
+}
+
+bool PBOneWire::_isAvailableSensor(const PBDS18B20Sensor& sensor, const DeviceVector& deviceAddresses)
 {
     // Returns true if a ds18b20 sensor exists in the list of available 
     // sensors
 
-    // for (const std::shared_ptr<Ds18b20> available : _availableSensors) {
-    //     if (sensor == *available) {
-    //         return true;
-    //     }
-    // }
+    // Get address from sensor
+    OneWireBus_ROMCode sensorAddr {};
+    for (size_t i = 0; i < ROM_SIZE; i++)
+    {
+        sensorAddr.bytes[i] = sensor.romCode()[i];
+    }
+
+    for (const OneWireBus_ROMCode& addr : deviceAddresses) {
+        if (_romCodesMatch(sensorAddr, addr)) {
+            return true;
+        }
+    }
 
     return false;
+}
+
+bool PBOneWire::_romCodesMatch(const OneWireBus_ROMCode& a, const OneWireBus_ROMCode& b)
+{
+    // Returns true if both rom codes are equivalent
+    return memcmp(a.bytes, b.bytes, ROM_SIZE) == 0;
 }
 
 PBRet PBOneWire::setTempSensor(DS18B20Role type, const std::shared_ptr<Ds18b20>& sensor)
