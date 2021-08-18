@@ -243,55 +243,30 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
     auto it = _assignedSensors.find(DS18B20Role::HEAD_TEMP);
     if (it != _assignedSensors.end())
     {
-        ESP_LOGW(PBOneWire::Name, "Writing head sensor to file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
-        }
-        printf("\n");
         registry.set_headTempSensor((*it->second).toSerialConfig());
     }
 
     it = _assignedSensors.find(DS18B20Role::REFLUX_TEMP);
     if (it != _assignedSensors.end())
     {
-        ESP_LOGW(PBOneWire::Name, "Writing reflux sensor to file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
-        }
-        printf("\n");
         registry.set_refluxTempSensor((*it->second).toSerialConfig());
     }
 
     it = _assignedSensors.find(DS18B20Role::PRODUCT_TEMP);
     if (it != _assignedSensors.end())
     {
-        ESP_LOGW(PBOneWire::Name, "Writing product sensor to file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
-        }
-        printf("\n");
         registry.set_productTempSensor((*it->second).toSerialConfig());
     }
 
     it = _assignedSensors.find(DS18B20Role::RADIATOR_TEMP);
     if (it != _assignedSensors.end())
     {
-        ESP_LOGW(PBOneWire::Name, "Writing radiator sensor to file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
-        }
-        printf("\n");
         registry.set_radiatorTempSensor((*it->second).toSerialConfig());
     }
 
     it = _assignedSensors.find(DS18B20Role::BOILER_TEMP);
     if (it != _assignedSensors.end())
     {
-        ESP_LOGW(PBOneWire::Name, "Writing boiler sensor to file");
-        for (size_t i = 0; i < ROM_SIZE; i++) {
-            printf("0x%X ", (*it->second).getInfo().rom_code.bytes[i]);
-        }
-        printf("\n");
         registry.set_boilerTempSensor((*it->second).toSerialConfig());
     }
 
@@ -310,8 +285,6 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
 PBRet PBOneWire::deserialize(Readable& buffer)
 {
     // Deserialize assigned sensors from buffer
-
-    ESP_LOGW(PBOneWire::Name, "Running PBOneWire deserialize");
 
     PBAssignedSensorRegistry registry {};
     ::EmbeddedProto::Error err = registry.deserialize(buffer);
@@ -376,11 +349,8 @@ PBRet PBOneWire::_createAndAssignSensor(const PBDS18B20Sensor& sensorConfig, DS1
         return PBRet::FAILURE;
     }
 
-    ESP_LOGW(PBOneWire::Name, "Reading %s sensor from file", name.c_str());
-    for (size_t i = 0; i < ROM_SIZE; i++) {
-        printf("0x%X ", sensor->getInfo().rom_code.bytes[i]);
-    }
-    printf("\n");
+    ESP_LOGI(PBOneWire::Name, "Read %s sensor from file", name.c_str());
+
     _assignedSensors[role] = sensor;
     return PBRet::SUCCESS;
 }

@@ -44,8 +44,6 @@ PBRet Ds18b20::loadFromSerial(const PBDS18B20Sensor& serialConfig, DS18B20_RESOL
     // Copy ROM code
     OneWireBus_ROMCode romCode {};
 
-    ESP_LOGW(Ds18b20::Name, "Loading DS18B20 sensor from serial");
-
     for (size_t i = 0; i < ROM_SIZE; i++) {
         romCode.bytes[i] = serialConfig.romCode()[i];
     }

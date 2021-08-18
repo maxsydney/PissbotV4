@@ -280,7 +280,6 @@ PBRet SensorManager::_loadKnownDevices(const char* basePath, const char* partiti
     std::vector<uint8_t> bytes(
          (std::istreambuf_iterator<char>(configIn)),
          (std::istreambuf_iterator<char>()));
-    ESP_LOGW(SensorManager::Name, "Loaded %zu bytes from file", bytes.size());
 
     Readable buffer {};
     for (uint8_t byte : bytes)
