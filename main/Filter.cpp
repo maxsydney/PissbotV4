@@ -92,7 +92,7 @@ PBRet Filter::checkInputs(const FilterConfig& config)
     return err == ESP_OK ? PBRet::SUCCESS : PBRet::FAILURE;
 }
 
-IIRLowpassFilter::IIRLowpassFilter(const IIRLowpassFilterTuning& config)
+IIRLowpassFilter::IIRLowpassFilter(const IIRLowpassFilterConfig& config)
 {
     // Initialize filter
     if (_initFromConfig(config) == PBRet::SUCCESS) {
@@ -106,7 +106,7 @@ IIRLowpassFilter::IIRLowpassFilter(const IIRLowpassFilterTuning& config)
 PBRet IIRLowpassFilter::filter(double val, double& output)
 {
     if (_configured == false) {
-        // ESP_LOGE(IIRLowpassFilter::Name, "IIRLowpassFilter object was not configured");
+        ESP_LOGE(IIRLowpassFilter::Name, "IIRLowpassFilter object was not configured");
         return PBRet::FAILURE;
     }
 
@@ -121,12 +121,9 @@ PBRet IIRLowpassFilter::filter(double val, double& output)
 PBRet IIRLowpassFilter::setCutoffFreq(double Fc)
 {
     // Create dummy config and check that it is valid
-    IIRLowpassFilterTuning filterConfig {};
-    filterConfig.set_sampleFreq(_config.sampleFreq());
-    filterConfig.set_cutoffFreq(Fc);
-
-    printf("Updating cutoff frequency\n");
-    printf("Fs: %f - Fc: %f\n", filterConfig.sampleFreq(), filterConfig.cutoffFreq());
+    IIRLowpassFilterConfig filterConfig {};
+    filterConfig.sampleFreq = _config.sampleFreq;
+    filterConfig.cutoffFreq = Fc;
 
     return _initFromConfig(filterConfig);
 }
@@ -134,83 +131,52 @@ PBRet IIRLowpassFilter::setCutoffFreq(double Fc)
 PBRet IIRLowpassFilter::setSamplingFreq(double Fs)
 {
     // Create dummy config and check that it is valid
-    IIRLowpassFilterTuning filterConfig {};
-    filterConfig.set_sampleFreq(Fs);
-    filterConfig.set_cutoffFreq(_config.cutoffFreq());
-
-    printf("Updating sampling frequency\n");
-    printf("Fs: %f - Fc: %f\n", filterConfig.sampleFreq(), filterConfig.cutoffFreq());
+    IIRLowpassFilterConfig filterConfig {};
+    filterConfig.sampleFreq = Fs;
+    filterConfig.cutoffFreq = _config.cutoffFreq;
 
     return _initFromConfig(filterConfig);
 }
 
-PBRet IIRLowpassFilter::checkInputs(const IIRLowpassFilterTuning& config)
+PBRet IIRLowpassFilter::checkInputs(const IIRLowpassFilterConfig& config)
 {
     esp_err_t err = 0;
 
-    if (Utilities::check(config.sampleFreq()) == false) {
+    if (Utilities::check(config.sampleFreq) == false) {
         ESP_LOGE(IIRLowpassFilter::Name, "Sampling frequency was inf or NaN");
         err |= ESP_FAIL;
     }
 
-    if (config.sampleFreq() <= 0) {
+    if (config.sampleFreq <= 0) {
         ESP_LOGE(IIRLowpassFilter::Name, "Sampling frequency was <= 0");
         err |= ESP_FAIL;
     }
 
-    if (Utilities::check(config.cutoffFreq()) == false) {
+    if (Utilities::check(config.cutoffFreq) == false) {
         ESP_LOGE(IIRLowpassFilter::Name, "Cutoff frequency was inf or NaN");
         err |= ESP_FAIL;
     }
 
-    if (config.cutoffFreq() <= 0) {
+    if (config.cutoffFreq <= 0) {
         ESP_LOGE(IIRLowpassFilter::Name, "Cutoff frequency was <= 0");
         err |= ESP_FAIL;
     }
 
-    if (config.cutoffFreq() >= (config.sampleFreq() / 2)) {
-        ESP_LOGE(IIRLowpassFilter::Name, "Sampling frequency (%.3f) was above the nyquist frequency", config.cutoffFreq());
+    if (config.cutoffFreq >= (config.sampleFreq / 2)) {
+        ESP_LOGE(IIRLowpassFilter::Name, "Sampling frequency (%.3f) was above the nyquist frequency", config.cutoffFreq);
         err |= ESP_FAIL;
     }
 
     return err == ESP_OK ? PBRet::SUCCESS : PBRet::FAILURE;
 }
 
-PBRet IIRLowpassFilter::loadFromJSON(IIRLowpassFilterTuning& cfg, const cJSON* cfgRoot)
-{
-    // if (cfgRoot == nullptr) {
-    //     ESP_LOGW(IIRLowpassFilter::Name, "cfg was null");
-    //     return PBRet::FAILURE;
-    // }
-
-    // // Get sampling frequency
-    // cJSON* FsNode = cJSON_GetObjectItem(cfgRoot, "Fs");
-    // if (cJSON_IsNumber(FsNode)) {
-    //     cfg.Fs = FsNode->valuedouble;
-    // } else {
-    //     ESP_LOGW(IIRLowpassFilter::Name, "Unable to read sampling frequency from JSON");
-    //     return PBRet::FAILURE;
-    // }
-
-    // // Get cutoff frequency
-    // cJSON* FcNode = cJSON_GetObjectItem(cfgRoot, "Fc");
-    // if (cJSON_IsNumber(FcNode)) {
-    //     cfg.sampleFreq() = FcNode->valuedouble;
-    // } else {
-    //     ESP_LOGW(IIRLowpassFilter::Name, "Unable to read cutoff frequency from JSON");
-    //     return PBRet::FAILURE;
-    // }
-
-    return PBRet::SUCCESS;
-}
-
-PBRet IIRLowpassFilter::_initFromConfig(const IIRLowpassFilterTuning& config)
+PBRet IIRLowpassFilter::_initFromConfig(const IIRLowpassFilterConfig& config)
 {
     if (checkInputs(config) == PBRet::SUCCESS) {
         _config = config;
 
         FilterConfig filterConfig {};
-        if (_computeFilterCoefficients(_config.sampleFreq(), _config.cutoffFreq(), filterConfig) != PBRet::SUCCESS) {
+        if (_computeFilterCoefficients(_config.sampleFreq, _config.cutoffFreq, filterConfig) != PBRet::SUCCESS) {
             ESP_LOGW(IIRLowpassFilter::Name, "Failed to compute filter coefficients. Filter was not configured");
             return PBRet::FAILURE;
         }
@@ -221,14 +187,10 @@ PBRet IIRLowpassFilter::_initFromConfig(const IIRLowpassFilterTuning& config)
             return PBRet::FAILURE;
         }
 
-        printf("IIR Filter configured\n");
-        printf("Fs: %f - Fc: %f\n", _config.sampleFreq(), _config.cutoffFreq());
-
-        ESP_LOGW(IIRLowpassFilter::Name, "Invalid inputs. Filter was not configured");
         return PBRet::SUCCESS;
     }
 
-
+    ESP_LOGW(IIRLowpassFilter::Name, "Invalid inputs. Filter was not configured");
     return PBRet::FAILURE;
 }
 

@@ -51,16 +51,16 @@ class Filter
         bool _configured = false;
 };
 
-// class IIRLowpassFilterConfig
-// {
-//     public:
-//         IIRLowpassFilterConfig(void) = default;
-//         IIRLowpassFilterConfig(double samplingFreq, double cutoffFreq)
-//             : Fs(samplingFreq), Fc(cutoffFreq) {}
+class IIRLowpassFilterConfig
+{
+    public:
+        IIRLowpassFilterConfig(void) = default;
+        IIRLowpassFilterConfig(double sampleFreq, double cutoffFreq)
+            : sampleFreq(sampleFreq), cutoffFreq(cutoffFreq) {}
 
-//         double Fs = 0.0;
-//         double Fc = 0.0;
-// };
+        double sampleFreq = 0.0;
+        double cutoffFreq = 0.0;
+};
 
 // Implements a lowpass filter as a single stage biquad
 // https://e2e.ti.com/cfs-file/__key/communityserver-discussions-components-files/6/Configure-the-Coefficients-for-Digital-Biquad-Filters-in-TLV320AIc3xxx-F_2E00__2E00__2E00_.pdf
@@ -70,7 +70,7 @@ class IIRLowpassFilter
     public:
         // Constructors
         IIRLowpassFilter(void) = default;
-        explicit IIRLowpassFilter(const IIRLowpassFilterTuning& config);
+        explicit IIRLowpassFilter(const IIRLowpassFilterConfig& config);
 
         // Update
         PBRet filter(double val, double& output);
@@ -78,22 +78,21 @@ class IIRLowpassFilter
         PBRet setSamplingFreq(double Fs);
 
         // Getters
-        double getCutoffFreq(void) const { return _config.cutoffFreq(); }
-        double getSamplingFreq(void) const { return _config.sampleFreq(); }
+        double getCutoffFreq(void) const { return _config.cutoffFreq; }
+        double getSamplingFreq(void) const { return _config.sampleFreq; }
 
         // Utility
-        static PBRet checkInputs(const IIRLowpassFilterTuning& config);
-        static PBRet loadFromJSON(IIRLowpassFilterTuning& cfg, const cJSON* cfgRoot);
+        static PBRet checkInputs(const IIRLowpassFilterConfig& config);
         bool isConfigured(void) const { return _configured; }
 
         friend class IIRLowpassFilterUT;
     private:
 
-        PBRet _initFromConfig(const IIRLowpassFilterTuning& config);
+        PBRet _initFromConfig(const IIRLowpassFilterConfig& config);
         PBRet _computeFilterCoefficients(double samplingFreq, double cutoffFreq, FilterConfig& filterConfig);
 
         Filter _filter {};
-        IIRLowpassFilterTuning _config {};
+        IIRLowpassFilterConfig _config {};
         bool _configured = false;
 
 };

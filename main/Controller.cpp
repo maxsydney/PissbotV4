@@ -117,16 +117,28 @@ PBRet Controller::_controlSettingsCB(std::shared_ptr<PBMessageWrapper> msg)
 
 PBRet Controller::_controlTuningCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    if (MessageServer::unwrap(*msg, _ctrlTuning) != PBRet::SUCCESS) {
+    ControllerTuning tuning {};
+    if (MessageServer::unwrap(*msg, tuning) != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Failed to decode ");
     }
+
+    // Reinitialize filter
+    IIRLowpassFilterConfig filterConfig(tuning.LPFsampleFreq(), tuning.LPFcutoffFreq());
+    if (IIRLowpassFilter::checkInputs(filterConfig) == PBRet::SUCCESS) {
+        _derivFilter = IIRLowpassFilter(filterConfig);
+    } else {
+        ESP_LOGW(Controller::Name, "Failed to initialize LPF. Filter parameters were invalid");
+        return PBRet::FAILURE;
+    }
+
+    // Can safely update tuning now
+    _ctrlTuning = tuning;
+    ESP_LOGI(Controller::Name, "Controller tuning was updated");
 
     // Write controller tuning to file
     if (saveTuningToFile() != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
     }
-
-    ESP_LOGI(Controller::Name, "Controller tuning was updated");
 
     return PBRet::SUCCESS;
 }
@@ -638,11 +650,11 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
         ESP_LOGW(Controller::Name, "Unable to load controller tuning from file");
     }
 
-    // // Initialize derivative filter from loaded tuning object
-    // _derivFilter = IIRLowpassFilter(_ctrlTuning.LPFTuning());
-    // if (_derivFilter.isConfigured() == false) {
-    //     ESP_LOGW(Controller::Name, "Unable to initialize derivative filter");
-    // }
+    // Initialize derivative filter from loaded tuning object
+    _derivFilter = IIRLowpassFilter(IIRLowpassFilterConfig(_ctrlTuning.LPFsampleFreq(), _ctrlTuning.LPFcutoffFreq()));
+    if (_derivFilter.isConfigured() == false) {
+        ESP_LOGW(Controller::Name, "Unable to initialize derivative filter");
+    }
 
     // Set pumps to active control
     _ctrlSettings.set_refluxPumpMode(PumpMode::ACTIVE_CONTROL);
@@ -702,17 +714,18 @@ PBRet Controller::loadTuningFromFile(void)
         return PBRet::FAILURE;
     }
 
-    // Get file size
-    inFile.seekg(0, std::ios::end);
-    int fileSize = inFile.tellg();
-    inFile.seekg(0, std::ios::beg);
-    
-    // Read into buffer
-    Readable readBuff {};
-    inFile.read((char*) readBuff.get_data_array(), fileSize);
+    std::vector<uint8_t> bytes(
+         (std::istreambuf_iterator<char>(inFile)),
+         (std::istreambuf_iterator<char>()));
+
+    Readable buffer {};
+    for (uint8_t byte : bytes)
+    {
+        buffer.push(byte);
+    }
 
     // Decode into ControllerTuning object
-    ::EmbeddedProto::Error err = _ctrlTuning.deserialize(readBuff);
+    ::EmbeddedProto::Error err = _ctrlTuning.deserialize(buffer);
     if (err != ::EmbeddedProto::Error::NO_ERRORS) {
         ESP_LOGW(Controller::Name, "Failed to deserialize control tuning object (err: %d)", static_cast<int>(err));
         return PBRet::FAILURE;

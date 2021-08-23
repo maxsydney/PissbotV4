@@ -138,20 +138,18 @@ void Webserver::processWebsocketMessage(Websock *ws, char *data, int len, int fl
 {
     // Read in message from websocket and broadcast over network
 
-    uint8_t buf[len] = {0};
-    memcpy(buf, data, len);
-
     Readable readBuffer {};
     for (size_t i = 0; i < len; i++)
     {
-        readBuffer.push(buf[i]);
+        readBuffer.push(static_cast<uint8_t>(data[i]));
     }
 
     PBMessageWrapper wrapped{};
-    EmbeddedProto::Error e = wrapped.deserialize(readBuffer);
+    EmbeddedProto::Error err = wrapped.deserialize(readBuffer);
 
-    if (e != EmbeddedProto::Error::NO_ERRORS) {
-        ESP_LOGW(Webserver::Name, "Failed to decode message. Error: %d", static_cast<int>(e));
+    if (err != EmbeddedProto::Error::NO_ERRORS) {
+        ESP_LOGW(Webserver::Name, "Failed to decode message");
+        MessageServer::printErr(err);
         return;
     }
 
