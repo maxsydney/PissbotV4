@@ -12,20 +12,20 @@ void includeFilterTests(void)
 
 static FilterConfig validConfig(void)
 {
-    FilterConfig cfg {};
-    cfg.num = {1.0};
-    cfg.den = {};
+    FilterConfig config {};
+    config.num = {1.0};
+    config.den = {};
 
-    return cfg;
+    return config;
 }
 
 static IIRLowpassFilterConfig validIIRConfig(void)
 {
-    IIRLowpassFilterConfig cfg {};
-    cfg.Fs = 5.0;
-    cfg.Fc = 1.0;
+    IIRLowpassFilterConfig config {};
+    config.sampleFreq = 5.0;
+    config.cutoffFreq = 1.0;
 
-    return cfg;
+    return config;
 }
 
 class IIRLowpassFilterUT
@@ -225,7 +225,7 @@ TEST_CASE("Constructor", "[IIRLowpassFilter]")
     // Sampling frequency is zero
     {
         IIRLowpassFilterConfig config = validIIRConfig();
-        config.Fs = 0.0;
+        config.sampleFreq = 0.0;
         IIRLowpassFilter filter(config);
         TEST_ASSERT_FALSE(filter.isConfigured());
     }
@@ -233,7 +233,7 @@ TEST_CASE("Constructor", "[IIRLowpassFilter]")
     // Sampling frequency is NaN
     {
         IIRLowpassFilterConfig config = validIIRConfig();
-        config.Fs = NAN;
+        config.sampleFreq = NAN;
         IIRLowpassFilter filter(config);
         TEST_ASSERT_FALSE(filter.isConfigured());
     }
@@ -241,7 +241,7 @@ TEST_CASE("Constructor", "[IIRLowpassFilter]")
     // Sampling frequency is inf
     {
         IIRLowpassFilterConfig config = validIIRConfig();
-        config.Fs = std::numeric_limits<double>::infinity();
+        config.sampleFreq = std::numeric_limits<double>::infinity();
         IIRLowpassFilter filter(config);
         TEST_ASSERT_FALSE(filter.isConfigured());
     }
@@ -249,7 +249,7 @@ TEST_CASE("Constructor", "[IIRLowpassFilter]")
     // Cutoff frequency is zero
     {
         IIRLowpassFilterConfig config = validIIRConfig();
-        config.Fc = 0.0;
+        config.cutoffFreq = 0.0;
         IIRLowpassFilter filter(config);
         TEST_ASSERT_FALSE(filter.isConfigured());
     }
@@ -257,8 +257,8 @@ TEST_CASE("Constructor", "[IIRLowpassFilter]")
     // Cutoff frequency above nyquist limit
     {
         IIRLowpassFilterConfig config = validIIRConfig();
-        config.Fs = 5.0;
-        config.Fc = 5.0;
+        config.sampleFreq = 5.0;
+        config.cutoffFreq = 5.0;
         IIRLowpassFilter filter(config);
         TEST_ASSERT_FALSE(filter.isConfigured());
     }
@@ -266,7 +266,7 @@ TEST_CASE("Constructor", "[IIRLowpassFilter]")
     // Sampling frequency is NaN
     {
         IIRLowpassFilterConfig config = validIIRConfig();
-        config.Fc = NAN;
+        config.cutoffFreq = NAN;
         IIRLowpassFilter filter(config);
         TEST_ASSERT_FALSE(filter.isConfigured());
     }
@@ -274,7 +274,7 @@ TEST_CASE("Constructor", "[IIRLowpassFilter]")
     // Sampling frequency is inf
     {
         IIRLowpassFilterConfig config = validIIRConfig();
-        config.Fc = std::numeric_limits<double>::infinity();
+        config.cutoffFreq = std::numeric_limits<double>::infinity();
         IIRLowpassFilter filter(config);
         TEST_ASSERT_FALSE(filter.isConfigured());
     }
@@ -284,8 +284,8 @@ TEST_CASE("filter", "[IIRLowpassFilter]")
 {
     // LPF step response
     IIRLowpassFilterConfig config {};
-    config.Fs = 5.0;
-    config.Fc = 0.5;
+    config.sampleFreq = 5.0;
+    config.cutoffFreq = 0.5;
     IIRLowpassFilter filter(config);
     TEST_ASSERT_EQUAL(true, filter.isConfigured());
     const double tol = 1e-9;
@@ -319,7 +319,7 @@ TEST_CASE("setCutoffFrequency", "[IIRLowpassFilter]")
         IIRLowpassFilter filter(config);
         TEST_ASSERT_TRUE(filter.isConfigured());
         TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setCutoffFreq(-1.0));
-        TEST_ASSERT_EQUAL(config.Fc, filter.getCutoffFreq());
+        TEST_ASSERT_EQUAL(config.cutoffFreq, filter.getCutoffFreq());
     }
 
     // Cutoff frequency is 0
@@ -327,15 +327,15 @@ TEST_CASE("setCutoffFrequency", "[IIRLowpassFilter]")
         IIRLowpassFilter filter(config);
         TEST_ASSERT_TRUE(filter.isConfigured());
         TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setCutoffFreq(0.0));
-        TEST_ASSERT_EQUAL(config.Fc, filter.getCutoffFreq());
+        TEST_ASSERT_EQUAL(config.cutoffFreq, filter.getCutoffFreq());
     }
 
     // Cutoff frequency above nyquist limit
     {
         IIRLowpassFilter filter(config);
         TEST_ASSERT_TRUE(filter.isConfigured());
-        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setCutoffFreq(config.Fs));
-        TEST_ASSERT_EQUAL(config.Fc, filter.getCutoffFreq());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setCutoffFreq(config.sampleFreq));
+        TEST_ASSERT_EQUAL(config.cutoffFreq, filter.getCutoffFreq());
     }
 
     // Cutoff frequency is NAN
@@ -343,11 +343,11 @@ TEST_CASE("setCutoffFrequency", "[IIRLowpassFilter]")
         IIRLowpassFilter filter(config);
         TEST_ASSERT_TRUE(filter.isConfigured());
         TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setCutoffFreq(NAN));
-        TEST_ASSERT_EQUAL(config.Fc, filter.getCutoffFreq());
+        TEST_ASSERT_EQUAL(config.cutoffFreq, filter.getCutoffFreq());
     }
 }
 
-TEST_CASE("setSamplingFrequency", "[IIRLowpassFilter]")
+TEST_CASE("setSampleFrequency", "[IIRLowpassFilter]")
 {
     const IIRLowpassFilterConfig config = validIIRConfig();
 
@@ -356,40 +356,40 @@ TEST_CASE("setSamplingFrequency", "[IIRLowpassFilter]")
         IIRLowpassFilter filter(config);
         TEST_ASSERT_TRUE(filter.isConfigured());
         const double samplingFrequency = 5.0;
-        TEST_ASSERT_EQUAL(PBRet::SUCCESS, filter.setSamplingFreq(samplingFrequency));
-        TEST_ASSERT_EQUAL(samplingFrequency, filter.getSamplingFreq());
+        TEST_ASSERT_EQUAL(PBRet::SUCCESS, filter.setSampleFreq(samplingFrequency));
+        TEST_ASSERT_EQUAL(samplingFrequency, filter.getSampleFreq());
     }
 
     // Negative sampling frequency
     {
         IIRLowpassFilter filter(config);
         TEST_ASSERT_TRUE(filter.isConfigured());
-        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSamplingFreq(-1.0));
-        TEST_ASSERT_EQUAL(config.Fs, filter.getSamplingFreq());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSampleFreq(-1.0));
+        TEST_ASSERT_EQUAL(config.sampleFreq, filter.getSampleFreq());
     }
 
     // Sampling frequency is 0
     {
         IIRLowpassFilter filter(config);
         TEST_ASSERT_TRUE(filter.isConfigured());
-        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSamplingFreq(0.0));
-        TEST_ASSERT_EQUAL(config.Fs, filter.getSamplingFreq());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSampleFreq(0.0));
+        TEST_ASSERT_EQUAL(config.sampleFreq, filter.getSampleFreq());
     }
 
     // Sampling frequency puts cutoff freq above nyquist limit
     {
         IIRLowpassFilter filter(config);
         TEST_ASSERT_TRUE(filter.isConfigured());
-        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSamplingFreq(config.Fc));
-        TEST_ASSERT_EQUAL(config.Fs, filter.getSamplingFreq());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSampleFreq(config.cutoffFreq));
+        TEST_ASSERT_EQUAL(config.sampleFreq, filter.getSampleFreq());
     }
 
     // Sampling frequency is NAN
     {
         IIRLowpassFilter filter(config);
         TEST_ASSERT_TRUE(filter.isConfigured());
-        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSamplingFreq(NAN));
-        TEST_ASSERT_EQUAL(config.Fs, filter.getSamplingFreq());
+        TEST_ASSERT_EQUAL(PBRet::FAILURE, filter.setSampleFreq(NAN));
+        TEST_ASSERT_EQUAL(config.sampleFreq, filter.getSampleFreq());
     }
 }
 

@@ -75,11 +75,11 @@ class IIRLowpassFilter
         // Update
         PBRet filter(double val, double& output);
         PBRet setCutoffFreq(double Fc);
-        PBRet setSamplingFreq(double Fs);
+        PBRet setSampleFreq(double Fs);
 
         // Getters
         double getCutoffFreq(void) const { return _config.cutoffFreq; }
-        double getSamplingFreq(void) const { return _config.sampleFreq; }
+        double getSampleFreq(void) const { return _config.sampleFreq; }
 
         // Utility
         static PBRet checkInputs(const IIRLowpassFilterConfig& config);

@@ -38,7 +38,7 @@ void SensorManager::taskMain(void)
     MessageServer::registerTask(sub);
 
     // Set update frequency
-    const TickType_t timestep =  _cfg.dt * 1000 / portTICK_PERIOD_MS;      // TODO: Define method for converting time
+    const TickType_t timestep =  _cfg.dt * 1000 / portTICK_PERIOD_MS;
     portTickType xLastWakeTime = xTaskGetTickCount();
 
     while (true) {

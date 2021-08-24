@@ -128,7 +128,7 @@ PBRet IIRLowpassFilter::setCutoffFreq(double Fc)
     return _initFromConfig(filterConfig);
 }
 
-PBRet IIRLowpassFilter::setSamplingFreq(double Fs)
+PBRet IIRLowpassFilter::setSampleFreq(double Fs)
 {
     // Create dummy config and check that it is valid
     IIRLowpassFilterConfig filterConfig {};
