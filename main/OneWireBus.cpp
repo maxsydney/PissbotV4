@@ -134,7 +134,7 @@ PBRet PBOneWire::_broadcastDeviceAddresses(const DeviceVector& deviceAddresses) 
         deviceData.add_addresses(addrBuffer);
     }
 
-    PBMessageWrapper wrapped = MessageServer::wrap(deviceData, PBMessageType::DeviceData);
+    PBMessageWrapper wrapped = MessageServer::wrap(deviceData, PBMessageType::DeviceData, ID);
     return MessageServer::broadcastMessage(wrapped);
 }
 

@@ -1,5 +1,4 @@
 #include "SensorManager.h"
-#include "MessageDefs.h"
 #include "esp_spiffs.h"
 #include "Filesystem.h"
 #include "Thermo.h"
@@ -10,10 +9,14 @@
 #include <iostream>
 
 SensorManager::SensorManager(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const SensorManagerConfig& cfg)
-    : Task(SensorManager::Name, priority, stackDepth, coreID), _refluxFlowmeter(cfg.refluxFlowConfig), _productFlowmeter(cfg.productFlowConfig)
+    : Task(SensorManager::Name, priority, stackDepth, coreID), _refluxFlowmeter(cfg.refluxFlowConfig), 
+      _productFlowmeter(cfg.productFlowConfig)
 {
     // Setup callback table
     _setupCBTable();
+
+    // Set message ID
+    Task::_ID = MessageOrigin::SensorManager;
 
     // Initialize SensorManager
     if (_initFromParams(cfg) == PBRet::SUCCESS) {
@@ -206,7 +209,7 @@ PBRet SensorManager::_initOneWireBus(const SensorManagerConfig &cfg)
 PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
 {
     // Send a temperature data message to the queue
-    PBMessageWrapper wrapped = MessageServer::wrap(Tdata, PBMessageType::TemperatureData);
+    PBMessageWrapper wrapped = MessageServer::wrap(Tdata, PBMessageType::TemperatureData, _ID);
 
     return MessageServer::broadcastMessage(wrapped);
 }
@@ -214,7 +217,7 @@ PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
 PBRet SensorManager::_broadcastFlowrates(const FlowrateData& flowData) const
 {
     // Send a temperature data message to the queue
-    PBMessageWrapper wrapped = MessageServer::wrap(flowData, PBMessageType::FlowrateData);
+    PBMessageWrapper wrapped = MessageServer::wrap(flowData, PBMessageType::FlowrateData, _ID);
 
     return MessageServer::broadcastMessage(wrapped);
 }
@@ -222,7 +225,7 @@ PBRet SensorManager::_broadcastFlowrates(const FlowrateData& flowData) const
 PBRet SensorManager::_broadcastConcentrations(const ConcentrationData& concData) const
 {
     // Send a temperature data message to the queue
-    PBMessageWrapper wrapped = MessageServer::wrap(concData, PBMessageType::ConcentrationData);
+    PBMessageWrapper wrapped = MessageServer::wrap(concData, PBMessageType::ConcentrationData, _ID);
 
     return MessageServer::broadcastMessage(wrapped);
 }

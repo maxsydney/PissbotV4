@@ -1,7 +1,8 @@
 #ifndef SENSOR_MANAGER_H
 #define SENSOR_MANAGER_H
 
-#include "SensorManagerMessaging.h"
+#include "Generated/SensorManagerMessaging.h"
+#include "Generated/MessageBase.h"
 #include "PBCommon.h"
 #include "CppTask.h"
 #include "OneWireBus.h"

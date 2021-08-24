@@ -1,5 +1,4 @@
 #include "MessageServer.h"
-#include "MessageDefs.h"
 #include "IO/Writable.h"
 #include "IO/Readable.h"
 #include <esp_log.h>
@@ -42,7 +41,7 @@ bool Subscriber::isSubscribed(PBMessageType msgType) const
     return (_subscriptions.find(msgType) != _subscriptions.end());
 }
 
-PBMessageWrapper MessageServer::wrap(const ::EmbeddedProto::MessageInterface& message, PBMessageType type)
+PBMessageWrapper MessageServer::wrap(const ::EmbeddedProto::MessageInterface& message, PBMessageType type, MessageOrigin origin)
 {
     // Wrap a protobuf message in a PBMessageWrapper to transmit out over the network
 
@@ -50,6 +49,7 @@ PBMessageWrapper MessageServer::wrap(const ::EmbeddedProto::MessageInterface& me
     // TODO: Auto type association?
     PBMessageWrapper wrapper {};
     wrapper.set_type(type);
+    wrapper.set_origin(origin);
 
     // Serialize the message to a buffer
     Writable buffer {};

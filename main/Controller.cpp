@@ -6,13 +6,15 @@
 #include <sstream>
 #include "IO/Writable.h"
 #include "IO/Readable.h"
-#include "MessageDefs.h"
 
 Controller::Controller(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const ControllerConfig& cfg)
     : Task(Controller::Name, priority, stackDepth, coreID)
 {
     // Setup callback table
     _setupCBTable();
+
+    // Set message ID
+    Task::_ID = MessageOrigin::Controller;
 
     // Initialize controller
     if (_initFromParams(cfg) == PBRet::SUCCESS) {
@@ -78,27 +80,26 @@ void Controller::taskMain(void)
 PBRet Controller::_temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Store the current temperature estimate
-
     return MessageServer::unwrap(*msg, _currentTemp); 
 }
 
 PBRet Controller::_controlCommandCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    // std::shared_ptr<ControlCommand> cmd = std::static_pointer_cast<ControlCommand>(msg);
-    // _peripheralState = ControlCommand(*cmd);
+    if (MessageServer::unwrap(*msg, _peripheralState) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to decode control command message");
+    }
 
-    // // Update PWM drivers
-    // if (_LPElementPWM.setDutyCycle(_peripheralState.LPElementDutyCycle) != PBRet::SUCCESS) {
-    //     ESP_LOGW(Controller::Name, "Failed to update LPElement duty cycle");
-    //     return PBRet::FAILURE;
-    // }
+    // Update PWM drivers
+    if (_LPElementPWM.setDutyCycle(_peripheralState.LPElementDutyCycle()) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to update LPElement duty cycle");
+        return PBRet::FAILURE;
+    }
 
-    // if (_HPElementPWM.setDutyCycle(_peripheralState.HPElementDutyCycle) != PBRet::SUCCESS) {
-    //     ESP_LOGW(Controller::Name, "Failed to update HPElement duty cycle");
-    //     return PBRet::FAILURE;
-    // }
+    if (_HPElementPWM.setDutyCycle(_peripheralState.HPElementDutyCycle()) != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to update HPElement duty cycle");
+        return PBRet::FAILURE;
+    }
 
-    // ESP_LOGI(Controller::Name, "Controller peripheral states were updated");
     return PBRet::SUCCESS;
 }
 
@@ -138,6 +139,10 @@ PBRet Controller::_controlTuningCB(std::shared_ptr<PBMessageWrapper> msg)
     // Write controller tuning to file
     if (saveTuningToFile() != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Unable to save controller tuning to file");
+    }
+
+    if (_broadcastControllerTuning() != PBRet::SUCCESS) {
+        ESP_LOGW(Controller::Name, "Failed to broadcast controller tuning");
     }
 
     return PBRet::SUCCESS;
@@ -205,7 +210,9 @@ PBRet Controller::_setupCBTable(void)
 PBRet Controller::_broadcastControllerTuning(void) const
 {
     // Send a controller message to the queue
-    PBMessageWrapper wrapped = MessageServer::wrap(_ctrlTuning, PBMessageType::ControllerTuning);
+    PBMessageWrapper wrapped = MessageServer::wrap(_ctrlTuning, PBMessageType::ControllerTuning, _ID);
+
+    ESP_LOGW(Controller::Name, "Broadcasting controller tuning");
 
     return MessageServer::broadcastMessage(wrapped);
 }
@@ -213,7 +220,7 @@ PBRet Controller::_broadcastControllerTuning(void) const
 PBRet Controller::_broadcastControllerSettings(void) const
 {
     // Send a controller settings message to the queue
-    PBMessageWrapper wrapped = MessageServer::wrap(_ctrlSettings, PBMessageType::ControllerSettings);
+    PBMessageWrapper wrapped = MessageServer::wrap(_ctrlSettings, PBMessageType::ControllerSettings, _ID);
 
     return MessageServer::broadcastMessage(wrapped);
 }
@@ -221,8 +228,7 @@ PBRet Controller::_broadcastControllerSettings(void) const
 PBRet Controller::_broadcastControllerPeripheralState(void) const
 {
     // Send a Control command message to the queue
-    // TODO: Does this loopback? Separate commands from state
-    PBMessageWrapper wrapped = MessageServer::wrap(_peripheralState, PBMessageType::ControllerCommand);
+    PBMessageWrapper wrapped = MessageServer::wrap(_peripheralState, PBMessageType::ControllerCommand, _ID);
 
     return MessageServer::broadcastMessage(wrapped);
 }
@@ -237,7 +243,7 @@ PBRet Controller::_broadcastControllerState(void) const
     state.set_totalOutput(_currentOutput);
     state.set_timeStamp(esp_timer_get_time());
 
-    PBMessageWrapper wrapped = MessageServer::wrap(state, PBMessageType::ControllerState);
+    PBMessageWrapper wrapped = MessageServer::wrap(state, PBMessageType::ControllerState, _ID);
 
     return MessageServer::broadcastMessage(wrapped);
 }

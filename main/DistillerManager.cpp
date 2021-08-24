@@ -2,7 +2,6 @@
 #include "DistillerManager.h"
 #include "WifiManager.h"
 #include "MessageServer.h"
-#include "MessageDefs.h"
 #include "nvs_flash.h"
 #include "Generated/WebserverMessaging.h"
 
@@ -33,6 +32,9 @@ DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth,
     // Setup callback table
     _setupCBTable();
 
+    // Set message ID
+    Task::_ID = MessageOrigin::DistillerManager;
+
     // Init from params
     if (_initFromParams(cfg) == PBRet::SUCCESS) {
         ESP_LOGI(DistillerManager::Name, "DistillerManager configured!");
@@ -44,18 +46,6 @@ DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth,
 
 void DistillerManager::taskMain(void)
 {
-    // std::set<PBMessageType> subscriptions = { PBMessageType::SocketLog };
-    // Subscriber sub(DistillerManager::Name, _GPQueue, subscriptions);
-    // MessageServer::registerTask(sub);
-
-    // Create a SocketLog message and broadcast it
-    std::string testMessage("This is a test");
-    PBSocketLogMessage msg {};
-    msg.mutable_logMsg().set(testMessage.c_str(), testMessage.length());
-    PBMessageWrapper wrapped = MessageServer::wrap(msg, PBMessageType::SocketLog);
-    MessageServer::broadcastMessage(wrapped);
-    ESP_LOGI(DistillerManager::Name, "Broadcast test socket log message!");
-
     while(true) {
         _processQueue();
 

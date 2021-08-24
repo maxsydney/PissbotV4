@@ -7,7 +7,6 @@
 #include "Pump.h"
 #include "SlowPWM.h"
 #include "Filter.h"
-#include "ControllerMessaging.h"
 #include "Generated/MessageBase.h"
 #include "Generated/ControllerMessaging.h"
 

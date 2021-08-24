@@ -20,6 +20,9 @@ Webserver::Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t co
     // Setup callback table
     _setupCBTable();
 
+    // Set message ID
+    Task::_ID = MessageOrigin::Webserver;
+
     // Init from params
     if (_initFromParams(cfg) == PBRet::SUCCESS) {
         ESP_LOGI(Webserver::Name, "Webserver configured!");
@@ -264,7 +267,7 @@ PBRet Webserver::_requestControllerTuning(void)
     ControllerDataRequest request {};
     request.set_requestType(ControllerDataRequestType::TUNING);
 
-    PBMessageWrapper wrapped = MessageServer::wrap(request, PBMessageType::ControllerDataRequest);
+    PBMessageWrapper wrapped = MessageServer::wrap(request, PBMessageType::ControllerDataRequest, MessageOrigin::Webserver);
     ESP_LOGI(Webserver::Name, "Requesting controller tuning");
 
     return MessageServer::broadcastMessage(wrapped);
@@ -277,7 +280,7 @@ PBRet Webserver::_requestControllerSettings(void)
 
     ControllerDataRequest request {};
     request.set_requestType(ControllerDataRequestType::SETTINGS);
-    PBMessageWrapper wrapped = MessageServer::wrap(request, PBMessageType::ControllerDataRequest);
+    PBMessageWrapper wrapped = MessageServer::wrap(request, PBMessageType::ControllerDataRequest, MessageOrigin::Webserver);
 
     return MessageServer::broadcastMessage(wrapped);
 }
@@ -288,7 +291,7 @@ PBRet Webserver::_requestControllerPeripheralState(void)
     // 
     ControllerDataRequest request {};
     request.set_requestType(ControllerDataRequestType::PERIPHERAL_STATE);
-    PBMessageWrapper wrapped = MessageServer::wrap(request, PBMessageType::ControllerDataRequest);
+    PBMessageWrapper wrapped = MessageServer::wrap(request, PBMessageType::ControllerDataRequest, MessageOrigin::Webserver);
 
     return MessageServer::broadcastMessage(wrapped);
 }
@@ -298,7 +301,7 @@ PBRet Webserver::socketLog(const std::string& logMsg)
     // Broadcast a logged message to all available sockets
     PBSocketLogMessage socketLog {};
     socketLog.mutable_logMsg().set(logMsg.c_str(), logMsg.length());
-    PBMessageWrapper wrapped = MessageServer::wrap(socketLog, PBMessageType::SocketLog);
+    PBMessageWrapper wrapped = MessageServer::wrap(socketLog, PBMessageType::SocketLog, MessageOrigin::Log);
     
     return MessageServer::broadcastMessage(wrapped);
 }

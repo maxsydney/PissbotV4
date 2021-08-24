@@ -7,7 +7,7 @@
 #include "WebServer.h"
 #include "driver/gpio.h"
 #include "SensorManager.h"
-#include "MessageDefs.h"
+#include "Generated/MessageBase.h"
 
 // Main system manager class. This class is a singleton and can be accessed
 // using the DistillerManager::getInstance() method. The DistillerManager is
@@ -30,6 +30,7 @@ class DistillerManager : public Task
 {
     static constexpr const char* Name = "Distiller Manager";
     static constexpr const double HeartBeatPeriod = 5000;   // [ms]
+    static constexpr MessageOrigin ID = MessageOrigin::DistillerManager;
 
     public:
         // Delete copy and assignment constructors

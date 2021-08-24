@@ -110,7 +110,8 @@
         "coroutine": "cpp",
         "numbers": "cpp",
         "semaphore": "cpp",
-        "source_location": "cpp"
+        "source_location": "cpp",
+        "filesystem": "cpp"
     },
     "python.linting.pylintEnabled": false,
     "python.pythonPath": "/usr/bin/python3"

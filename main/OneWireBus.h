@@ -15,6 +15,7 @@
 #include "IO/Readable.h"
 #include "Generated/SensorManagerMessaging.h"
 #include "Generated/DS18B20Messaging.h"
+#include "Generated/MessageBase.h"
 
 // C++ wrapper around the esp32-owb library
 // https://github.com/DavidAntliff/esp32-owb
@@ -32,6 +33,7 @@ struct PBOneWireConfig
 
 class PBOneWire
 {
+    static constexpr MessageOrigin ID = MessageOrigin::OneWireBus;
     static constexpr const char *Name = "PBOneWire";
     static constexpr double MaxValidTemp = 110.0;
     static constexpr double MinValidTemp = -10.0;

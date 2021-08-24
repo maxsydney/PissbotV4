@@ -10,6 +10,7 @@
 #include "libesphttpd/httpd.h"
 #include "libesphttpd/httpd-freertos.h"
 #include "Generated/WebserverMessaging.h"
+#include "Generated/MessageBase.h"
 
 static constexpr uint32_t socketLogLength = 128;
 using PBSocketLogMessage = SocketLogMessage<socketLogLength>;
@@ -25,12 +26,6 @@ class Webserver : public Task
 {
     static constexpr const char* Name = "Webserver";
     static constexpr int LISTEN_PORT = 80;
-    static constexpr const char* CtrlTuningStr = "ControlTuning";
-    static constexpr const char* CtrlSettingsStr = "ControlSettings";
-    static constexpr const char* CommandStr = "Command";
-    static constexpr const char* BroadcastDevices = "BroadcastDevices";
-    static constexpr const char* AssignSensor = "AssignSensor";
-    static constexpr const char* PeripheralState = "PeripheralState";
 
     public:
         Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg);

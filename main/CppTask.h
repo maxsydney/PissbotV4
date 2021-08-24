@@ -28,8 +28,6 @@ class Task
 
         void start(void);
         xTaskHandle getTaskHandle(void) const { return _taskHandle; }
-
-    protected:
     
         // Interface methods
         virtual PBRet _setupCBTable(void) = 0;
@@ -41,6 +39,9 @@ class Task
         // queue, this table maps the message type to a callback function
         // to process it
         CBTable _cbTable {};
+
+        // Message ID
+        MessageOrigin _ID = MessageOrigin::OriginUnknown;
 
         // Configuration data
         xTaskHandle _taskHandle {};
