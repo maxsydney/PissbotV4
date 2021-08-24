@@ -151,10 +151,7 @@ PBRet PBOneWire::broadcastAvailableDevices(void) const
 
 PBRet PBOneWire::_oneWireConvert(void) const
 {
-    // Command all temperature sensors on the bus to convert temperatures.
-    // NOTE: This method is not protected by a semaphore. If you are calling
-    //       this method, it is your responsibility to make sure that the bus
-    //       is not locked out
+    // Command all temperature sensors on the bus to convert temperatures
 
     if (_assignedSensors.size() == 0) {
         ESP_LOGW(PBOneWire::Name, "No assigned devices. Cannot convert temperatures");
