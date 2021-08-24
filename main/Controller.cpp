@@ -212,8 +212,6 @@ PBRet Controller::_broadcastControllerTuning(void) const
     // Send a controller message to the queue
     PBMessageWrapper wrapped = MessageServer::wrap(_ctrlTuning, PBMessageType::ControllerTuning, _ID);
 
-    ESP_LOGW(Controller::Name, "Broadcasting controller tuning");
-
     return MessageServer::broadcastMessage(wrapped);
 }
 
