@@ -6,7 +6,6 @@
 #include "SensorManager.h"
 #include "Controller.h"
 #include "libespfs/espfs.h"
-// #include "espfs_image.h"
 #include "libesphttpd/httpd-espfs.h"
 #include "esp_netif.h"
 #include "libesphttpd/route.h"
