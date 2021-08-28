@@ -13,6 +13,6 @@ idf_component_register(
     REQUIRES ${DEPENDENCIES}
 )
 
-target_compile_options(${COMPONENT_LIB} PRIVATE -std=c++17)
+target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++14)
 
 spiffs_create_partition_image(config ../Config FLASH_IN_PROJECT)

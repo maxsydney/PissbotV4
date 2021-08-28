@@ -5,14 +5,15 @@
 #include "SensorManager.h"
 #include "SensorManager.h"
 #include "Controller.h"
-#include "espfs.h"
-#include "espfs_image.h"
+#include "libespfs/espfs.h"
 #include "libesphttpd/httpd-espfs.h"
 #include "esp_netif.h"
 #include "libesphttpd/route.h"
 #include "IO/Readable.h"
 #include "IO/Writable.h"
 #include "cJSON.h"
+
+extern const uint8_t espfs_bin[];
 
 Webserver::Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg)
     : Task(Webserver::Name, priority, stackDepth, coreID)
@@ -179,9 +180,9 @@ PBRet Webserver::_startupWebserver(const WebserverConfig& cfg)
     }
 
     // Configure webserver
-	EspFsConfig espfs_conf {};
-    espfs_conf.memAddr = espfs_image_bin;
-	EspFs* fs = espFsInit(&espfs_conf);
+	espfs_config_t espfs_conf {};
+    espfs_conf.addr = espfs_bin;
+	espfs_fs_t* fs = espfs_init(&espfs_conf);
     if (fs == nullptr) {
         ESP_LOGE(Webserver::Name, "Failed to initialise espfs file system");
         return PBRet::FAILURE;

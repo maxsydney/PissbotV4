@@ -3,7 +3,7 @@
 #include "cJSON.h"
 #include <fstream>
 #include <sstream>
-#include <dirent.h>
+// #include <dirent.h>
 
 PBRet ConfigManager::loadConfig(const std::string& cfgPath, DistillerConfig& cfg)
 {

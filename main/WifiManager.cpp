@@ -106,7 +106,7 @@ PBRet WifiManager::connect(const char* ssid, const char* password)
 
     esp_err_t err = ESP_OK;
     err |= esp_wifi_set_mode(WIFI_MODE_STA);
-    err |= esp_wifi_set_config(ESP_IF_WIFI_STA, &wifiConfig);
+    err |= esp_wifi_set_config(WIFI_IF_STA, &wifiConfig);
     err |= esp_wifi_start();
     if (err != ESP_OK) {
         ESP_LOGW(WifiManager::Name, "Failed to configure WiFi driver");

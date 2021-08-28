@@ -6,13 +6,14 @@
 	url = https://github.com/DavidAntliff/esp32-owb.git
 [submodule "components/libesphttpd"]
 	path = components/libesphttpd
-	url = https://github.com/chmorgan/libesphttpd.git
+	url = git@github.com:maxsydney/libesphttpd.git
 [submodule "components/espfs"]
 	path = components/espfs
-	url = https://github.com/jkent/esp32-espfs.git
+	url = git@github.com:maxsydney/esp32-espfs.git
 [submodule "components/EmbeddedProto"]
 	path = lib/EmbeddedProto
 	url = https://github.com/Embedded-AMS/EmbeddedProto.git
 [submodule "components/PBProtoBuf"]
 	path = lib/PBProtoBuf
 	url = https://github.com/maxsydney/PBProtoBuf.git
+

@@ -87,7 +87,7 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
     WifiManager::connect("PBLink", "pissbot1");
 
     // Initialize Controller
-    _controller = std::make_unique<Controller> (7, 8192, 1, cfg.ctrlConfig);
+    _controller = std::make_shared<Controller> (7, 8192, 1, cfg.ctrlConfig);
     if (_controller->isConfigured()) {
         _controller->begin();
     } else {
@@ -95,7 +95,7 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
     }
 
     // Initialize SensorManager
-    _sensorManager = std::make_unique<SensorManager> (7, 8192, 0, cfg.sensorManagerConfig);
+    _sensorManager = std::make_shared<SensorManager> (7, 8192, 0, cfg.sensorManagerConfig);
     if (_sensorManager->isConfigured()) {
         _sensorManager->begin();
     } else {
@@ -103,7 +103,7 @@ PBRet DistillerManager::_initFromParams(const DistillerConfig& cfg)
     }
 
     // Initialize Webserver
-    _webserver = std::make_unique<Webserver> (7, 8192, 1, cfg.webserverConfig);
+    _webserver = std::make_shared<Webserver> (7, 8192, 1, cfg.webserverConfig);
     if (_webserver->isConfigured()) {
         _webserver->begin();
     } else {

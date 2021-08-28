@@ -70,9 +70,11 @@ class DistillerManager : public Task
         bool _configured = false;
         double _lastHeartbeatTime = 0.0;     // [ms]
         gpio_num_t _LEDGPIO = (gpio_num_t) GPIO_NUM_NC;
-        std::unique_ptr<Webserver> _webserver;
-        std::unique_ptr<Controller> _controller;
-        std::unique_ptr<SensorManager> _sensorManager;
+
+        // TODO: Using shared ptr because make_unique not available in c++11
+        std::shared_ptr<Webserver> _webserver;
+        std::shared_ptr<Controller> _controller;
+        std::shared_ptr<SensorManager> _sensorManager;
 };
 
 #endif // MAIN_DISTILLERMANAGER_H
