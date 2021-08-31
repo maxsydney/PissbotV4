@@ -1,21 +1,20 @@
-FROM espressif/idf:release-v4.1
+FROM espressif/idf:release-v4.3
 
-RUN apt-get update -y && apt-get install -y xxd && apt-get install -y pkg-config
+RUN apt-get update -y && apt-get install -y
 
-RUN git clone --recursive https://github.com/maxsydney/qemu.git
+ENV NVM_VERSION v0.38.0
+ENV NODE_VERSION v16.8.0
+ENV NVM_DIR /usr/local/nvm
+RUN mkdir $NVM_DIR
+RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
 
-RUN apt-get install -y libglib2.0-dev
+ENV NODE_PATH $NVM_DIR/v$NODE_VERSION/lib/node_modules
+ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
-RUN apt-get install -y libpixman-1-dev
-
-run mkdir /qemu/build
-
-WORKDIR "/qemu/build"
-
-RUN ../configure --target-list=xtensa-softmmu \
-    --enable-debug --enable-sanitizers \
-    --disable-strip --disable-user \
-    --disable-capstone --disable-vnc \
-    --disable-sdl --disable-gtk
-
-RUN make 
+RUN echo "source $NVM_DIR/nvm.sh && \
+    nvm install $NODE_VERSION && \
+    nvm alias default $NODE_VERSION && \
+    nvm use default" | bash
+    
+# Python dependencies
+RUN pip3 install heatshrink2 hiyapyco  
