@@ -137,7 +137,7 @@ TEST_CASE("interpLinear", "[Utilities]")
     }
 }
 
-TEST_CASE("Check double", "[Utilities]")
+TEST_CASE("CheckDouble", "[Utilities]")
 {
     // Check valid double
     TEST_ASSERT_TRUE(Utilities::check(0.0));
@@ -149,7 +149,7 @@ TEST_CASE("Check double", "[Utilities]")
     TEST_ASSERT_FALSE(Utilities::check(std::numeric_limits<double>::infinity()));
 }
 
-TEST_CASE("Check double vector", "[Utilities]")
+TEST_CASE("CheckDoubleVector", "[Utilities]")
 {
     // Check valid vector
     {

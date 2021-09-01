@@ -12,7 +12,7 @@ void includeThermoTests(void)
     // Dummy function to force discovery of unit tests by main test runner
 }
 
-TEST_CASE("Antoine Equation Ethanol", "[Thermo]")
+TEST_CASE("AntoineEquationEthanol", "[Thermo]")
 {
     // Test cases generated from
     // http://ddbonline.ddbst.com/computeVapourPressureCalculation/computeVapourPressureCalculationCGI.exe
@@ -35,7 +35,7 @@ TEST_CASE("Antoine Equation Ethanol", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 112.767, Thermo::computeVapourPressureAntoine(AntoineModels::Ethanol, 81.0));
 }
 
-TEST_CASE("Antoine Equation H20", "[Thermo]")
+TEST_CASE("AntoineEquationH20", "[Thermo]")
 {
     // Test cases generated from
     // http://ddbonline.ddbst.com/computeVapourPressureCalculation/computeVapourPressureCalculationCGI.exe
@@ -57,7 +57,7 @@ TEST_CASE("Antoine Equation H20", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 70.0298, Thermo::computeVapourPressureAntoine(AntoineModels::H20, 90.0));
 }
 
-TEST_CASE("Vapour Pressure H20", "[Thermo]")
+TEST_CASE("VapourPressureH20", "[Thermo]")
 {
     // Test cases generated from
     // https://en.wikipedia.org/wiki/Vapour_pressure_of_water
@@ -68,7 +68,7 @@ TEST_CASE("Vapour Pressure H20", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(5e-2, 70.1170, Thermo::computeVapourPressureH20(90.0));
 }
 
-TEST_CASE("Mol fraction liquid", "[Thermo]")
+TEST_CASE("MolFractionLiquid", "[Thermo]")
 {
     // Test cases generated from
     // The Compleat Distiller - Fig. 8-6
@@ -80,7 +80,7 @@ TEST_CASE("Mol fraction liquid", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.16252, Thermo::computeLiquidEthMolFraction(95.0));
 }
 
-TEST_CASE("Mol fraction vapour", "[Thermo]")
+TEST_CASE("MolFractionVapour", "[Thermo]")
 {
     // Test cases generated from
     // The Compleat Distiller - Fig. 8-6
@@ -92,7 +92,7 @@ TEST_CASE("Mol fraction vapour", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(5e-2, 0.29, Thermo::computeVapourEthMolFraction(95.1303));
 }
 
-TEST_CASE("Compute mass fraction", "[Thermo]")
+TEST_CASE("ComputeMassFraction", "[Thermo]")
 {
     // Test cases based on 
     // On the Conversion of Alcohol - Edwin Croissant - Alcohol strength by mass to mole fraction and vice versa
@@ -105,7 +105,7 @@ TEST_CASE("Compute mass fraction", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(1e-8, 1.0, Thermo::computeMassFraction(1.0));
 }
 
-TEST_CASE("Compute ABV", "[Thermo]")
+TEST_CASE("ComputeABV", "[Thermo]")
 {
     // Test cases based on 
     // On the Conversion of Alcohol - Edwin Croissant - Alcohol strength by volume to mass and vice versa
@@ -122,7 +122,7 @@ TEST_CASE("Compute ABV", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.0, Thermo::computeABV(1.0));
 }
 
-TEST_CASE("Compute liquid ABV Lookup", "[Thermo]")
+TEST_CASE("ComputeLiquidABVLookup", "[Thermo]")
 {
     // Test cases based on
     // Higher Alcohols in the Alcoholic Distillation From Fermented Cane Molasses - EQUILIBRIUM COMPOSITIONS 
@@ -145,7 +145,7 @@ TEST_CASE("Compute liquid ABV Lookup", "[Thermo]")
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0, Thermo::computeLiquidABVLookup(100.0));
 }
 
-TEST_CASE("Compute vapour ABV Lookup", "[Thermo]")
+TEST_CASE("ComputeVapourABVLookup", "[Thermo]")
 {
     // Test cases based on
     // Higher Alcohols in the Alcoholic Distillation From Fermented Cane Molasses - EQUILIBRIUM COMPOSITIONS 

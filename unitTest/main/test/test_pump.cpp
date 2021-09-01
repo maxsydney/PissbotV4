@@ -111,7 +111,7 @@ TEST_CASE("updatePumpSpeed", "[Pump]")
     }
 }
 
-TEST_CASE("loadFromJSON Valid", "[Pump]")
+TEST_CASE("loadFromJSONValid", "[Pump]")
 {
     PumpConfig testConfig {};
     cJSON* root = cJSON_Parse(pumpConfig);
@@ -124,7 +124,7 @@ TEST_CASE("loadFromJSON Valid", "[Pump]")
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, Pump::loadFromJSON(testConfig, cfg));
 }
 
-TEST_CASE("loadFromJSON Invalid", "[Pump]")
+TEST_CASE("loadFromJSONInvalid", "[Pump]")
 {
     PumpConfig testConfig {};
     cJSON* root = cJSON_Parse(pumpConfig);

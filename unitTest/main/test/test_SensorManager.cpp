@@ -68,7 +68,7 @@ TEST_CASE("checkInputs", "[SensorManager]")
     }
 }
 
-TEST_CASE("loadFromJSON Valid", "[SensorManager]")
+TEST_CASE("loadFromJSONValid", "[SensorManager]")
 {
     SensorManagerConfig testConfig {};
     cJSON* root = cJSON_Parse(sensorManagerConfig);
@@ -81,7 +81,7 @@ TEST_CASE("loadFromJSON Valid", "[SensorManager]")
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, SensorManager::loadFromJSON(testConfig, cfg));
 }
 
-TEST_CASE("loadFromJSON Invalid", "[SensorManager]")
+TEST_CASE("loadFromJSONInvalid", "[SensorManager]")
 {
     SensorManagerConfig testConfig {};
     cJSON* root = cJSON_Parse(sensorManagerConfig);

@@ -77,7 +77,7 @@ TEST_CASE("checkInputs", "[Flowmeter]")
     }
 }
 
-TEST_CASE("loadFromJSON valid", "[Flowmeter]")
+TEST_CASE("loadFromJSONValid", "[Flowmeter]")
 {
     FlowmeterConfig testConfig {};
     cJSON* root = cJSON_Parse(flowmeterTestConfig);
@@ -90,7 +90,7 @@ TEST_CASE("loadFromJSON valid", "[Flowmeter]")
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, Flowmeter::loadFromJSON(testConfig, cfg));
 }
 
-TEST_CASE("loadFromJSON invalid", "[Flowmeter]")
+TEST_CASE("loadFromJSONInvalid", "[Flowmeter]")
 {
     FlowmeterConfig testConfig {};
     cJSON* root = cJSON_Parse(flowmeterTestConfig);
