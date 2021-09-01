@@ -19,4 +19,4 @@ register_component()
 
 add_compile_definitions(CONFIG_ESPHTTPD_USE_ESPFS)
 
-target_compile_options(${COMPONENT_LIB} PRIVATE -std=c++17)
+target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++17)
