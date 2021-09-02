@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 import unity_test_parser
 import junit_xml
 
@@ -22,6 +23,9 @@ def main():
 
     # Switch to unitTest directory
     os.chdir(f"{PBPath}/unitTest")
+
+    # If outputs directory doesn't exist, create it
+    Path("outputs").mkdir(parents=True, exist_ok=True)
 
     # Run tests
     print("Building tests")
