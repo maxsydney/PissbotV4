@@ -1,6 +1,6 @@
 #include "unity.h"
-#include "main/Webserver.h"
-#include "testWebserverConfig.h"
+#include "main/WebServer.h"
+#include "testWebServerConfig.h"
 
 #ifdef __cplusplus
 extern "C" {

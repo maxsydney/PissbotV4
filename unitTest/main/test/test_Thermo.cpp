@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "unity.h"
-#include "main/thermo.h"
+#include "main/Thermo.h"
 
 #ifdef __cplusplus
 extern "C"
