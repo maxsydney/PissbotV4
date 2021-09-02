@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+
 if(NOT DEFINED ENV{PBPATH})
     message(FATAL_ERROR "PBPATH environment variable was not set")
 endif()
