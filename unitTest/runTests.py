@@ -29,15 +29,21 @@ def main():
 
     # Run tests
     print("Building tests")
-    os.system("idf.py build")
+    if os.system("idf.py build") != 0:
+        print("idf.py build failed")
+        sys.exit(os.EX_USAGE)
 
     print("\n\tGenerating test binary\n")
-    os.system("./makeUnitTestImg.sh")
+    if os.system("./makeUnitTestImg.sh") != 0:
+        print("Creation of qemu test binary failed")
+        sys.exit(os.EX_USAGE)
 
     print("\n\tLaunching Qemu and running tests\n")
-    os.system(f"{qemuPath}/qemu-system-xtensa -nographic "
+    if os.system(f"{qemuPath}/qemu-system-xtensa -nographic "
               "--no-reboot -machine esp32 -drive file=outputs/unitTest.bin,if=mtd,format=raw "
-              f"-serial file:{RAW_RESULTS_PATH}")
+              f"-serial file:{RAW_RESULTS_PATH}") != 0:
+        print("Qemu failed to run tests")
+        sys.exit(os.EX_USAGE)
 
     print("\n\tTests complete. Processing results\n")
     with open(RAW_RESULTS_PATH, "r") as results_file:
