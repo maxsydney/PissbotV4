@@ -49,7 +49,7 @@ TEST_CASE("checkInputs", "[OneWireBus]")
     }
 }
 
-TEST_CASE("loadFromJSON Valid", "[OneWireBus]")
+TEST_CASE("loadFromJSONValid", "[OneWireBus]")
 {
     PBOneWireConfig testConfig {};
     cJSON* root = cJSON_Parse(OneWireBusConfig);
@@ -62,7 +62,7 @@ TEST_CASE("loadFromJSON Valid", "[OneWireBus]")
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, PBOneWire::loadFromJSON(testConfig, cfg));
 }
 
-TEST_CASE("loadFromJSON Invalid", "[OneWireBus]")
+TEST_CASE("loadFromJSONInvalid", "[OneWireBus]")
 {
     PBOneWireConfig testConfig {};
     cJSON* root = cJSON_Parse(OneWireBusConfig);

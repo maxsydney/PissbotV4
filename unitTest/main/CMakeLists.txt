@@ -1,39 +1,26 @@
+cmake_minimum_required(VERSION 3.16)
+
+if(NOT DEFINED ENV{PBPATH})
+    message(FATAL_ERROR "PBPATH environment variable was not set")
+endif()
+
 set(COMPONENT_SRCDIRS
-    "."
-    "./test"
-    "../../main"
-    "../../components"
-    "../../lib/EmbeddedProto/src"
-    "../../lib/PBProtoBuf/IO/"
+    $ENV{PBPATH}/unitTest/main
+    $ENV{PBPATH}/unitTest/main/test
+    $ENV{PBPATH}/main
+    $ENV{PBPATH}/components
 )
 
 set(COMPONENT_ADD_INCLUDEDIRS
-    "../../components/esp32-ds18b20/include"
-    "../../components/esp32-owb/include"
-    "../../components/libesphttpd/include"
-    "../../"
-    "./test"
-    "./testData"
-    "/Users/maxsydney/esp/PissbotV4/components/espfs/include"
-    "../../lib/EmbeddedProto/src" 
-    "../../lib/PBProtoBuf/"
-    "../../lib/PBProtoBuf/Generated"
+    $ENV{PBPATH}
+    $ENV{PBPATH}/components/esp32-ds18b20/include
+    $ENV{PBPATH}/components/esp32-owb/include
+    $ENV{PBPATH}/components/libesphttpd/include
+    $ENV{PBPATH}/unitTest/main/test
+    $ENV{PBPATH}/unitTest/main/testData
+    $ENV{PBPATH}/components/espfs/include
 )
 
-set(DEPENDENCIES
-    # esp32-ds18b20
-    # esp32-owb
-    # spiffs
-    # nvs_flash
-    # libesphttpd
-    # espfs
-)
-
-idf_component_register(
-    SRC_DIRS ${COMPONENT_SRCDIRS}
-    INCLUDE_DIRS ${COMPONENT_ADD_INCLUDEDIRS}
-    REQUIRES ${DEPENDENCIES}
-)
-
+register_component()
 add_compile_definitions(CONFIG_ESPHTTPD_USE_ESPFS)
-target_compile_options(${COMPONENT_LIB} PRIVATE -std=c++17)
+target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++17)
