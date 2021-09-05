@@ -33,4 +33,4 @@ RUN echo "source $NVM_DIR/nvm.sh && \
     nvm use default" | bash
     
 # Install Python dependencies
-RUN pip3 install heatshrink2 hiyapyco unity-test-parser
+RUN /opt/esp/python_env/idf4.3_py3.6_env/bin/python3 -m pip install heatshrink2 hiyapyco unity-test-parser
