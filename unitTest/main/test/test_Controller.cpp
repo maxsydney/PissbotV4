@@ -1,5 +1,5 @@
 #include "unity.h"
-#include "main/controller.h"
+#include "main/Controller.h"
 #include "testControllerConfig.h"
 
 #ifdef __cplusplus
@@ -363,7 +363,7 @@ TEST_CASE("loadFromJSONInvlid", "[Controller]")
     TEST_ASSERT_EQUAL(PBRet::FAILURE, Controller::loadFromJSON(testConfig, cfg));
 }
 
-TEST_CASE("ControlTuning serialization/deserialization", "[Controller]")
+TEST_CASE("ControlTuningSerialization/deserialization", "[Controller]")
 {
     const IIRLowpassFilterConfig derivFilterCfg(5.0, 1.0);
     const ControlTuning ctrlTuningIn(50.0, 25.0, 10.0, 75.0, derivFilterCfg);
@@ -386,7 +386,7 @@ TEST_CASE("ControlTuning serialization/deserialization", "[Controller]")
     TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.derivFilterCfg.Fs, ctrlTuningOut.derivFilterCfg.Fs);
 }
 
-TEST_CASE("ControlCommand serialization/deserialization", "[Controller]")
+TEST_CASE("ControlCommandSerialization/deserialization", "[Controller]")
 {
     ControlCommand ctrlCommandIn(ComponentState::ON, 0.5, 0.75);
     ControlCommand ctrlCommandOut {};
@@ -405,7 +405,7 @@ TEST_CASE("ControlCommand serialization/deserialization", "[Controller]")
     TEST_ASSERT_EQUAL(ctrlCommandIn.HPElementDutyCycle, ctrlCommandOut.HPElementDutyCycle);
 }
 
-TEST_CASE("ControlSettings serialization/deserialization", "[Controller]")
+TEST_CASE("ControlSettingsSerialization/deserialization", "[Controller]")
 {
     const PumpSpeeds pumpSpeeds(1, 2);
     const ControlSettings ctrlSettingsIn(PumpMode::Off, PumpMode::ManualControl, pumpSpeeds);
@@ -426,7 +426,7 @@ TEST_CASE("ControlSettings serialization/deserialization", "[Controller]")
     TEST_ASSERT_EQUAL(ctrlSettingsIn.manualPumpSpeeds.productPumpSpeed, ctrlSettingsOut.manualPumpSpeeds.productPumpSpeed);
 }
 
-TEST_CASE("ControllerState serialization/deserialization", "[Controller]")
+TEST_CASE("ControllerStateSerialization/deserialization", "[Controller]")
 {
     const ControllerState ctrlStateIn(5.0, 10.0, 15.0, 30.0);
     ControllerState ctrlStateOut {};

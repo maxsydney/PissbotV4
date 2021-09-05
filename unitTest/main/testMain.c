@@ -31,6 +31,7 @@ void app_main(void)
     UNITY_BEGIN();
     unity_run_all_tests();
     UNITY_END();
+    exit(0);
 }
 
 static void print_banner(const char* text)

@@ -1,22 +1,26 @@
+cmake_minimum_required(VERSION 3.16)
+
+if(NOT DEFINED ENV{PBPATH})
+    message(FATAL_ERROR "PBPATH environment variable was not set")
+endif()
+
 set(COMPONENT_SRCDIRS
-    "."
-    "./test"
-    "../../main"
-    "../../components"
+    $ENV{PBPATH}/unitTest/main
+    $ENV{PBPATH}/unitTest/main/test
+    $ENV{PBPATH}/main
+    $ENV{PBPATH}/components
 )
 
 set(COMPONENT_ADD_INCLUDEDIRS
-    "../../components/esp32-ds18b20/include"
-    "../../components/esp32-owb/include"
-    "../../components/libesphttpd/include"
-    "../../"
-    "./test"
-    "./testData"
-    "/Users/maxsydney/esp/PissbotV4/components/espfs/include"
+    $ENV{PBPATH}
+    $ENV{PBPATH}/components/esp32-ds18b20/include
+    $ENV{PBPATH}/components/esp32-owb/include
+    $ENV{PBPATH}/components/libesphttpd/include
+    $ENV{PBPATH}/unitTest/main/test
+    $ENV{PBPATH}/unitTest/main/testData
+    $ENV{PBPATH}/components/espfs/include
 )
 
 register_component()
-
 add_compile_definitions(CONFIG_ESPHTTPD_USE_ESPFS)
-
 target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++17)

@@ -1,6 +1,6 @@
 #include "unity.h"
-#include "main/Webserver.h"
-#include "testWebserverConfig.h"
+#include "main/WebServer.h"
+#include "testWebServerConfig.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,7 +49,7 @@ TEST_CASE("checkInputs", "[Webserver]")
     }
 }
 
-TEST_CASE("loadFromJSON Valid", "[Webserver]")
+TEST_CASE("loadFromJSONValid", "[Webserver]")
 {
     WebserverConfig testConfig {};
     cJSON* root = cJSON_Parse(webserverConfig);
@@ -62,7 +62,7 @@ TEST_CASE("loadFromJSON Valid", "[Webserver]")
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, Webserver::loadFromJSON(testConfig, cfg));
 }
 
-TEST_CASE("loadFromJSON Invalid", "[Webserver]")
+TEST_CASE("loadFromJSONInvalid", "[Webserver]")
 {
     WebserverConfig testConfig {};
     cJSON* root = cJSON_Parse(webserverConfig);
