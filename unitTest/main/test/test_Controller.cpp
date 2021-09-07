@@ -189,7 +189,6 @@ TEST_CASE("InitPumps", "[Controller]")
 
 TEST_CASE("updateRefluxPump", "[Controller]")
 {
-
     // Unconfigured pump
     {
         Controller testCtrl(1, 1024, 1, validConfig());

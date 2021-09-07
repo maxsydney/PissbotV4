@@ -21,6 +21,7 @@ static void includeAllTests(void)
     includeFlowmeterTests();
     includeSlowPWMTests();
     includeFilterTests();
+    includeMessageServerTests();
 }
 
 void app_main(void)

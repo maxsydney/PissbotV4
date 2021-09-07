@@ -43,31 +43,6 @@ enum class MessageType {
     SocketLog
 };
 
-// Base class for all messages to be passed over network
-class MessageBase
-{   
-    public:
-        MessageBase(void) = default;
-        MessageBase(PBMessageType msgType, const std::string& name, int64_t timeStamp)
-            : _type(msgType), _name(name), _timeStamp(timeStamp), _valid(true) {}
-
-        PBMessageType getType(void) const { return _type; }
-        bool isValid(void) const { return _valid; }
-        const std::string& getName(void) const { return _name; }
-        int64_t getTimeStamp(void) const { return _timeStamp; }
-
-        // Serialization/deserialization
-        virtual PBRet serialize(std::string &JSONStr) const = 0;
-        virtual PBRet deserialize(const cJSON *root) = 0;
-
-    protected:
-        static constexpr const char* TimeStampStr = "timestamp";
-        PBMessageType _type = PBMessageType::Unknown;
-        std::string _name {};
-        int64_t _timeStamp = 0;             // [uS]
-        bool _valid = false;
-};
-
 // Represents a task and the messages that it is subscribed to
 class Subscriber
 {
