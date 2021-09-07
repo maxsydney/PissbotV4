@@ -276,36 +276,44 @@ TEST_CASE("updateRefluxPump", "[Controller]")
     }
 }
 
-TEST_CASE("updateProductPump", "[Controller]")
+TEST_CASE("updateProductPumpActiveMode", "[Controller]")
 {
     Controller ctrl(1, 1024, 1, validConfig());
     TEST_ASSERT_TRUE(ctrl.isConfigured());
     const double hysteresisUpperBound = ControllerUT::getHysteresisUpperBound(ctrl);
     const double hysteresisLowerBound = ControllerUT::getHysteresisLowerBound(ctrl);
     const Pump& productPump = ControllerUT::getProductPump(ctrl);
+    ctrl.setProductPumpMode(PumpMode::ACTIVE_CONTROL);
 
-    // Active control - Below lower bound rising
+    // Below lower bound
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
     TEST_ASSERT_EQUAL(Pump::PUMP_IDLE_SPEED, productPump.getPumpSpeed());
 
-    // Active control - Above lower bound rising
+    // Above lower bound rising
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, hysteresisLowerBound + 1));
     TEST_ASSERT_EQUAL(Pump::PUMP_IDLE_SPEED, productPump.getPumpSpeed());
 
-    // Active control - Above upper bound rising
+    // Above upper bound rising
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, hysteresisUpperBound + 1));
     TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, productPump.getPumpSpeed());
 
-    // Active control - Above lower bound falling
+    // Above lower bound falling
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, hysteresisLowerBound + 1));
     TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, productPump.getPumpSpeed());
 
-    // Active control - Below lower bound falling
+    // Below lower bound falling
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
     TEST_ASSERT_EQUAL(Pump::PUMP_IDLE_SPEED, productPump.getPumpSpeed());
+}
 
-    // Manual control - Valid speed
+TEST_CASE("updateProductPumpManualMode", "[Controller]")
+{
+    Controller ctrl(1, 1024, 1, validConfig());
+    TEST_ASSERT_TRUE(ctrl.isConfigured());
+    const Pump& productPump = ControllerUT::getProductPump(ctrl);
     ctrl.setProductPumpMode(PumpMode::MANUAL_CONTROL);
+
+    // Valid speed
     PumpSpeeds validSpeeds {};
     validSpeeds.set_refluxPumpSpeed(256.0);
     validSpeeds.set_productPumpSpeed(256.0);
@@ -313,7 +321,7 @@ TEST_CASE("updateProductPump", "[Controller]")
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
     TEST_ASSERT_EQUAL(256, productPump.getPumpSpeed());
 
-    // Manual control - Above max speed
+    // Above max speed
     PumpSpeeds invalidSpeeds {};
     invalidSpeeds.set_refluxPumpSpeed(Pump::PUMP_MAX_SPEED + 1);
     invalidSpeeds.set_productPumpSpeed(Pump::PUMP_MAX_SPEED + 1);
