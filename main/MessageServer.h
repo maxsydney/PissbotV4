@@ -56,9 +56,8 @@ class Subscriber
         
     private:
         const char* _name = nullptr;
-        std::queue<std::shared_ptr<PBMessageWrapper>>& _taskQueue;       // TODO: Is this legit?
+        std::queue<std::shared_ptr<PBMessageWrapper>>& _taskQueue;
         std::set<PBMessageType> _subscriptions;
-        PBMessageWrapper _wrapper {};
 };
 
 class MessageServer
