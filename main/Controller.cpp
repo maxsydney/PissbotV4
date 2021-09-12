@@ -65,7 +65,7 @@ void Controller::taskMain(void)
 
         // Command pumps
         if (_updatePumps() != PBRet::SUCCESS) {
-            ESP_LOGW(Controller::Name, "Pump speeds were not updates");
+            ESP_LOGW(Controller::Name, "Pump speeds were not updated");
         }
 
         // Broadcast controller state
@@ -85,6 +85,7 @@ PBRet Controller::_temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg)
 
 PBRet Controller::_controlCommandCB(std::shared_ptr<PBMessageWrapper> msg)
 {
+    _peripheralState.clear();   // Reset defaults
     if (MessageServer::unwrap(*msg, _peripheralState) != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Failed to decode control command message");
     }
@@ -106,9 +107,9 @@ PBRet Controller::_controlCommandCB(std::shared_ptr<PBMessageWrapper> msg)
 PBRet Controller::_controlSettingsCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Store new settings and update pumps
-
+    _ctrlSettings.clear();
     if (MessageServer::unwrap(*msg, _ctrlSettings) != PBRet::SUCCESS) {
-        ESP_LOGW(Controller::Name, "Failed to decode ");
+        ESP_LOGW(Controller::Name, "Failed to decode");
     }
 
     ESP_LOGI(Controller::Name, "Controller settings were updated");
@@ -660,6 +661,12 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
         ESP_LOGW(Controller::Name, "Unable to initialize derivative filter");
     }
 
+    // Set pump manual speeds to idle
+    PumpSpeeds initPumpSpeeds {};
+    initPumpSpeeds.set_refluxPumpSpeed(Pump::PUMP_IDLE_SPEED);
+    initPumpSpeeds.set_productPumpSpeed(Pump::PUMP_IDLE_SPEED);
+    _ctrlSettings.set_manualPumpSpeeds(initPumpSpeeds);
+
     // Set pumps to active control
     _ctrlSettings.set_refluxPumpMode(PumpMode::ACTIVE_CONTROL);
     _ctrlSettings.set_refluxPumpMode(PumpMode::ACTIVE_CONTROL);
@@ -696,6 +703,11 @@ PBRet Controller::saveTuningToFile(void)
     // Write data structure to file
     outFile.write((char*) writeBuffer.get_buffer(), writeBuffer.get_size());
     ESP_LOGI(Controller::Name, "Controller tuning successfully written to file");
+
+    size_t totalBytes = 0;
+    size_t usedBytes = 0;
+    F.getInfo(totalBytes, usedBytes);
+    ESP_LOGW(Controller::Name, "PBData total: %d bytes, used: %d bytes", totalBytes, usedBytes);
 
     return PBRet::SUCCESS;
 }
