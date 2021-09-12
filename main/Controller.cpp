@@ -85,6 +85,7 @@ PBRet Controller::_temperatureDataCB(std::shared_ptr<PBMessageWrapper> msg)
 
 PBRet Controller::_controlCommandCB(std::shared_ptr<PBMessageWrapper> msg)
 {
+    _peripheralState.clear();   // Reset defaults
     if (MessageServer::unwrap(*msg, _peripheralState) != PBRet::SUCCESS) {
         ESP_LOGW(Controller::Name, "Failed to decode control command message");
     }
