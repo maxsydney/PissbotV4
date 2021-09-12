@@ -5,12 +5,6 @@
 #include "cJSON.h"
 #include <driver/ledc.h>
 
-enum class PumpMode {
-    Off,
-    ActiveControl,
-    ManualControl
-};
-
 class PumpConfig
 {
     public:
@@ -21,17 +15,6 @@ class PumpConfig
         gpio_num_t pumpGPIO = (gpio_num_t) GPIO_NUM_NC;
         ledc_channel_t PWMChannel = LEDC_CHANNEL_0;
         ledc_timer_t timerChannel = LEDC_TIMER_0;
-};
-
-class PumpSpeeds
-{
-    public:
-        PumpSpeeds(void) = default;
-        PumpSpeeds(uint32_t refluxPumpSpeed, uint32_t productPumpSpeed)
-            : refluxPumpSpeed(refluxPumpSpeed), productPumpSpeed(productPumpSpeed) {}
-            
-        uint32_t refluxPumpSpeed = 0.0;
-        uint32_t productPumpSpeed = 0.0;
 };
 
 class Pump

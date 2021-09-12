@@ -4,6 +4,7 @@
 #include <vector>
 #include "PBCommon.h"
 #include "cJSON.h"
+#include "Generated/ControllerMessaging.h"
 
 class FilterConfig
 {
@@ -54,11 +55,11 @@ class IIRLowpassFilterConfig
 {
     public:
         IIRLowpassFilterConfig(void) = default;
-        IIRLowpassFilterConfig(double samplingFreq, double cutoffFreq)
-            : Fs(samplingFreq), Fc(cutoffFreq) {}
+        IIRLowpassFilterConfig(double sampleFreq, double cutoffFreq)
+            : sampleFreq(sampleFreq), cutoffFreq(cutoffFreq) {}
 
-        double Fs = 0.0;
-        double Fc = 0.0;
+        double sampleFreq = 0.0;
+        double cutoffFreq = 0.0;
 };
 
 // Implements a lowpass filter as a single stage biquad
@@ -74,15 +75,14 @@ class IIRLowpassFilter
         // Update
         PBRet filter(double val, double& output);
         PBRet setCutoffFreq(double Fc);
-        PBRet setSamplingFreq(double Fs);
+        PBRet setSampleFreq(double Fs);
 
         // Getters
-        double getCutoffFreq(void) const { return _config.Fc; }
-        double getSamplingFreq(void) const { return _config.Fs; }
+        double getCutoffFreq(void) const { return _config.cutoffFreq; }
+        double getSampleFreq(void) const { return _config.sampleFreq; }
 
         // Utility
         static PBRet checkInputs(const IIRLowpassFilterConfig& config);
-        static PBRet loadFromJSON(IIRLowpassFilterConfig& cfg, const cJSON* cfgRoot);
         bool isConfigured(void) const { return _configured; }
 
         friend class IIRLowpassFilterUT;

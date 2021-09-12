@@ -2,8 +2,8 @@
 #include "DistillerManager.h"
 #include "WifiManager.h"
 #include "MessageServer.h"
-#include "MessageDefs.h"
 #include "nvs_flash.h"
+#include "Generated/WebserverMessaging.h"
 
 DistillerManager* DistillerManager::_managerPtr = nullptr;
 
@@ -32,6 +32,9 @@ DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth,
     // Setup callback table
     _setupCBTable();
 
+    // Set message ID
+    Task::_ID = MessageOrigin::DistillerManager;
+
     // Init from params
     if (_initFromParams(cfg) == PBRet::SUCCESS) {
         ESP_LOGI(DistillerManager::Name, "DistillerManager configured!");
@@ -43,10 +46,6 @@ DistillerManager::DistillerManager(UBaseType_t priority, UBaseType_t stackDepth,
 
 void DistillerManager::taskMain(void)
 {
-    std::set<MessageType> subscriptions = { MessageType::General };
-    Subscriber sub(DistillerManager::Name, _GPQueue, subscriptions);
-    MessageServer::registerTask(sub);
-
     while(true) {
         _processQueue();
 
@@ -56,19 +55,23 @@ void DistillerManager::taskMain(void)
     }
 }
 
-PBRet DistillerManager::_generalMessagCB(std::shared_ptr<MessageBase> msg)
+PBRet DistillerManager::_socketLogCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    ESP_LOGI(DistillerManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
+    ESP_LOGI(DistillerManager::Name, "Received socket log message");
+    
+    PBSocketLogMessage socketMessage {};
+    if (MessageServer::unwrap(*msg, socketMessage) == PBRet::SUCCESS) {
+        ESP_LOGI(DistillerManager::Name, "Message: %s", socketMessage.logMsg());
+    }
 
     return PBRet::SUCCESS;
 }
 
 PBRet DistillerManager::_setupCBTable(void)
 {
-    _cbTable = std::map<MessageType, queueCallback> {
-        {MessageType::General, std::bind(&DistillerManager::_generalMessagCB, this, std::placeholders::_1)}
-    };
+    // _cbTable = std::map<PBMessageType, queueCallback> {
+    //     {PBMessageType::SocketLog, std::bind(&DistillerManager::_socketLogCB, this, std::placeholders::_1)}
+    // };
 
     return PBRet::SUCCESS;
 }

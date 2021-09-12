@@ -1,18 +1,22 @@
 #include "SensorManager.h"
-#include "MessageDefs.h"
 #include "esp_spiffs.h"
 #include "Filesystem.h"
 #include "Thermo.h"
 #include "ABVTables.h"
+#include "IO/Writable.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
 
 SensorManager::SensorManager(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const SensorManagerConfig& cfg)
-    : Task(SensorManager::Name, priority, stackDepth, coreID), _refluxFlowmeter(cfg.refluxFlowConfig), _productFlowmeter(cfg.productFlowConfig)
+    : Task(SensorManager::Name, priority, stackDepth, coreID), _refluxFlowmeter(cfg.refluxFlowConfig), 
+      _productFlowmeter(cfg.productFlowConfig)
 {
     // Setup callback table
     _setupCBTable();
+
+    // Set message ID
+    Task::_ID = MessageOrigin::SensorManager;
 
     // Initialize SensorManager
     if (_initFromParams(cfg) == PBRet::SUCCESS) {
@@ -26,16 +30,15 @@ SensorManager::SensorManager(UBaseType_t priority, UBaseType_t stackDepth, BaseT
 void SensorManager::taskMain(void)
 {
     // Subscribe to messages
-    std::set<MessageType> subscriptions = { 
-        MessageType::General,
-        MessageType::SensorManagerCmd,
-        MessageType::AssignSensor
+    std::set<PBMessageType> subscriptions = { 
+        PBMessageType::SensorManagerCommand,
+        PBMessageType::AssignSensor
     };
     Subscriber sub(SensorManager::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
 
     // Set update frequency
-    const TickType_t timestep =  _cfg.dt * 1000 / portTICK_PERIOD_MS;      // TODO: Define method for converting time
+    const TickType_t timestep =  _cfg.dt * 1000 / portTICK_PERIOD_MS;
     portTickType xLastWakeTime = xTaskGetTickCount();
 
     while (true) {
@@ -51,17 +54,16 @@ void SensorManager::taskMain(void)
         }
 
         // Read flowmeters
-        FlowrateData flowData(0.0, 0.0);
-        if (_refluxFlowmeter.readMassFlowrate(esp_timer_get_time(), flowData.refluxFlowrate) != PBRet::SUCCESS) {
+        FlowrateData flowData {};
+        if (_refluxFlowmeter.readMassFlowrate(esp_timer_get_time(), flowData.mutable_refluxFlowrate().get()) != PBRet::SUCCESS) {
             ESP_LOGW(SensorManager::Name, "Unable to read reflux flowmeter");
         }
 
         // Compute ABV
-        ConcentrationData concData(0.0, 0.0);
+        ConcentrationData concData {};
         if (_estimateABV(Tdata, concData) != PBRet::SUCCESS) {
             ESP_LOGW(SensorManager::Name, "Unable to estimate ABV");
         }
-
 
         // Broadcast data
         _broadcastTemps(Tdata);
@@ -72,27 +74,23 @@ void SensorManager::taskMain(void)
     }
 }
 
-PBRet SensorManager::_generalMessageCB(std::shared_ptr<MessageBase> msg)
+PBRet SensorManager::_commandMessageCB(std::shared_ptr<PBMessageWrapper> msg)
 {
-    std::shared_ptr<GeneralMessage> genMsg = std::static_pointer_cast<GeneralMessage>(msg);
-    ESP_LOGI(SensorManager::Name, "Received general message: %s", genMsg->getMessage().c_str());  
-
-    return PBRet::SUCCESS;
-}
-
-PBRet SensorManager::_commandMessageCB(std::shared_ptr<MessageBase> msg)
-{
-    SensorManagerCommand cmd = *std::static_pointer_cast<SensorManagerCommand>(msg);
+    SensorManagerCommandMessage cmd {};
+    if (MessageServer::unwrap(*msg, cmd) != PBRet::SUCCESS) {
+        ESP_LOGW(SensorManager::Name, "Failed to decode SensorManagerCommand");
+        return PBRet::FAILURE;
+    } 
     ESP_LOGI(SensorManager::Name, "Got SensorManagerCommand message");
 
-    switch (cmd.getCommandType())
+    switch (cmd.get_cmdType())
     {
-        case (SensorManagerCmdType::BroadcastSensorsStart):
+        case (SensorManagerCmdType::CMD_BROADCAST_SENSORS):
         {
             ESP_LOGI(SensorManager::Name, "Broadcasting sensor adresses");
             return _broadcastSensors();
         }
-        case (SensorManagerCmdType::None):
+        case (SensorManagerCmdType::CMD_NONE):
         {
             ESP_LOGW(SensorManager::Name, "Received command None");
             break;
@@ -107,37 +105,60 @@ PBRet SensorManager::_commandMessageCB(std::shared_ptr<MessageBase> msg)
     return PBRet::SUCCESS;
 }
 
-PBRet SensorManager::_assignSensorCB(std::shared_ptr<MessageBase> msg)
+PBRet SensorManager::_assignSensorCB(std::shared_ptr<PBMessageWrapper> msg)
 {
     // Create a new sensor object and assign it to the requested task. Write
     // new sensor configuration to filesystem
 
-    AssignSensorCommand cmd = *std::static_pointer_cast<AssignSensorCommand>(msg);
-    ESP_LOGI(SensorManager::Name, "Assigning new temperature sensor");
+    PBAssignSensorCommand sensorMsg {};
+    if (MessageServer::unwrap(*msg, sensorMsg) != PBRet::SUCCESS) {
+        ESP_LOGW(SensorManager::Name, "Failed to decode DS18B20Sensor message");
+        return PBRet::FAILURE;
+    } 
 
     // Create new sensor object
-    const Ds18b20 sensor(cmd.getAddress(), DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
-    if (sensor.isConfigured() == false) {
+    OneWireBus_ROMCode romCode {};
+
+    // Copy bytes into ROM code
+    for (size_t i = 0; i < ROM_SIZE; i++)
+    {
+        romCode.bytes[i] = sensorMsg.address()[i];
+    }
+
+    // TODO: Check here if this is a known sensor, and load it's calibration if so
+    //       Otherwise, initialize with default calibration
+
+    // Use default calibration for now
+    const double calibLinear = 1.0;
+    const double calibOffset = 0.0;
+
+    const Ds18b20Config config(romCode, calibLinear, calibOffset, DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
+
+    // TODO: Decide where this object should be created + use unique ptr
+    std::shared_ptr<Ds18b20> sensor = std::make_shared<Ds18b20>(config);
+    if (sensor->isConfigured() == false) {
         ESP_LOGW(SensorManager::Name, "Failed to create valid Ds18b20 sensor");
         return PBRet::FAILURE;
     }
 
     // Assign sensor to requested task
-    if (_OWBus.setTempSensor(cmd.getSensorType(), sensor) != PBRet::SUCCESS) {
+    if (_OWBus.setTempSensor(sensorMsg.get_role(), sensor) != PBRet::SUCCESS) {
         ESP_LOGW(SensorManager::Name, "Failed to assign sensor");
         return PBRet::FAILURE;
     }
 
-    // Write new sensor configuration to file
-    return _writeSensorConfigToFile();
+    // TODO: Error handling here
+    _writeSensorConfigToFile();
+
+    ESP_LOGI(SensorManager::Name, "Successfully assigned sensor");
+    return PBRet::SUCCESS;
 }
 
 PBRet SensorManager::_setupCBTable(void)
 {
-    _cbTable = std::map<MessageType, queueCallback> {
-        {MessageType::General, std::bind(&SensorManager::_generalMessageCB, this, std::placeholders::_1)},
-        {MessageType::SensorManagerCmd, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)},
-        {MessageType::AssignSensor, std::bind(&SensorManager::_assignSensorCB, this, std::placeholders::_1)}
+    _cbTable = std::map<PBMessageType, queueCallback> {
+        {PBMessageType::SensorManagerCommand, std::bind(&SensorManager::_commandMessageCB, this, std::placeholders::_1)},
+        {PBMessageType::AssignSensor, std::bind(&SensorManager::_assignSensorCB, this, std::placeholders::_1)}
     };
 
     return PBRet::SUCCESS;
@@ -188,25 +209,25 @@ PBRet SensorManager::_initOneWireBus(const SensorManagerConfig &cfg)
 PBRet SensorManager::_broadcastTemps(const TemperatureData& Tdata) const
 {
     // Send a temperature data message to the queue
-    std::shared_ptr<TemperatureData> msg = std::make_shared<TemperatureData> (Tdata);
+    PBMessageWrapper wrapped = MessageServer::wrap(Tdata, PBMessageType::TemperatureData, _ID);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet SensorManager::_broadcastFlowrates(const FlowrateData& flowData) const
 {
     // Send a temperature data message to the queue
-    std::shared_ptr<FlowrateData> msg = std::make_shared<FlowrateData> (flowData);
+    PBMessageWrapper wrapped = MessageServer::wrap(flowData, PBMessageType::FlowrateData, _ID);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet SensorManager::_broadcastConcentrations(const ConcentrationData& concData) const
 {
     // Send a temperature data message to the queue
-    std::shared_ptr<ConcentrationData> msg = std::make_shared<ConcentrationData> (concData);
+    PBMessageWrapper wrapped = MessageServer::wrap(concData, PBMessageType::ConcentrationData, _ID);
 
-    return MessageServer::broadcastMessage(msg);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
 PBRet SensorManager::checkInputs(const SensorManagerConfig& cfg)
@@ -252,103 +273,27 @@ PBRet SensorManager::_loadKnownDevices(const char* basePath, const char* partiti
     // Mount filesystem
     Filesystem F(SensorManager::FSBasePath, SensorManager::FSPartitionLabel, 5, true);
 
-    // Read JSON string from file
-    std::ifstream configIn(SensorManager::deviceFile);
+    // Read serialized config from file
+    std::ifstream configIn(SensorManager::assignedSensorFile, std::ios::binary);
     if (configIn.good() == false) {
         ESP_LOGW(SensorManager::Name, "Devices file could not be opened");
         return PBRet::FAILURE;
     }
 
-    // TODO: Stringstream is quite heavy for embedded. Might need to remove
-    std::stringstream JSONBuffer;
-    JSONBuffer << configIn.rdbuf();
+    std::vector<uint8_t> bytes(
+         (std::istreambuf_iterator<char>(configIn)),
+         (std::istreambuf_iterator<char>()));
 
-    // Load JSON object
-    // Just load one sensor for now. Package into proper methods for loading all sensors once
-    // validated
-    cJSON* configRoot = cJSON_Parse(JSONBuffer.str().c_str());
-    if (configRoot == nullptr) {
-        ESP_LOGW(SensorManager::Name, "Sensor config file was opened but could not be parsed");
+    Readable buffer {};
+    for (uint8_t byte : bytes)
+    {
+        buffer.push(byte);
+    }
+
+    if (_OWBus.deserialize(buffer) != PBRet::SUCCESS)
+    {
+        ESP_LOGW(SensorManager::Name, "Failed to read saved sensors from file");
         return PBRet::FAILURE;
-    }
-
-    // Load saved temperature sensors
-    // No longer required to check for null, as this check is performed in cJSON_GetObjectItemCaseSensitive
-    const cJSON* tempSensors = cJSON_GetObjectItemCaseSensitive(configRoot, "TempSensors");
-    if (_loadTempSensorsFromJSON(tempSensors) != PBRet::SUCCESS) {
-        ESP_LOGW(SensorManager::Name, "No temperature sensor config data was available");
-    }
-
-    cJSON_Delete(configRoot);
-    return PBRet::SUCCESS;
-}
-
-PBRet SensorManager::_loadTempSensorsFromJSON(const cJSON* JSONTempSensors)
-{
-    if (JSONTempSensors == nullptr) {
-        return PBRet::FAILURE;
-    }
-
-    Ds18b20 savedSensor {};
-
-    // If there is saved head temp sensor in the config file, load it
-    const cJSON* headTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::HeadTempSensorKey);
-    if (headTemp != nullptr) {
-        savedSensor = Ds18b20(headTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-        if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-            _OWBus.setTempSensor(SensorType::Head, savedSensor);
-            ESP_LOGI(SensorManager::Name, "Loaded head temp sensor from file");
-        } else {
-            ESP_LOGW(SensorManager::Name, "Unable to head temp sensor object from file");
-        }
-    }
-
-    // Load reflux out temp sensor
-    const cJSON* refluxTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::RefluxTempSensorKey);
-    if (refluxTemp != nullptr) {
-        savedSensor = Ds18b20(refluxTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-        if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-            _OWBus.setTempSensor(SensorType::Reflux, savedSensor);
-            ESP_LOGI(SensorManager::Name, "Loaded reflux outflow temp sensor from file");
-        } else {
-            ESP_LOGW(SensorManager::Name, "Unable to reflux temp sensor object from file");
-        }
-    }
-
-    // Load product out temp sensor
-    const cJSON* productTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::ProductTempSensorKey);
-    if (productTemp != nullptr) {
-        savedSensor = Ds18b20(productTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-        if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-            _OWBus.setTempSensor(SensorType::Product, savedSensor);
-            ESP_LOGI(SensorManager::Name, "Loaded product outflow temp sensor from file");
-        } else {
-            ESP_LOGW(SensorManager::Name, "Unable to product temp sensor object from file");
-        }
-    }
-
-    // Load radiator temp sensor
-    const cJSON* radiatorTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::RadiatorTempSensorKey);
-    if (radiatorTemp != nullptr) {
-        savedSensor = Ds18b20(radiatorTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-        if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-            _OWBus.setTempSensor(SensorType::Radiator, savedSensor);
-            ESP_LOGI(SensorManager::Name, "Loaded radiator temp sensor from file");
-        } else {
-            ESP_LOGW(SensorManager::Name, "Unable to radiator temp sensor object from file");
-        }
-    }
-
-    // Load boiler temp sensor
-    const cJSON* boilerTemp = cJSON_GetObjectItemCaseSensitive(JSONTempSensors, SensorManager::BoilerTempSensorKey);
-    if (boilerTemp != nullptr) {
-        savedSensor = Ds18b20(boilerTemp, _cfg.oneWireConfig.tempSensorResolution, _OWBus.getOWB());
-        if (savedSensor.isConfigured() && _OWBus.isAvailableSensor(savedSensor)) {
-            _OWBus.setTempSensor(SensorType::Boiler, savedSensor);
-            ESP_LOGI(SensorManager::Name, "Loaded boiler temp sensor from file");
-        } else {
-            ESP_LOGW(SensorManager::Name, "Unable to boiler temp sensor object from file");
-        }
     }
 
     return PBRet::SUCCESS;
@@ -400,8 +345,8 @@ PBRet SensorManager::_writeSensorConfigToFile(void) const
     // Write the current sensor configuration to JSON
     ESP_LOGI(SensorManager::Name, "Writing sensor configuration data to file");
 
-    std::string JSONstr;
-    if (_OWBus.serialize(JSONstr) != PBRet::SUCCESS) {
+    Writable buffer {};
+    if (_OWBus.serialize(buffer) != PBRet::SUCCESS) {
         ESP_LOGW(SensorManager::Name, "Failed to write sensor config to file");
         return PBRet::FAILURE;
     }
@@ -413,39 +358,17 @@ PBRet SensorManager::_writeSensorConfigToFile(void) const
         return PBRet::FAILURE;
     }
 
-    std::ofstream outFile(SensorManager::deviceFile);
+    std::ofstream outFile(SensorManager::assignedSensorFile, std::ios::out | std::ios::binary);
     if (outFile.is_open() == false) {
         ESP_LOGE(SensorManager::Name, "Failed to open file for writing. Sensor data was not written to file");
         return PBRet::FAILURE;
     }
 
-    // Write JSON string out to file
-    outFile << JSONstr;
+    // Write serialized to file
+    // TODO: C++ casting
+    outFile.write((const char*) buffer.get_buffer(), buffer.get_size());
 
     ESP_LOGI(SensorManager::Name, "Sensor configuration data successfully written to file");
-    return PBRet::SUCCESS;
-}
-
-PBRet SensorManager::_printConfigFile(void) const
-{
-    // Print config JSON file to the console. Assumes filesystem is
-    // mounted
-
-    ESP_LOGI(SensorManager::Name, "Reading config file");
-
-    Filesystem F(SensorManager::FSBasePath, SensorManager::FSPartitionLabel, 5, false);
-
-    std::ifstream JSONstream(SensorManager::deviceFile);
-    if (JSONstream.good() == false) {
-        ESP_LOGW(SensorManager::Name, "Failed to open config file for reading");
-        return PBRet::FAILURE;
-    }
-
-    std::stringstream JSONBuffer;
-    JSONBuffer << JSONstream.rdbuf();
-
-    printf("%s\n", JSONBuffer.str().c_str());
-
     return PBRet::SUCCESS;
 }
 
@@ -464,9 +387,9 @@ PBRet SensorManager::_estimateABV(const TemperatureData &TData, ConcentrationDat
     // TODO: Not sure that this is where this method should live permanently
 
     // Only do lookup if temperature is within interpolation range
-    if ((TData.headTemp > ABVTables::MIN_TEMPERATURE) && (TData.headTemp < ABVTables::MAX_TEMPERATURE)) {
-        concData.vapourConcentration = Thermo::computeVapourABVLookup(TData.headTemp);
-        concData.boilerConcentration = Thermo::computeLiquidABVLookup(TData.boilerTemp);
+    if ((TData.get_headTemp() > ABVTables::MIN_TEMPERATURE) && (TData.get_headTemp() < ABVTables::MAX_TEMPERATURE)) {
+        concData.set_vapourConcentration(Thermo::computeVapourABVLookup(TData.get_headTemp()));
+        concData.set_boilerConcentration(Thermo::computeLiquidABVLookup(TData.get_boilerTemp()));
     }
 
     return PBRet::SUCCESS;

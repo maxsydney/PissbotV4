@@ -105,7 +105,13 @@
         "queue": "cpp",
         "stack": "cpp",
         "shared_mutex": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "any": "cpp",
+        "coroutine": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "source_location": "cpp",
+        "filesystem": "cpp"
     },
     "python.linting.pylintEnabled": false,
     "python.pythonPath": "/usr/bin/python3"

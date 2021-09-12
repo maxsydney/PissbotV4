@@ -1,5 +1,6 @@
 #include "OneWireBus.h"
 #include "SensorManager.h"
+#include "Generated/SensorManagerMessaging.h"
 
 PBOneWire::PBOneWire(const PBOneWireConfig& cfg)
 {
@@ -91,7 +92,7 @@ PBRet PBOneWire::_initOWB()
     return PBRet::SUCCESS;
 }
 
-PBRet PBOneWire::_scanForDevices(void)
+PBRet PBOneWire::_scanForDevices(DeviceVector& devices) const
 {
     if (_owb == nullptr) {
         ESP_LOGW(PBOneWire::Name, "Onewire bus pointer was null");
@@ -101,79 +102,66 @@ PBRet PBOneWire::_scanForDevices(void)
     if (xSemaphoreTake(_OWBMutex, 250 / portTICK_PERIOD_MS) == pdTRUE) {
         OneWireBus_SearchState search_state {};
         bool found = false;
-        _connectedDevices = 0;
-        _availableSensors.clear();
+        devices.clear();
 
         owb_search_first(_owb, &search_state, &found);
         while (found) {
-            _availableSensors.emplace_back(Ds18b20(search_state.rom_code, _cfg.tempSensorResolution, _owb));
-            _connectedDevices++;
+            devices.emplace_back(search_state.rom_code);
             owb_search_next(_owb, &search_state, &found);
         }
         xSemaphoreGive(_OWBMutex);
     } else {
-        ESP_LOGW(PBOneWire::Name, "(_scanForDevices) Unable to access PBOneWire shared resource");
+        ESP_LOGW(PBOneWire::Name, "Unable to access PBOneWire shared resource");
         return PBRet::FAILURE;
     }
 
     return PBRet::SUCCESS;
 }
 
-PBRet PBOneWire::_broadcastDeviceAddresses(void) const
+PBRet PBOneWire::_broadcastDeviceAddresses(const DeviceVector& deviceAddresses) const
 {
     // Broadcast the available device addresses to all listening tasks
-    std::shared_ptr<DeviceData> msg = std::make_shared<DeviceData> (_availableSensors);
 
-    return MessageServer::broadcastMessage(msg);
+    PBDeviceData deviceData {};
+    for (const OneWireBus_ROMCode& address : deviceAddresses) {
+        PBFieldBytes addrBuffer {};
+
+        // Copy address into buffer
+        for (size_t i = 0; i < ROM_SIZE; i++) {
+            addrBuffer[i] = address.bytes[i];
+        }
+
+        deviceData.add_addresses(addrBuffer);
+    }
+
+    PBMessageWrapper wrapped = MessageServer::wrap(deviceData, PBMessageType::DeviceData, ID);
+    return MessageServer::broadcastMessage(wrapped);
 }
 
-PBRet PBOneWire::broadcastAvailableDevices(void)
+PBRet PBOneWire::broadcastAvailableDevices(void) const
 {
-    if (_scanForDevices() != PBRet::SUCCESS) {
+    DeviceVector deviceAddresses {};
+    if (_scanForDevices(deviceAddresses) != PBRet::SUCCESS) {
         ESP_LOGW(PBOneWire::Name, "Scan of OneWire bus failed");
         return PBRet::FAILURE;
     }
 
-    return _broadcastDeviceAddresses();
-}
-
-PBRet PBOneWire::initialiseTempSensors(void)
-{
-    // TODO:
-    // Attempt to connect to each sensor and check that they are responding
-    // 
-
-    // // Connect to sensors and create PBds18b20 object
-    // if (_connectedDevices == 0) {
-    //     ESP_LOGW(PBOneWire::Name, "No available devices");
-    //     return PBRet::FAILURE;
-    // }
-
-    // // NOTE: Just assigning the first for now. Assign properly from saved sensors JSON
-    // // Assign sensors
-    // if (_headTempSensor.isConfigured() == false) {
-    //     _headTempSensor = _availableSensors.at(0);
-    // }
-
-    // // Connect other devices here
-    
-    return PBRet::SUCCESS;
+    return _broadcastDeviceAddresses(deviceAddresses);
 }
 
 PBRet PBOneWire::_oneWireConvert(void) const
 {
-    // Command all temperature sensors on the bus to convert temperatures.
-    // NOTE: This method is not protected by a semaphore. If you are calling
-    //       this method, it is your responsibility to make sure that the bus
-    //       is not locked out
+    // Command all temperature sensors on the bus to convert temperatures
 
-    if (_connectedDevices == 0) {
-        ESP_LOGW(PBOneWire::Name, "No available devices. Cannot convert temperatures");
+    if (_assignedSensors.size() == 0) {
+        ESP_LOGW(PBOneWire::Name, "No assigned devices. Cannot convert temperatures");
         return PBRet::FAILURE;
     }
 
     ds18b20_convert_all(_owb);
-    ds18b20_wait_for_conversion(&_availableSensors.front().getInfo());
+
+    // Wait until the first sensor in the map has finished converting measurement
+    ds18b20_wait_for_conversion(&_assignedSensors.begin()->second->getInfo());
 
     return PBRet::SUCCESS;
 }
@@ -181,14 +169,6 @@ PBRet PBOneWire::_oneWireConvert(void) const
 PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
 {
     // Read all available temperature sensors
-    
-    // TODO: Replace these with direct memory access
-    float headTemp = 0.0;
-    float refluxTemp = 0.0;
-    float productTemp = 0.0;
-    float radiatorTemp = 0.0;
-    float boilerTemp = 0.0;
-
     if (_configured == false) {
         ESP_LOGW(PBOneWire::Name, "Cannot read temperatures before PBOneWireBuse is configured");
         return PBRet::FAILURE;
@@ -201,36 +181,19 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
             return PBRet::FAILURE;
         }
 
-        // Read all available temperature sensors
-        if (_headTempSensor.isConfigured()) {
-            if (_headTempSensor.readTemp(headTemp) != PBRet::SUCCESS) {
-                ESP_LOGW(PBOneWire::Name, "Head temperature sensor is configured but was not able to be read");
-            }
+        // Print a warning for this one, as it required for control
+        if (_readTemperatureSensor(DS18B20Role::HEAD_TEMP, Tdata.mutable_headTemp().get()) != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Failed to read head temperature sensor");
         }
 
-        if (_refluxTempSensor.isConfigured()) {
-            if (_refluxTempSensor.readTemp(refluxTemp) != PBRet::SUCCESS) {
-                ESP_LOGW(PBOneWire::Name, "Reflux condensor temperature sensor is configured but was not able to be read");
-            }
-        }
+        // Read all other sensors
+        _readTemperatureSensor(DS18B20Role::REFLUX_TEMP, Tdata.mutable_refluxCondensorTemp().get());
+        _readTemperatureSensor(DS18B20Role::PRODUCT_TEMP, Tdata.mutable_prodCondensorTemp().get());
+        _readTemperatureSensor(DS18B20Role::RADIATOR_TEMP, Tdata.mutable_radiatorTemp().get());
+        _readTemperatureSensor(DS18B20Role::BOILER_TEMP, Tdata.mutable_boilerTemp().get());
 
-        if (_productTempSensor.isConfigured()) {
-            if (_productTempSensor.readTemp(productTemp) != PBRet::SUCCESS) {
-                ESP_LOGW(PBOneWire::Name, "Product condensor temperature sensor is configured but was not able to be read");
-            }
-        }
-
-        if (_radiatorTempSensor.isConfigured()) {
-            if (_radiatorTempSensor.readTemp(radiatorTemp) != PBRet::SUCCESS) {
-                ESP_LOGW(PBOneWire::Name, "Radiator temperature sensor is configured but was not able to be read");
-            }
-        }
-
-        if (_boilerTempSensor.isConfigured()) {
-            if (_boilerTempSensor.readTemp(boilerTemp) != PBRet::SUCCESS) {
-                ESP_LOGW(PBOneWire::Name, "Boiler temperature sensor is configured but was not able to be read");
-            }
-        }
+        // Set timestamp
+        Tdata.set_timeStamp(esp_timer_get_time());
 
         xSemaphoreGive(_OWBMutex);
     } else {
@@ -238,15 +201,13 @@ PBRet PBOneWire::readTempSensors(TemperatureData& Tdata) const
         return PBRet::FAILURE;
     }
 
-    // Reject temperature measurements if head temperature is invalid
-    if ((headTemp < PBOneWire::MinValidTemp) || (headTemp > PBOneWire::MaxValidTemp)) {
-        ESP_LOGW(PBOneWire::Name, "Head temperature (%.2f) was invalid", headTemp);
-        return PBRet::FAILURE;
-    }
-
-    // Fill data structure
-    Tdata = TemperatureData(headTemp, refluxTemp, productTemp, radiatorTemp, boilerTemp);
-
+    // // Reject temperature measurements if head temperature is invalid
+    // // TODO: This shouldn't live here. Move to controller
+    // if ((headTemp < PBOneWire::MinValidTemp) || (headTemp > PBOneWire::MaxValidTemp)) {
+    //     ESP_LOGW(PBOneWire::Name, "Head temperature (%.2f) was invalid", headTemp);
+    //     return PBRet::FAILURE;
+    // }
+    
     return PBRet::SUCCESS;
 }
 
@@ -267,163 +228,144 @@ PBRet PBOneWire::_initFromParams(const PBOneWireConfig& cfg)
         return PBRet::FAILURE;
     }
 
-    // The following cases can fail and be recovered from. Don't return failure
-    // Find available devices on bus
-    if (_scanForDevices() != PBRet::SUCCESS) {
-        ESP_LOGW(PBOneWire::Name, "Failed to scan OneWire bus for deveices");
-    }
-    if (_connectedDevices <= 0) {
-        ESP_LOGW(PBOneWire::Name, "No devices were found on OneWire bus");
-    }
-
-    // // This is a temporary method to load a temperature sensor into the headTemp channel
-    // // for testing
-    if (initialiseTempSensors() != PBRet::SUCCESS) {
-        ESP_LOGW(PBOneWire::Name, "Sensors were not initialized");
-    }
-
     return PBRet::SUCCESS;
 }
 
- PBRet PBOneWire::serialize(std::string& JSONstr) const
+ PBRet PBOneWire::serialize(Writable& buffer) const
 {
-    // Helper method for writing out the sensor configuration to JSON
-    cJSON* root = cJSON_CreateObject();
-    if (root == nullptr) {
-        ESP_LOGW(PBOneWire::Name, "Unable to create root JSON object");
+    // Write the assigned sensors to buffer
+
+    PBAssignedSensorRegistry registry {};
+
+    auto it = _assignedSensors.find(DS18B20Role::HEAD_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_headTempSensor((*it->second).toSerialConfig());
+    }
+
+    it = _assignedSensors.find(DS18B20Role::REFLUX_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_refluxTempSensor((*it->second).toSerialConfig());
+    }
+
+    it = _assignedSensors.find(DS18B20Role::PRODUCT_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_productTempSensor((*it->second).toSerialConfig());
+    }
+
+    it = _assignedSensors.find(DS18B20Role::RADIATOR_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_radiatorTempSensor((*it->second).toSerialConfig());
+    }
+
+    it = _assignedSensors.find(DS18B20Role::BOILER_TEMP);
+    if (it != _assignedSensors.end())
+    {
+        registry.set_boilerTempSensor((*it->second).toSerialConfig());
+    }
+
+    // Serialize data structure into buffer
+    EmbeddedProto::Error e = registry.serialize(buffer);
+
+    if (e != EmbeddedProto::Error::NO_ERRORS) {
+        ESP_LOGW(PBOneWire::Name, "Failed to serialize message");
+        MessageServer::printErr(e);
         return PBRet::FAILURE;
     }
-
-    // Create an object for temperature sensors
-    cJSON* tempSensors = cJSON_CreateObject();
-    if (tempSensors == NULL) {
-        ESP_LOGW(PBOneWire::Name, "Unable to create tempSensors JSON object");
-        return PBRet::FAILURE;
-    }
-
-    // Write individual sensors to tempSensors
-    if (_headTempSensor.isConfigured()) {
-        // Write out its data
-        cJSON* headTemp = cJSON_CreateObject();
-        if (headTemp == NULL) {
-            ESP_LOGW(PBOneWire::Name, "Unable to create headTemp JSON object");
-            return PBRet::FAILURE;
-        }
-
-        // TODO: Add headTemp to tempSensors and the modify inplace?
-        if (_headTempSensor.serialize(headTemp) != PBRet::SUCCESS) {
-            ESP_LOGW(PBOneWire::Name, "Couldn't serialize head temp sensor");
-            cJSON_Delete(headTemp);
-            return PBRet::FAILURE;
-        }
-
-        cJSON_AddItemToObject(tempSensors, SensorManager::HeadTempSensorKey, headTemp);
-    }
-
-    if (_refluxTempSensor.isConfigured()) {
-        // Write out its data
-        cJSON* refluxTempSensor = cJSON_CreateObject();
-        if (refluxTempSensor == NULL) {
-            ESP_LOGW(PBOneWire::Name, "Unable to create reflux temp sensor JSON object");
-            return PBRet::FAILURE;
-        }
-
-        if (_refluxTempSensor.serialize(refluxTempSensor) != PBRet::SUCCESS) {
-            ESP_LOGW(PBOneWire::Name, "Couldn't serialize reflux condensor temp sensor");
-            cJSON_Delete(refluxTempSensor);
-            return PBRet::FAILURE;
-        }
-
-        cJSON_AddItemToObject(tempSensors, SensorManager::RefluxTempSensorKey, refluxTempSensor);
-    }
-
-    if (_productTempSensor.isConfigured()) {
-        // Write out its data
-        cJSON* productTempSensor = cJSON_CreateObject();
-        if (productTempSensor == NULL) {
-            ESP_LOGW(PBOneWire::Name, "Unable to create product temp sensor JSON object");
-            return PBRet::FAILURE;
-        }
-
-        if (_productTempSensor.serialize(productTempSensor) != PBRet::SUCCESS) {
-            ESP_LOGW(PBOneWire::Name, "Couldn't serialize product condensor temp sensor");
-            cJSON_Delete(productTempSensor);
-            return PBRet::FAILURE;
-        }
-
-        cJSON_AddItemToObject(tempSensors, SensorManager::ProductTempSensorKey, productTempSensor);
-    }
-
-    if (_radiatorTempSensor.isConfigured()) {
-        // Write out its data
-        cJSON* radiatorTempSensor = cJSON_CreateObject();
-        if (radiatorTempSensor == NULL) {
-            ESP_LOGW(PBOneWire::Name, "Unable to create radiator temp sensor JSON object");
-            return PBRet::FAILURE;
-        }
-
-        if (_radiatorTempSensor.serialize(radiatorTempSensor) != PBRet::SUCCESS) {
-            ESP_LOGW(PBOneWire::Name, "Couldn't serialize radiator temp sensor");
-            cJSON_Delete(radiatorTempSensor);
-            return PBRet::FAILURE;
-        }
-
-        cJSON_AddItemToObject(tempSensors, SensorManager::RadiatorTempSensorKey, radiatorTempSensor);
-    }
-
-    if (_radiatorTempSensor.isConfigured()) {
-        // Write out its data
-        cJSON* radiatorTempSensor = cJSON_CreateObject();
-        if (radiatorTempSensor == NULL) {
-            ESP_LOGW(PBOneWire::Name, "Unable to create radiator temp sensor JSON object");
-            return PBRet::FAILURE;
-        }
-
-        if (_radiatorTempSensor.serialize(radiatorTempSensor) != PBRet::SUCCESS) {
-            ESP_LOGW(PBOneWire::Name, "Couldn't serialize radiator temp sensor");
-            cJSON_Delete(radiatorTempSensor);
-            return PBRet::FAILURE;
-        }
-
-        cJSON_AddItemToObject(tempSensors, SensorManager::RadiatorTempSensorKey, radiatorTempSensor);
-    }
-
-    if (_boilerTempSensor.isConfigured()) {
-        // Write out its data
-        cJSON* boilerTempSensor = cJSON_CreateObject();
-        if (boilerTempSensor == NULL) {
-            ESP_LOGW(PBOneWire::Name, "Unable to create boiler temp sensor JSON object");
-            return PBRet::FAILURE;
-        }
-
-        if (_boilerTempSensor.serialize(boilerTempSensor) != PBRet::SUCCESS) {
-            ESP_LOGW(PBOneWire::Name, "Couldn't serialize boiler temp sensor");
-            cJSON_Delete(boilerTempSensor);
-            return PBRet::FAILURE;
-        }
-
-        cJSON_AddItemToObject(tempSensors, SensorManager::BoilerTempSensorKey, boilerTempSensor);
-    }
-
-    cJSON_AddItemToObject(root, "TempSensors", tempSensors);
-
-    // Copy JSON to string. cJSON requires printing to a char* pointer. Copy into
-    // std::string and free memory to avoid memory leak
-    char* stringPtr = cJSON_Print(root);
-    JSONstr = std::string(stringPtr);
-    cJSON_Delete(root);
-    free(stringPtr);
 
     return PBRet::SUCCESS;
 }
 
-bool PBOneWire::isAvailableSensor(const Ds18b20& sensor) const
+PBRet PBOneWire::deserialize(Readable& buffer)
+{
+    // Deserialize assigned sensors from buffer
+
+    PBAssignedSensorRegistry registry {};
+    ::EmbeddedProto::Error err = registry.deserialize(buffer);
+    if (err != ::EmbeddedProto::Error::NO_ERRORS)
+    {
+        MessageServer::printErr(err);
+        return PBRet::FAILURE;
+    }
+
+    // Read available devices addresss from bus
+    DeviceVector deviceAddresses {};
+    if (_scanForDevices(deviceAddresses) != PBRet::SUCCESS) {
+        ESP_LOGW(PBOneWire::Name, "Scan for available devices failed");
+        return PBRet::FAILURE;
+    }
+
+    if (_isAvailableSensor(registry.headTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.headTempSensor(), DS18B20Role::HEAD_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "head temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Head temp sensor was available on bus but could not be configured");
+        }
+    }
+    
+    if (_isAvailableSensor(registry.refluxTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.refluxTempSensor(), DS18B20Role::REFLUX_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "reflux temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Reflux temp sensor was available on bus but could not be configured");
+        }
+    }
+
+    if (_isAvailableSensor(registry.productTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.productTempSensor(), DS18B20Role::PRODUCT_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "product temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Product temp sensor was available on bus but could not be configured");
+        }
+    }
+
+    if (_isAvailableSensor(registry.radiatorTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.radiatorTempSensor(), DS18B20Role::RADIATOR_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "radiator temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Radiator temp sensor was available on bus but could not be configured");
+        }
+    }
+
+    if (_isAvailableSensor(registry.boilerTempSensor(), deviceAddresses)) {
+        if (_createAndAssignSensor(registry.boilerTempSensor(), DS18B20Role::BOILER_TEMP, 
+            DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, "boiler temp") != PBRet::SUCCESS) {
+            ESP_LOGW(PBOneWire::Name, "Boiler temp sensor was available on bus but could not be configured");
+        }
+    }
+
+    return PBRet::SUCCESS;
+}
+
+PBRet PBOneWire::_createAndAssignSensor(const PBDS18B20Sensor& sensorConfig, DS18B20Role role, DS18B20_RESOLUTION res, const std::string& name)
+{
+    // Create a sensor object and assign it a role
+    std::shared_ptr<Ds18b20> sensor = std::make_shared<Ds18b20>(sensorConfig, res, _owb);
+
+    if (sensor->isConfigured() == false) {
+        ESP_LOGW(PBOneWire::Name, "Failed to initialize and assign %s sensor", name.c_str());
+        return PBRet::FAILURE;
+    }
+
+    ESP_LOGI(PBOneWire::Name, "Read %s sensor from file", name.c_str());
+
+    _assignedSensors[role] = sensor;
+    return PBRet::SUCCESS;
+}
+
+bool PBOneWire::_isAvailableSensor(const PBDS18B20Sensor& sensor, const DeviceVector& deviceAddresses)
 {
     // Returns true if a ds18b20 sensor exists in the list of available 
     // sensors
 
-    for (const Ds18b20& available : _availableSensors) {
-        if (sensor == available) {
+    // Get address from sensor
+    OneWireBus_ROMCode sensorAddr {};
+    for (size_t i = 0; i < ROM_SIZE; i++)
+    {
+        sensorAddr.bytes[i] = sensor.romCode()[i];
+    }
+
+    for (const OneWireBus_ROMCode& addr : deviceAddresses) {
+        if (_romCodesMatch(sensorAddr, addr)) {
             return true;
         }
     }
@@ -431,94 +373,47 @@ bool PBOneWire::isAvailableSensor(const Ds18b20& sensor) const
     return false;
 }
 
-PBRet PBOneWire::setTempSensor(SensorType type, const Ds18b20& sensor)
+bool PBOneWire::_romCodesMatch(const OneWireBus_ROMCode& a, const OneWireBus_ROMCode& b)
 {
-    // TODO: This function is very manual and could be tidied up a lot
-    
+    // Returns true if both rom codes are equivalent
+    return memcmp(a.bytes, b.bytes, ROM_SIZE) == 0;
+}
+
+PBRet PBOneWire::setTempSensor(DS18B20Role type, const std::shared_ptr<Ds18b20>& sensor)
+{
     // First, we must "unassign" the sensor if it is already assigned
-    if (_headTempSensor == sensor) {
-        _headTempSensor = Ds18b20();
-    } else if (_refluxTempSensor == sensor) {
-        _refluxTempSensor = Ds18b20();
-    } else if (_productTempSensor == sensor) {
-        _productTempSensor = Ds18b20();
-    } else if (_radiatorTempSensor == sensor) {
-        _radiatorTempSensor = Ds18b20();
-    } else if (_boilerTempSensor == sensor) {
-        _boilerTempSensor = Ds18b20();
+    auto it = std::find_if(_assignedSensors.begin(), _assignedSensors.end(), 
+                           [&sensor] (const auto& p) { return *p.second == *sensor; });
+
+    if (it != _assignedSensors.end()) { 
+        _assignedSensors.erase(it); 
     }
 
-    // Assign the sensor to the selected task
-    switch (type)
-    {
-        case SensorType::Head:
-        {
-            _headTempSensor = sensor;
-            break;
-        }
-        case SensorType::Reflux:
-        {
-            _refluxTempSensor = sensor;
-            break;
-        }
-        case SensorType::Product:
-        {
-            _productTempSensor = sensor;
-            break;
-        }
-        case SensorType::Boiler:
-        {
-            _boilerTempSensor = sensor;
-            break;
-        }
-        case SensorType::Radiator:
-        {
-            _radiatorTempSensor = sensor;
-            break;
-        }
-        case SensorType::Unknown:
-        {
-            ESP_LOGE(PBOneWire::Name, "Cannot set sensor with type unknown");
-            return PBRet::FAILURE;
-        }
-        default:
-        {
-            ESP_LOGE(PBOneWire::Name, "Sensor type is not supported");
-            return PBRet::FAILURE;
-        }
-    }
+    // Assign sensor to new type
+    _assignedSensors[type] = sensor;
 
     return PBRet::SUCCESS;
 }
 
-// TODO: Replace this with a more robust mapping
-SensorType PBOneWire::mapSensorIDToType(int sensorID)
+PBRet PBOneWire::_readTemperatureSensor(DS18B20Role sensor, double& T) const
 {
-    switch (sensorID)
-    {
-        case (0):
-        {
-            return SensorType::Head;
-        }
-        case (1):
-        {
-            return SensorType::Reflux;
-        }
-        case (2):
-        {
-            return SensorType::Product;
-        }
-        case (3):
-        {
-            return SensorType::Radiator;
-        }
-        case (4):
-        {
-            return SensorType::Boiler;
-        }
-        default:
-        {
-            return SensorType::Unknown;
-        }
+    // Attempt to read the temperature of a sensor with a prescribed role.
+    SensorMap::const_iterator it = _assignedSensors.find(sensor);
+
+    if (it == _assignedSensors.end()) {
+        // Role has no assigned sensor
+        return PBRet::FAILURE;
     }
+
+    // Compiler doesn't like getting the address for a double inside this fn
+    // TODO: Fix this weirdness
+    float temp = 0.0;
+    if (it->second->readTemp(temp) == PBRet::SUCCESS) {
+        // Successfully read temperature sensor
+        T = temp;
+        return PBRet::SUCCESS;
+    }
+
+    // Sensor read failed
+    return PBRet::FAILURE;
 }

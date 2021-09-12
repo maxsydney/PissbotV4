@@ -11,7 +11,7 @@ void includeControllerTests(void)
     // Dummy function to force discovery of unit tests by main test runner
 }
 
-ControllerConfig validConfig(void)
+static ControllerConfig validConfig(void)
 {
     ControllerConfig cfg {};
     cfg.dt = 1.0;
@@ -30,6 +30,19 @@ ControllerConfig validConfig(void)
     return cfg;
 }
 
+static TemperatureData createTemperatureData(double T_head, double T_reflux, double T_product, double T_radiator, double T_boiler)
+{
+    TemperatureData TData {};
+    TData.set_headTemp(T_head);
+    TData.set_refluxCondensorTemp(T_reflux);
+    TData.set_prodCondensorTemp(T_product);
+    TData.set_radiatorTemp(T_radiator);
+    TData.set_boilerTemp(T_boiler);
+    TData.set_timeStamp(esp_timer_get_time());
+
+    return TData;
+}
+
 class ControllerUT
 {
     public:
@@ -44,7 +57,7 @@ class ControllerUT
         static PBRet initPumps(Controller& ctrl, const PumpConfig& refluxCfg, const PumpConfig prodCfg) { return ctrl._initPumps(refluxCfg, prodCfg); }
         static PBRet updateRefluxPump(Controller& ctrl) { return ctrl._updateRefluxPump(); }
         static void setCurrentOutput(Controller& ctrl, double output) { ctrl._currentOutput = output; }
-        static void setManualPumpSpeed(Controller& ctrl, const PumpSpeeds& pumpSpeeds) { ctrl._ctrlSettings.manualPumpSpeeds = pumpSpeeds; }
+        static void setManualPumpSpeed(Controller& ctrl, const PumpSpeeds& pumpSpeeds) { ctrl._ctrlSettings.set_manualPumpSpeeds(pumpSpeeds); }
         static PBRet checkTemperatures(Controller& ctrl, const TemperatureData& currTemp) { return ctrl._checkTemperatures(currTemp); }
 };
 
@@ -159,8 +172,8 @@ TEST_CASE("InitPumps", "[Controller]")
     // Init valid pumps
     {
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::initPumps(testCtrl, validPumpConfig, validPumpConfig));
-        TEST_ASSERT_EQUAL(PumpMode::Off, testCtrl.getRefluxPumpMode());
-        TEST_ASSERT_EQUAL(PumpMode::Off, testCtrl.getProductPumpMode());
+        TEST_ASSERT_EQUAL(PumpMode::PUMP_OFF, testCtrl.getRefluxPumpMode());
+        TEST_ASSERT_EQUAL(PumpMode::PUMP_OFF, testCtrl.getProductPumpMode());
     }
 
     // Invalid reflux pump
@@ -176,7 +189,6 @@ TEST_CASE("InitPumps", "[Controller]")
 
 TEST_CASE("updateRefluxPump", "[Controller]")
 {
-
     // Unconfigured pump
     {
         Controller testCtrl(1, 1024, 1, validConfig());
@@ -192,7 +204,7 @@ TEST_CASE("updateRefluxPump", "[Controller]")
     {
         Controller testCtrl(1, 1024, 1, validConfig());
         TEST_ASSERT_TRUE(testCtrl.isConfigured());
-        testCtrl.setRefluxPumpMode(PumpMode::ActiveControl);
+        testCtrl.setRefluxPumpMode(PumpMode::ACTIVE_CONTROL);
         ControllerUT::setCurrentOutput(testCtrl, 256);
         Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
 
@@ -204,7 +216,7 @@ TEST_CASE("updateRefluxPump", "[Controller]")
     {
         Controller testCtrl(1, 1024, 1, validConfig());
         TEST_ASSERT_TRUE(testCtrl.isConfigured());
-        testCtrl.setRefluxPumpMode(PumpMode::ActiveControl);
+        testCtrl.setRefluxPumpMode(PumpMode::ACTIVE_CONTROL);
         ControllerUT::setCurrentOutput(testCtrl, Pump::PUMP_MAX_SPEED + 1);
         Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
 
@@ -216,10 +228,12 @@ TEST_CASE("updateRefluxPump", "[Controller]")
     {
         Controller testCtrl(1, 1024, 1, validConfig());
         TEST_ASSERT_TRUE(testCtrl.isConfigured());
-        testCtrl.setRefluxPumpMode(PumpMode::ManualControl);
+        testCtrl.setRefluxPumpMode(PumpMode::MANUAL_CONTROL);
         Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
 
-        PumpSpeeds validSpeeds(256, 256);
+        PumpSpeeds validSpeeds {};
+        validSpeeds.set_refluxPumpSpeed(256.0);
+        validSpeeds.set_productPumpSpeed(256.0);
         ControllerUT::setManualPumpSpeed(testCtrl, validSpeeds);
 
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateRefluxPump(testCtrl));
@@ -230,10 +244,12 @@ TEST_CASE("updateRefluxPump", "[Controller]")
     {
         Controller testCtrl(1, 1024, 1, validConfig());
         TEST_ASSERT_TRUE(testCtrl.isConfigured());
-        testCtrl.setRefluxPumpMode(PumpMode::ManualControl);
+        testCtrl.setRefluxPumpMode(PumpMode::MANUAL_CONTROL);
         Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
 
-        PumpSpeeds invalidSpeeds(Pump::PUMP_MAX_SPEED + 1, Pump::PUMP_MAX_SPEED + 1);
+        PumpSpeeds invalidSpeeds {};
+        invalidSpeeds.set_refluxPumpSpeed(Pump::PUMP_MAX_SPEED + 1);
+        invalidSpeeds.set_productPumpSpeed(Pump::PUMP_MAX_SPEED + 1);
         ControllerUT::setManualPumpSpeed(testCtrl, invalidSpeeds);
 
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateRefluxPump(testCtrl));
@@ -244,7 +260,7 @@ TEST_CASE("updateRefluxPump", "[Controller]")
     {
         Controller testCtrl(1, 1024, 1, validConfig());
         TEST_ASSERT_TRUE(testCtrl.isConfigured());
-        testCtrl.setRefluxPumpMode(PumpMode::ActiveControl);
+        testCtrl.setRefluxPumpMode(PumpMode::ACTIVE_CONTROL);
         ControllerUT::setCurrentOutput(testCtrl, 256);
         Pump& refluxPump = ControllerUT::getRefluxPump(testCtrl);
 
@@ -253,55 +269,67 @@ TEST_CASE("updateRefluxPump", "[Controller]")
         TEST_ASSERT_EQUAL(256, refluxPump.getPumpSpeed());
 
         // Stop pump
-        testCtrl.setRefluxPumpMode(PumpMode::Off);
+        testCtrl.setRefluxPumpMode(PumpMode::PUMP_OFF);
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateRefluxPump(testCtrl));
         TEST_ASSERT_EQUAL(0, refluxPump.getPumpSpeed());
     }
 }
 
-TEST_CASE("updateProductPump", "[Controller]")
+TEST_CASE("updateProductPumpActiveMode", "[Controller]")
 {
     Controller ctrl(1, 1024, 1, validConfig());
     TEST_ASSERT_TRUE(ctrl.isConfigured());
     const double hysteresisUpperBound = ControllerUT::getHysteresisUpperBound(ctrl);
     const double hysteresisLowerBound = ControllerUT::getHysteresisLowerBound(ctrl);
     const Pump& productPump = ControllerUT::getProductPump(ctrl);
+    ctrl.setProductPumpMode(PumpMode::ACTIVE_CONTROL);
 
-    // Active control - Below lower bound rising
+    // Below lower bound
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
     TEST_ASSERT_EQUAL(Pump::PUMP_IDLE_SPEED, productPump.getPumpSpeed());
 
-    // Active control - Above lower bound rising
+    // Above lower bound rising
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, hysteresisLowerBound + 1));
     TEST_ASSERT_EQUAL(Pump::PUMP_IDLE_SPEED, productPump.getPumpSpeed());
 
-    // Active control - Above upper bound rising
+    // Above upper bound rising
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, hysteresisUpperBound + 1));
     TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, productPump.getPumpSpeed());
 
-    // Active control - Above lower bound falling
+    // Above lower bound falling
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, hysteresisLowerBound + 1));
     TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, productPump.getPumpSpeed());
 
-    // Active control - Below lower bound falling
+    // Below lower bound falling
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
     TEST_ASSERT_EQUAL(Pump::PUMP_IDLE_SPEED, productPump.getPumpSpeed());
+}
 
-    // Manual control - Valid speed
-    ctrl.setProductPumpMode(PumpMode::ManualControl);
-    PumpSpeeds validSpeeds(256, 256);
+TEST_CASE("updateProductPumpManualMode", "[Controller]")
+{
+    Controller ctrl(1, 1024, 1, validConfig());
+    TEST_ASSERT_TRUE(ctrl.isConfigured());
+    const Pump& productPump = ControllerUT::getProductPump(ctrl);
+    ctrl.setProductPumpMode(PumpMode::MANUAL_CONTROL);
+
+    // Valid speed
+    PumpSpeeds validSpeeds {};
+    validSpeeds.set_refluxPumpSpeed(256.0);
+    validSpeeds.set_productPumpSpeed(256.0);
     ControllerUT::setManualPumpSpeed(ctrl, validSpeeds);
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
     TEST_ASSERT_EQUAL(256, productPump.getPumpSpeed());
 
-    // Manual control - Above max speed
-    PumpSpeeds invalidSpeeds(Pump::PUMP_MAX_SPEED + 1, Pump::PUMP_MAX_SPEED + 1);
+    // Above max speed
+    PumpSpeeds invalidSpeeds {};
+    invalidSpeeds.set_refluxPumpSpeed(Pump::PUMP_MAX_SPEED + 1);
+    invalidSpeeds.set_productPumpSpeed(Pump::PUMP_MAX_SPEED + 1);
     ControllerUT::setManualPumpSpeed(ctrl, invalidSpeeds);
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
     TEST_ASSERT_EQUAL(Pump::PUMP_MAX_SPEED, productPump.getPumpSpeed());
 
     // Turn pump off
-    ctrl.setProductPumpMode(PumpMode::Off);
+    ctrl.setProductPumpMode(PumpMode::PUMP_OFF);
     TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::updateProductPump(ctrl, 0.0));
     TEST_ASSERT_EQUAL(0, productPump.getPumpSpeed());
 }
@@ -313,25 +341,25 @@ TEST_CASE("checkTemperatures", "[Controller]")
 
     // Valid temperatures
     {
-        TemperatureData validTemp(0.0, 0.0, 0.0, 0.0, 0.0);        // 0 is a valid temperature
+        TemperatureData validTemp = createTemperatureData(0.0, 0.0, 0.0, 0.0, 0.0);
         TEST_ASSERT_EQUAL(PBRet::SUCCESS, ControllerUT::checkTemperatures(ctrl, validTemp));
     }
 
     // Temperature above max control temp
     {
-        TemperatureData invalidTemp(110.0, 0.0, 0.0, 0.0, 0.0);
+        TemperatureData invalidTemp = createTemperatureData(110.0, 0.0, 0.0, 0.0, 0.0);
         TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::checkTemperatures(ctrl, invalidTemp));
     }
 
     // Temperature below min control temp
     {
-        TemperatureData invalidTemp(-10.0, 0.0, 0.0, 0.0, 0.0);
+        TemperatureData invalidTemp = createTemperatureData(-10.0, 0.0, 0.0, 0.0, 0.0);
         TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::checkTemperatures(ctrl, invalidTemp));
     }
 
     // Temperature message is stale
     {
-        TemperatureData validTemp(0.0, 0.0, 0.0, 0.0, 0.0);
+        TemperatureData validTemp = createTemperatureData(0.0, 0.0, 0.0, 0.0, 0.0);
         vTaskDelay(1250 / portTICK_PERIOD_MS);      // Wait for message to go stale
         TEST_ASSERT_EQUAL(PBRet::FAILURE, ControllerUT::checkTemperatures(ctrl, validTemp));
     }
@@ -361,89 +389,6 @@ TEST_CASE("loadFromJSONInvlid", "[Controller]")
     TEST_ASSERT_NOT_EQUAL(cfg, nullptr);
 
     TEST_ASSERT_EQUAL(PBRet::FAILURE, Controller::loadFromJSON(testConfig, cfg));
-}
-
-TEST_CASE("ControlTuningSerialization/deserialization", "[Controller]")
-{
-    const IIRLowpassFilterConfig derivFilterCfg(5.0, 1.0);
-    const ControlTuning ctrlTuningIn(50.0, 25.0, 10.0, 75.0, derivFilterCfg);
-    ControlTuning ctrlTuningOut {};
-
-    // Test serialization
-    std::string JSONStr {};
-    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ctrlTuningIn.serialize(JSONStr));
-
-    // Test deserialization
-    cJSON* root = cJSON_Parse(JSONStr.c_str());
-    TEST_ASSERT_NOT_EQUAL(root, nullptr);
-    ctrlTuningOut.deserialize(root);
-
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.setpoint, ctrlTuningOut.setpoint);
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.PGain, ctrlTuningOut.PGain);
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.IGain, ctrlTuningOut.IGain);
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.DGain, ctrlTuningOut.DGain);
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.derivFilterCfg.Fc, ctrlTuningOut.derivFilterCfg.Fc);
-    TEST_ASSERT_EQUAL_DOUBLE(ctrlTuningIn.derivFilterCfg.Fs, ctrlTuningOut.derivFilterCfg.Fs);
-}
-
-TEST_CASE("ControlCommandSerialization/deserialization", "[Controller]")
-{
-    ControlCommand ctrlCommandIn(ComponentState::ON, 0.5, 0.75);
-    ControlCommand ctrlCommandOut {};
-
-    // Test serialization
-    std::string JSONStr {};
-    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ctrlCommandIn.serialize(JSONStr));
-
-    // Test deserialization
-    cJSON* root = cJSON_Parse(JSONStr.c_str());
-    TEST_ASSERT_NOT_EQUAL(root, nullptr);
-    ctrlCommandOut.deserialize(root);
-
-    TEST_ASSERT_EQUAL(ctrlCommandIn.fanState, ctrlCommandOut.fanState);
-    TEST_ASSERT_EQUAL(ctrlCommandIn.LPElementDutyCycle, ctrlCommandOut.LPElementDutyCycle);
-    TEST_ASSERT_EQUAL(ctrlCommandIn.HPElementDutyCycle, ctrlCommandOut.HPElementDutyCycle);
-}
-
-TEST_CASE("ControlSettingsSerialization/deserialization", "[Controller]")
-{
-    const PumpSpeeds pumpSpeeds(1, 2);
-    const ControlSettings ctrlSettingsIn(PumpMode::Off, PumpMode::ManualControl, pumpSpeeds);
-    ControlSettings ctrlSettingsOut {};
-
-    // Test serialization
-    std::string JSONStr {};
-    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ctrlSettingsIn.serialize(JSONStr));
-
-    // Test deserialization
-    cJSON* root = cJSON_Parse(JSONStr.c_str());
-    TEST_ASSERT_NOT_EQUAL(root, nullptr);
-    ctrlSettingsOut.deserialize(root);
-
-    TEST_ASSERT_EQUAL(ctrlSettingsIn.refluxPumpMode, ctrlSettingsOut.refluxPumpMode);
-    TEST_ASSERT_EQUAL(ctrlSettingsIn.productPumpMode, ctrlSettingsOut.productPumpMode);
-    TEST_ASSERT_EQUAL(ctrlSettingsIn.manualPumpSpeeds.refluxPumpSpeed, ctrlSettingsOut.manualPumpSpeeds.refluxPumpSpeed);
-    TEST_ASSERT_EQUAL(ctrlSettingsIn.manualPumpSpeeds.productPumpSpeed, ctrlSettingsOut.manualPumpSpeeds.productPumpSpeed);
-}
-
-TEST_CASE("ControllerStateSerialization/deserialization", "[Controller]")
-{
-    const ControllerState ctrlStateIn(5.0, 10.0, 15.0, 30.0);
-    ControllerState ctrlStateOut {};
-
-    // Test serialization
-    std::string JSONStr {};
-    TEST_ASSERT_EQUAL(PBRet::SUCCESS, ctrlStateIn.serialize(JSONStr));
-
-    // Test deserialization
-    cJSON* root = cJSON_Parse(JSONStr.c_str());
-    TEST_ASSERT_NOT_EQUAL(root, nullptr);
-    ctrlStateOut.deserialize(root);
-
-    TEST_ASSERT_EQUAL(ctrlStateIn.propOutput, ctrlStateOut.propOutput);
-    TEST_ASSERT_EQUAL(ctrlStateIn.integralOutput, ctrlStateOut.integralOutput);
-    TEST_ASSERT_EQUAL(ctrlStateIn.derivOutput, ctrlStateOut.derivOutput);
-    TEST_ASSERT_EQUAL(ctrlStateIn.totalOutput, ctrlStateOut.totalOutput);
 }
 
 #ifdef __cplusplus

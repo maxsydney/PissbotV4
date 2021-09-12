@@ -1,7 +1,8 @@
 #ifndef SENSOR_MANAGER_H
 #define SENSOR_MANAGER_H
 
-#include "SensorManagerMessaging.h"
+#include "Generated/SensorManagerMessaging.h"
+#include "Generated/MessageBase.h"
 #include "PBCommon.h"
 #include "CppTask.h"
 #include "OneWireBus.h"
@@ -9,7 +10,8 @@
 
 // Forward declarations
 class PBOneWire;
-
+using PBAssignedSensorRegistry = AssignedSensorRegistry<ROM_SIZE, ROM_SIZE, ROM_SIZE, ROM_SIZE, ROM_SIZE>;
+using PBFieldBytes = ::EmbeddedProto::FieldBytes<ROM_SIZE>;
 struct SensorManagerConfig
 {
     double dt = 0.0;
@@ -23,7 +25,7 @@ class SensorManager : public Task
     static constexpr const char *Name = "SensorManager";
     static constexpr const char *FSBasePath = "/spiffs";
     static constexpr const char *FSPartitionLabel = "PBData";
-    static constexpr const char *deviceFile = "/spiffs/devices.json";
+    static constexpr const char *assignedSensorFile = "/spiffs/assignedSensors";
 
 public:
     // Constructors
@@ -47,7 +49,6 @@ private:
     PBRet _initFromParams(const SensorManagerConfig &cfg);
     PBRet _setupCBTable(void) override;
     PBRet _loadKnownDevices(const char *basePath, const char *partitionLabel);
-    PBRet _loadTempSensorsFromJSON(const cJSON *JSONTempSensors);
 
     // Updates
     PBRet _readFlowmeters(const FlowrateData &F) const;
@@ -58,16 +59,14 @@ private:
 
     // Utilities
     PBRet _writeSensorConfigToFile(void) const;
-    PBRet _printConfigFile(void) const;
     PBRet _broadcastSensors(void);
 
     // FreeRTOS hook method
     void taskMain(void) override;
 
     // Queue callbacks
-    PBRet _generalMessageCB(std::shared_ptr<MessageBase> msg);
-    PBRet _commandMessageCB(std::shared_ptr<MessageBase> msg);
-    PBRet _assignSensorCB(std::shared_ptr<MessageBase> msg);
+    PBRet _commandMessageCB(std::shared_ptr<PBMessageWrapper> msg);
+    PBRet _assignSensorCB(std::shared_ptr<PBMessageWrapper> msg);
 
     // SensorManager data
     SensorManagerConfig _cfg{};

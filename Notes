@@ -1,0 +1,5 @@
+Generate cpp with embeddedProto
+protoc --proto_path=/Users/maxsydney/esp/PissbotV4/lib/PBProtoBuf/Proto --plugin=protoc-gen-eams --eams_out=/Users/maxsydney/esp/PissbotV4/lib/PBProtoBuf/Generated ControllerMessaging.proto
+
+Generate typescript with protoc
+npx protoc --ts_out ../src/app/ProtoBuf --ts_opt enable_angular_annotations --ts_opt long_type_string --proto_path /Users/maxsydney/Documents/DistillerSoftware/DistillerWebClient/PBProtobuf/Proto --experimental_allow_proto3_optional DS18B20Messaging.proto

@@ -2,8 +2,8 @@
 #define ONEWIRE_BUS_H
 
 #include <vector>
-
-#include "OneWireBusMessaging.h"
+#include <memory>
+#include <unordered_map>
 #include "PBCommon.h"
 #include "MessageServer.h"
 #include "PBds18b20.h"
@@ -11,9 +11,19 @@
 #include "owb_rmt.h"
 #include "freertos/semphr.h"
 #include "ds18b20.h"
+#include "IO/Writable.h"
+#include "IO/Readable.h"
+#include "Generated/SensorManagerMessaging.h"
+#include "Generated/DS18B20Messaging.h"
+#include "Generated/MessageBase.h"
 
 // C++ wrapper around the esp32-owb library
 // https://github.com/DavidAntliff/esp32-owb
+
+constexpr uint8_t DEVICE_DATA_LEN = 12;
+using PBDeviceData = DeviceData<DEVICE_DATA_LEN, ROM_SIZE>;
+using SensorMap = std::unordered_map<DS18B20Role, std::shared_ptr<Ds18b20>>;
+using DeviceVector = std::vector<OneWireBus_ROMCode>;
 
 struct PBOneWireConfig
 {
@@ -21,18 +31,9 @@ struct PBOneWireConfig
     DS18B20_RESOLUTION tempSensorResolution = DS18B20_RESOLUTION_INVALID;
 };
 
-enum class SensorType
-{
-    Unknown,
-    Head,
-    Reflux,
-    Product,
-    Radiator,
-    Boiler
-};
-
 class PBOneWire
 {
+    static constexpr MessageOrigin ID = MessageOrigin::OneWireBus;
     static constexpr const char *Name = "PBOneWire";
     static constexpr double MaxValidTemp = 110.0;
     static constexpr double MinValidTemp = -10.0;
@@ -42,21 +43,17 @@ public:
     PBOneWire(void) = default;
     explicit PBOneWire(const PBOneWireConfig &cfg);
 
-    // Initialisation
-    PBRet initialiseTempSensors(void);
-
     // Update
     PBRet readTempSensors(TemperatureData &Tdata) const;
 
     // Get/Set
-    PBRet setTempSensor(SensorType type, const Ds18b20 &sensor);
+    PBRet setTempSensor(DS18B20Role type, const std::shared_ptr<Ds18b20>& sensor);
     const OneWireBus *getOWB(void) const { return _owb; } // Probably not a great idea. Consider removing
 
     // Utility
-    bool isAvailableSensor(const Ds18b20 &sensor) const;
-    PBRet serialize(std::string &JSONstr) const;
-    PBRet broadcastAvailableDevices(void);
-    static SensorType mapSensorIDToType(int sensorID);
+    PBRet serialize(Writable& buffer) const;
+    PBRet deserialize(Readable& buffer);
+    PBRet broadcastAvailableDevices(void) const;
 
     static PBRet checkInputs(const PBOneWireConfig &cfg);
     static PBRet loadFromJSON(PBOneWireConfig &cfg, const cJSON *cfgRoot);
@@ -73,27 +70,19 @@ private:
     PBRet _oneWireConvert(void) const;
 
     // Utility
-    PBRet _writeToFile(void) const;
-    PBRet _printConfigFile(void) const;
-    PBRet _scanForDevices(void);
-    PBRet _broadcastDeviceAddresses(void) const;
+    PBRet _scanForDevices(DeviceVector& devices) const;
+    PBRet _broadcastDeviceAddresses(const DeviceVector& deviceAddresses) const;
+    PBRet _readTemperatureSensor(DS18B20Role sensor, double& T) const;
+    static bool _isAvailableSensor(const PBDS18B20Sensor& sensor, const DeviceVector& deviceAddresses);
+    static bool _romCodesMatch(const OneWireBus_ROMCode& a, const OneWireBus_ROMCode& b);
+    PBRet _createAndAssignSensor(const PBDS18B20Sensor& sensorConfig, DS18B20Role role, DS18B20_RESOLUTION res, const std::string& name);
 
     SemaphoreHandle_t _OWBMutex = NULL;
     OneWireBus *_owb = nullptr;
     owb_rmt_driver_info *_rmtDriver = nullptr;
 
-    // TODO: This interface could be cleaned up a lot by using key-val mapping between
-    // assigned task and sensor object
     // Assigned sensors
-    Ds18b20 _headTempSensor{};
-    Ds18b20 _refluxTempSensor{};
-    Ds18b20 _productTempSensor{};
-    Ds18b20 _radiatorTempSensor{};
-    Ds18b20 _boilerTempSensor{};
-
-    // Unassigned sensors
-    size_t _connectedDevices = 0;
-    std::vector<Ds18b20> _availableSensors;
+    SensorMap _assignedSensors {};
 
     // Class data
     PBOneWireConfig _cfg{};

@@ -3,17 +3,19 @@
         {
             "name": "Mac",
             "includePath": [
-                "${workspaceFolder}",
-                "${IDF_PATH}/components/soc/esp32/include",
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/lib/PBProtoBuf/Generated",
                 "${workspaceFolder}/components/esp32-ds18b20/include",
                 "${workspaceFolder}/components/esp32-owb/include",
-                "${workspaceFolder}/build/include",
-                "${IDF_PATH}/components/**"
+                "${IDF_PATH}/components/**",
+                "${workspaceFolder}/lib/PBProtoBuf"
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""
-            }
+            },
+            "cppStandard": "c++17",
+            "cStandard": "c17"
         }
     ],
     "version": 4

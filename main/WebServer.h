@@ -9,6 +9,11 @@
 #include <libesphttpd/esp.h>
 #include "libesphttpd/httpd.h"
 #include "libesphttpd/httpd-freertos.h"
+#include "Generated/WebserverMessaging.h"
+#include "Generated/MessageBase.h"
+
+static constexpr uint32_t socketLogLength = 128;
+using PBSocketLogMessage = SocketLogMessage<socketLogLength>;
 
 class WebserverConfig
 {
@@ -21,12 +26,6 @@ class Webserver : public Task
 {
     static constexpr const char* Name = "Webserver";
     static constexpr int LISTEN_PORT = 80;
-    static constexpr const char* CtrlTuningStr = "ControlTuning";
-    static constexpr const char* CtrlSettingsStr = "ControlSettings";
-    static constexpr const char* CommandStr = "Command";
-    static constexpr const char* BroadcastDevices = "BroadcastDevices";
-    static constexpr const char* AssignSensor = "AssignSensor";
-    static constexpr const char* PeripheralState = "PeripheralState";
 
     public:
         Webserver(UBaseType_t priority, UBaseType_t stackDepth, BaseType_t coreID, const WebserverConfig& cfg);
@@ -50,24 +49,7 @@ class Webserver : public Task
         PBRet _setupCBTable(void) override; 
 
         // Queue callbacks
-        PBRet _temperatureDataCB(std::shared_ptr<MessageBase> msg);
-        PBRet _controlSettingsCB(std::shared_ptr<MessageBase> msg);
-        PBRet _controlTuningCB(std::shared_ptr<MessageBase> msg);
-        PBRet _deviceDataCB(std::shared_ptr<MessageBase> msg);
-        PBRet _flowrateDataCB(std::shared_ptr<MessageBase> msg);
-        PBRet _controlCommandCB(std::shared_ptr<MessageBase> msg);
-        PBRet _concentrationDataCB(std::shared_ptr<MessageBase> msg);
-        PBRet _controllerStateCB(std::shared_ptr<MessageBase> msg);
-        PBRet _socketLogMessageCB(std::shared_ptr<MessageBase> msg);
-
-        // Message serialization
-        static PBRet serializeControlSettingsMessage(const ControlSettings& ctrlSettings, std::string& outStr);
-
-        // Message parsing
-        static PBRet _processControlTuningMessage(cJSON* msgRoot);
-        static PBRet _processControlSettingsMessage(cJSON* msgRoot);
-        static PBRet _processCommandMessage(cJSON* msgRoot);
-        static PBRet _processPeripheralStateMessage(cJSON* msgRoot);
+        PBRet _broadcastDataCB(std::shared_ptr<PBMessageWrapper> msg);
 
         // Utility methods
         static PBRet _requestControllerTuning(void);
@@ -77,6 +59,7 @@ class Webserver : public Task
 
         // Websocket methods
         PBRet _sendToAll(const std::string& msg);
+        PBRet _sendToAll(const PBMessageWrapper& wrapper);
 
         // FreeRTOS hook method
         void taskMain(void) override;

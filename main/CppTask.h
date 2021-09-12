@@ -8,8 +8,8 @@
 #include "MessageServer.h"
 #include "functional"
 
-using queueCallback = std::function<PBRet(const std::shared_ptr<MessageBase>&)>;
-using CBTable = std::map<MessageType, queueCallback>;
+using queueCallback = std::function<PBRet(const std::shared_ptr<PBMessageWrapper>&)>;
+using CBTable = std::map<PBMessageType, queueCallback>;
 
 class Task
 {
@@ -28,8 +28,6 @@ class Task
 
         void start(void);
         xTaskHandle getTaskHandle(void) const { return _taskHandle; }
-
-    protected:
     
         // Interface methods
         virtual PBRet _setupCBTable(void) = 0;
@@ -42,6 +40,9 @@ class Task
         // to process it
         CBTable _cbTable {};
 
+        // Message ID
+        MessageOrigin _ID = MessageOrigin::OriginUnknown;
+
         // Configuration data
         xTaskHandle _taskHandle {};
         const char* _name = nullptr;
@@ -50,7 +51,7 @@ class Task
         BaseType_t _coreID {};
 
         // Use c++ queues instead of FreeRTOS queues
-        std::queue<std::shared_ptr<MessageBase>> _GPQueue {};
+        std::queue<std::shared_ptr<PBMessageWrapper>> _GPQueue {};
 
     private:
         static void runTask(void* taskPtr);

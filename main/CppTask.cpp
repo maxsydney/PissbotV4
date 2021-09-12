@@ -1,5 +1,4 @@
 #include "CppTask.h"
-#include "MessageDefs.h"
 
 void Task::start(void) 
 {
@@ -20,25 +19,29 @@ void Task::runTask(void* taskPtr)
         ESP_LOGW(Task::Name, "Task object was null\n");
         vTaskDelete(NULL);
     }
-    
 
-    // Once task has returned, kill the task properly
+    // TODO: Once task has returned, kill the task properly
 }
 
 PBRet Task::_processQueue(void)
 {
     for (size_t i = 0; i < _GPQueue.size(); i++) {
-        const std::shared_ptr<MessageBase> msg = _GPQueue.front();
+        const std::shared_ptr<PBMessageWrapper> msg = _GPQueue.front();
         _GPQueue.pop();
+
+        // Check to see if message has looped back
+        if (msg->get_origin() == _ID) {
+            return PBRet::SUCCESS;
+        }
         
-        MessageType type = msg->getType();
+        PBMessageType type = msg->get_type();
         CBTable::iterator it = _cbTable.find(type);
         if (it != _cbTable.end()) {
             if (it->second(msg) == PBRet::FAILURE) {
-                ESP_LOGW(_name, "Callback failed for %s", msg->getName().c_str());
+                // ESP_LOGW(_name, "Callback failed for %s", msg->getName().c_str());
             }
         } else {
-            ESP_LOGW(_name, "No callback defined for message type: %s", msg->getName().c_str());
+            // ESP_LOGW(_name, "No callback defined for message type: %s", msg->getName().c_str());
         }
     }
     

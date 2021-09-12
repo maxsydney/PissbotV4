@@ -59,6 +59,30 @@
                     "message": 5
                 }
             }
-        }
+        },
+        {
+            "label": "Compile Protobuf",
+            "type": "shell",
+            "command": "Python3",
+            "options": {
+                "cwd": "${workspaceRoot}"
+            },
+            // start the build without prompting for task selection, use "group": "build" otherwise
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            // arg passing example: in this case is executed make QUIET=0
+            "args": [
+                "lib/PBProtoBuf/Tools/compileProto.py", 
+                "--all"
+            ],
+        },
     ]
 }

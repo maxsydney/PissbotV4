@@ -9,6 +9,8 @@ set(COMPONENT_SRCDIRS
     $ENV{PBPATH}/unitTest/main/test
     $ENV{PBPATH}/main
     $ENV{PBPATH}/components
+    $ENV{PBPATH}/lib/PBProtoBuf/IO
+    $ENV{PBPATH}/lib/EmbeddedProto/src
 )
 
 set(COMPONENT_ADD_INCLUDEDIRS
@@ -19,6 +21,9 @@ set(COMPONENT_ADD_INCLUDEDIRS
     $ENV{PBPATH}/unitTest/main/test
     $ENV{PBPATH}/unitTest/main/testData
     $ENV{PBPATH}/components/espfs/include
+    $ENV{PBPATH}/lib/PBProtoBuf
+    $ENV{PBPATH}/lib/EmbeddedProto/src
+    $ENV{PBPATH}/lib/PBProtoBuf/Generated
 )
 
 register_component()
