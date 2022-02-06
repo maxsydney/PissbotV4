@@ -693,6 +693,7 @@ PBRet Controller::saveTuningToFile(void)
         return PBRet::FAILURE;
     }
 
+    ESP_LOGI(Controller::Name, "Serializing buffer");
     Writable writeBuffer {};
     ::EmbeddedProto::Error err = _ctrlTuning.serialize(writeBuffer);
     if (err != ::EmbeddedProto::Error::NO_ERRORS) {
@@ -701,6 +702,7 @@ PBRet Controller::saveTuningToFile(void)
     }
 
     // Write data structure to file
+    ESP_LOGI(Controller::Name, "Writing %d bytes to file", writeBuffer.get_size());
     outFile.write((char*) writeBuffer.get_buffer(), writeBuffer.get_size());
     ESP_LOGI(Controller::Name, "Controller tuning successfully written to file");
 
