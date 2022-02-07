@@ -1,3 +1,4 @@
+#include "esp_task_wdt.h"
 #include "Controller.h"
 #include "Filesystem.h"
 #include "Utilities.h"
@@ -38,6 +39,9 @@ void Controller::taskMain(void)
     Subscriber sub(Controller::Name, _GPQueue, subscriptions);
     MessageServer::registerTask(sub);
 
+    // Subscribe this task to the TWDT
+    esp_task_wdt_add(NULL);
+
     // Set update frequency
     TickType_t timestep =  _cfg.dt * 1000 / portTICK_PERIOD_MS;      // TODO: Define method for converting time
     portTickType xLastWakeTime = xTaskGetTickCount();
@@ -73,6 +77,9 @@ void Controller::taskMain(void)
             ESP_LOGW(Controller::Name, "Could not broadcast controller state");
         }
 
+        // Feed the TWDT
+        esp_task_wdt_reset();
+        
         vTaskDelayUntil(&xLastWakeTime, timestep);
     }
 }
@@ -693,7 +700,6 @@ PBRet Controller::saveTuningToFile(void)
         return PBRet::FAILURE;
     }
 
-    ESP_LOGI(Controller::Name, "Serializing buffer");
     Writable writeBuffer {};
     ::EmbeddedProto::Error err = _ctrlTuning.serialize(writeBuffer);
     if (err != ::EmbeddedProto::Error::NO_ERRORS) {
@@ -702,7 +708,6 @@ PBRet Controller::saveTuningToFile(void)
     }
 
     // Write data structure to file
-    ESP_LOGI(Controller::Name, "Writing %d bytes to file", writeBuffer.get_size());
     outFile.write((char*) writeBuffer.get_buffer(), writeBuffer.get_size());
     ESP_LOGI(Controller::Name, "Controller tuning successfully written to file");
 

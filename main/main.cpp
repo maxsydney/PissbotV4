@@ -1,5 +1,6 @@
 #include <esp_log.h>
 #include "nvs_flash.h"
+#include "esp_task_wdt.h"
 #include "DistillerManager.h"
 #include "ConfigManager.h"
 
@@ -27,6 +28,10 @@ void app_main()
     if (ConfigManager::loadConfig("/spiffs/PissbotConfig.json", cfg) != PBRet::SUCCESS) {
         ESP_LOGE("Main", "Failed to configure system");
     } else {
+        // Enable task watchdog timer
+        esp_task_wdt_init(2, true);
+
+        // Start DistillerManager
         DistillerManager* manager = DistillerManager::getInstance(5, 16384, 1, cfg);
         manager->begin();
     }
