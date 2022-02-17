@@ -119,7 +119,7 @@ PBRet Flowmeter::loadFromJSON(FlowmeterConfig& cfg, const cJSON* cfgRoot)
     // Get flowmeter K-factor
     cJSON* kFactorNode = cJSON_GetObjectItem(cfgRoot, "kFactor");
     if (cJSON_IsNumber(kFactorNode)) {
-        cfg.kFactor = static_cast<gpio_num_t>(kFactorNode->valuedouble);
+        cfg.kFactor = static_cast<double>(kFactorNode->valuedouble);
     } else {
         ESP_LOGI(Flowmeter::Name, "Unable to read flowmeter K-factor from JSON");
         return PBRet::FAILURE;

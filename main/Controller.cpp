@@ -675,8 +675,8 @@ PBRet Controller::_initFromParams(const ControllerConfig& cfg)
     _ctrlSettings.set_manualPumpSpeeds(initPumpSpeeds);
 
     // Set pumps to active control
-    _ctrlSettings.set_refluxPumpMode(PumpMode::ACTIVE_CONTROL);
-    _ctrlSettings.set_refluxPumpMode(PumpMode::ACTIVE_CONTROL);
+    _ctrlSettings.set_refluxPumpMode(PumpMode::PUMP_OFF);
+    _ctrlSettings.set_refluxPumpMode(PumpMode::PUMP_OFF);
     _cfg = cfg;
 
     return PBRet::SUCCESS;
