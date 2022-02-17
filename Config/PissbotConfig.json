@@ -1,7 +1,7 @@
 {
     "DistillerConfig": {
         "ControllerConfig": {
-            "dt": 0.375,
+            "dt": 0.1875,
             "GPIO_fan": 21,
             "GPIO_element1": 13,
             "GPIO_element2": 32,
@@ -26,15 +26,15 @@
             "dt": 0.1875,
             "oneWireConfig": {
                 "GPIO_onewire": 15,
-                "DS18B20Resolution": 11
+                "DS18B20Resolution": 10
             },
             "refluxFlowmeterConfig": {
                 "GPIO": 35,
-                "kFactor": 1
+                "kFactor": 0.0008741258741258741
             },
             "productFlowmeterConfig": {
                 "GPIO": 34,
-                "kFactor": 1
+                "kFactor": 0.0008741258741258741
             }
         },
         "WebserverConfig": {

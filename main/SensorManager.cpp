@@ -132,7 +132,7 @@ PBRet SensorManager::_assignSensorCB(std::shared_ptr<PBMessageWrapper> msg)
     const double calibLinear = 1.0;
     const double calibOffset = 0.0;
 
-    const Ds18b20Config config(romCode, calibLinear, calibOffset, DS18B20_RESOLUTION::DS18B20_RESOLUTION_11_BIT, _OWBus.getOWB());
+    const Ds18b20Config config(romCode, calibLinear, calibOffset, DS18B20_RESOLUTION::DS18B20_RESOLUTION_10_BIT, _OWBus.getOWB());
 
     // TODO: Decide where this object should be created + use unique ptr
     std::shared_ptr<Ds18b20> sensor = std::make_shared<Ds18b20>(config);
